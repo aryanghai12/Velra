@@ -1,0 +1,34 @@
+[workspace]
+resolver = "2"
+members = ["crates/velra", "crates/velra-core"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.98"
+license = "MIT"
+authors = ["Velra contributors"]
+repository = "https://github.com/{{GITHUB_ORG}}/velra"
+homepage = "https://{{VELRA_DOMAIN}}"
+description = "Lossless compaction for Claude Code: task continuity across context compactions."
+keywords = ["claude-code", "compaction", "hooks", "developer-tools", "cli"]
+categories = ["command-line-utilities", "development-tools"]
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+strip = true
+# Required: the hook wrapper catches panics and always exits 0.
+panic = "unwind"
+
+# Profile used by `dist` for release artifacts (identical to release).
+[profile.dist]
+inherits = "release"
+
+# Fast, debuggable builds for local benchmarking of the hook path.
+[profile.bench-local]
+inherits = "release"
+lto = "thin"
+codegen-units = 16
+strip = false

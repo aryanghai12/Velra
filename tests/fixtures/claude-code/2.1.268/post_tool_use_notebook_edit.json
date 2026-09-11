@@ -1,0 +1,21 @@
+{
+  "session_id": "0199b0f2-4c31-7c8a-9f1e-2b6d5a0e7c11",
+  "transcript_path": "/Users/dev/.claude/projects/-Users-dev-app/0199b0f2.jsonl",
+  "cwd": "/Users/dev/app",
+  "permission_mode": "default",
+  "hook_event_name": "PostToolUse",
+  "tool_name": "NotebookEdit",
+  "tool_input": {
+    "notebook_path": "/Users/dev/app/notebooks/explore.ipynb",
+    "cell_id": "cell-7",
+    "new_source": "import pandas as pd\ndf = pd.read_csv('data.csv')\ndf.head()\n",
+    "edit_mode": "replace"
+  },
+  "tool_response": {
+    "filePath": "/Users/dev/app/notebooks/explore.ipynb",
+    "cell_id": "cell-7",
+    "edit_mode": "replace"
+  },
+  "tool_use_id": "toolu_01NB000001",
+  "duration_ms": 18
+}

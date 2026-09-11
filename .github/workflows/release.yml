@@ -1,0 +1,129 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag to build (for a dry run)
+        required: false
+
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-musl
+            os: ubuntu-latest
+            zigbuild: true
+          - target: aarch64-unknown-linux-musl
+            os: ubuntu-latest
+            zigbuild: true
+          - target: x86_64-apple-darwin
+            os: macos-latest
+          - target: aarch64-apple-darwin
+            os: macos-latest
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+          - target: aarch64-pc-windows-msvc
+            os: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup show active-toolchain || rustup toolchain install
+      - run: rustup target add ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+
+      - name: Install cargo-zigbuild
+        if: matrix.zigbuild
+        run: |
+          pip install ziglang
+          cargo install cargo-zigbuild --locked
+
+      - name: Build
+        shell: bash
+        run: |
+          if [ "${{ matrix.zigbuild }}" = "true" ]; then
+            cargo zigbuild --release --target ${{ matrix.target }} -p velra
+          else
+            cargo build --release --target ${{ matrix.target }} -p velra
+          fi
+        env:
+          # Static CRT on Windows so the binary has zero runtime prerequisites.
+          RUSTFLAGS: ${{ startsWith(matrix.target, 'x86_64-pc-windows') && '-C target-feature=+crt-static' || (startsWith(matrix.target, 'aarch64-pc-windows') && '-C target-feature=+crt-static' || '') }}
+
+      - name: Package
+        id: package
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist staging
+          src="target/${{ matrix.target }}/release"
+          cp README.md LICENSE SECURITY.md staging/
+          if [ -f "$src/velra.exe" ]; then
+            cp "$src/velra.exe" staging/
+            archive="velra-${{ matrix.target }}.zip"
+            (cd staging && 7z a -tzip "../dist/$archive" . >/dev/null)
+          else
+            cp "$src/velra" staging/
+            chmod 755 staging/velra
+            archive="velra-${{ matrix.target }}.tar.gz"
+            tar -czf "dist/$archive" -C staging .
+          fi
+          cd dist
+          if command -v sha256sum >/dev/null; then
+            sha256sum "$archive" > "$archive.sha256"
+          else
+            shasum -a 256 "$archive" > "$archive.sha256"
+          fi
+          echo "archive=$archive" >> "$GITHUB_OUTPUT"
+          echo "Built $archive:"
+          cat "$archive.sha256"
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: dist/${{ steps.package.outputs.archive }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: velra-${{ matrix.target }}
+          path: dist/*
+
+  publish:
+    name: publish release
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: Collect archives and checksum file
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          find artifacts -type f \( -name '*.tar.gz' -o -name '*.zip' -o -name '*.sha256' \) -exec cp {} dist/ \;
+          cd dist
+          cat *.sha256 > sha256.sum
+          ls -la
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true
+          fail_on_unmatched_files: true

@@ -1,0 +1,5 @@
+# MSRV / pinned toolchain. CI and local builds use exactly this version.
+[toolchain]
+channel = "1.98.1"
+components = ["clippy", "rustfmt"]
+profile = "minimal"

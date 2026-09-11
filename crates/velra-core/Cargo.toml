@@ -1,0 +1,28 @@
+[package]
+name = "velra-core"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "Velra core: event log, reducer, continuation state machine and capsule renderer."
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+aho-corasick = "1.1.5"
+blake3 = "1.8.7"
+chrono = { version = "0.4.45", default-features = false, features = ["clock", "std"] }
+regex = "1.13.1"
+rusqlite = { version = "0.40.2", features = ["bundled"] }
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = { version = "1.0.151", features = ["raw_value"] }
+ulid = "3.0.0"
+
+[dev-dependencies]
+insta = "1.48.0"
+proptest = "1.11.0"
+tempfile = "3.27.0"

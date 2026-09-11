@@ -1,0 +1,16 @@
+{
+  "session_id": "0199b0f2-4c31-7c8a-9f1e-2b6d5a0e7c11",
+  "transcript_path": "/Users/dev/.claude/projects/-Users-dev-app/0199b0f2.jsonl",
+  "cwd": "/Users/dev/app",
+  "permission_mode": "default",
+  "hook_event_name": "PostToolUseFailure",
+  "tool_name": "Bash",
+  "tool_input": {
+    "command": "pytest tests/test_auth.py -x",
+    "description": "Run the auth tests"
+  },
+  "tool_use_id": "toolu_01PYTEST0001",
+  "error": "Exit code 1\n============================= test session starts ==============================\ncollected 12 items\n\ntests/test_auth.py .......F\n\n=================================== FAILURES ===================================\n______________________________ test_logout_clears ______________________________\n\n    def test_logout_clears(client):\n        response = client.post('/logout')\n>       assert response.cookies[\"session\"] is None\nE       assert <Cookie session=abc> is None\n\ntests/test_auth.py:88: AssertionError\n=========================== short test summary info ============================\nFAILED tests/test_auth.py::test_logout_clears - assert <Cookie session=abc> is None\n1 failed, 11 passed in 2.41s\n",
+  "is_interrupt": false,
+  "duration_ms": 2610
+}

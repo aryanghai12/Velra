@@ -1,0 +1,39 @@
+[package]
+name = "velra"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description.workspace = true
+keywords.workspace = true
+categories.workspace = true
+readme = "../../README.md"
+
+[[bin]]
+name = "velra"
+path = "src/main.rs"
+
+[features]
+# Enables VELRA_TEST_* fault injection (panic / stall) used by acceptance tests G2/G3.
+fault-injection = []
+
+[dependencies]
+blake3 = "1.8.7"
+clap = { version = "4.6.6", features = ["derive"] }
+jsonc-parser = { version = "0.33.1", features = ["serde"] }
+rusqlite = "0.40.2"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = { version = "1.0.151", features = ["raw_value", "preserve_order"] }
+similar = "3.2.0"
+toml = "1.1.6"
+ulid = "3.0.0"
+velra-core = { version = "0.1.0", path = "../velra-core" }
+
+[dev-dependencies]
+assert_cmd = "2.2.2"
+insta = "1.48.0"
+proptest = "1.11.0"
+tempfile = "3.27.0"

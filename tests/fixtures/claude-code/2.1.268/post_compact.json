@@ -1,0 +1,8 @@
+{
+  "session_id": "0199b0f2-4c31-7c8a-9f1e-2b6d5a0e7c11",
+  "transcript_path": "/Users/dev/.claude/projects/-Users-dev-app/0199b0f2.jsonl",
+  "cwd": "/Users/dev/app",
+  "hook_event_name": "PostCompact",
+  "trigger": "auto",
+  "compact_summary": "The user asked to fix a flaky logout test. We edited src/auth/session.py to set max_age=0, ran pytest, saw one failure in tests/test_auth.py::test_logout_clears, and reverted the change with git restore."
+}

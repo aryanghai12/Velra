@@ -1,0 +1,10 @@
+{
+  "session_id": "0199b0f2-4c31-7c8a-9f1e-2b6d5a0e7c11",
+  "prompt_id": "550e8400-e29b-41d4-a716-446655440000",
+  "transcript_path": "/Users/dev/.claude/projects/-Users-dev-app/0199b0f2.jsonl",
+  "cwd": "/Users/dev/app",
+  "scratchpad_dir": "/tmp/claude-1000/-Users-dev-app/0199b0f2/scratchpad",
+  "permission_mode": "default",
+  "hook_event_name": "UserPromptSubmit",
+  "prompt": "fix the flaky logout test and keep the session cookie behaviour intact"
+}

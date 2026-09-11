@@ -1,0 +1,94 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust (pinned by rust-toolchain.toml)
+        run: rustup show active-toolchain || rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+      - name: Formatting
+        run: cargo fmt --all -- --check
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+      - name: Tests
+        run: cargo test --workspace --all-features
+        env:
+          TZ: UTC
+      - name: Binary size budget (8 MB)
+        shell: bash
+        run: |
+          cargo build --release -p velra
+          bin="target/release/velra"
+          [ -f "$bin" ] || bin="target/release/velra.exe"
+          size=$(wc -c < "$bin")
+          echo "velra binary: $size bytes"
+          if [ "$size" -gt 8388608 ]; then
+            echo "::error::binary is $size bytes, budget is 8388608"
+            exit 1
+          fi
+
+  fuzz-ipc:
+    name: IPC fuzz (nightly-ish, 2 min per subcommand)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup show active-toolchain || rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test --workspace --all-features --test ipc_contract -- --ignored --nocapture
+        env:
+          VELRA_FUZZ_SECONDS: 120
+
+  dependency-audit:
+    name: no network-capable dependency
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup show active-toolchain || rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+      - name: Check the hook path's dependency graph (J3)
+        run: bash ci/check-no-network-deps.sh
+
+  benchmarks:
+    name: performance budgets (H1)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup show active-toolchain || rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+      - name: Install hyperfine
+        run: |
+          wget -q https://github.com/sharkdp/hyperfine/releases/download/v1.19.0/hyperfine_1.19.0_amd64.deb
+          sudo dpkg -i hyperfine_1.19.0_amd64.deb
+      - name: Build release binary
+        run: cargo build --release -p velra
+      - name: Run budgets
+        run: bash bench/run.sh
+        env:
+          TZ: UTC
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: benchmark-results
+          path: bench/results/

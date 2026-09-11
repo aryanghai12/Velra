@@ -1,0 +1,24 @@
+{
+  "session_id": "0199b0f2-4c31-7c8a-9f1e-2b6d5a0e7c11",
+  "transcript_path": "/Users/dev/.claude/projects/-Users-dev-app/0199b0f2.jsonl",
+  "cwd": "/Users/dev/app",
+  "permission_mode": "default",
+  "hook_event_name": "PostToolUse",
+  "agent_id": "8f2c1d90-3b77-4a5e-b0c2-1d9e4f7a6b33",
+  "agent_type": "Explore",
+  "tool_name": "MultiEdit",
+  "tool_input": {
+    "file_path": "/Users/dev/app/src/auth/cookies.py",
+    "edits": [
+      { "old_string": "max_age=0", "new_string": "max_age=-1" },
+      { "old_string": "secure=False", "new_string": "secure=True" }
+    ]
+  },
+  "tool_response": {
+    "filePath": "/Users/dev/app/src/auth/cookies.py",
+    "originalFile": "def clear_session(response):\n    response.delete_cookie('session', max_age=0, secure=False)\n    return response\n",
+    "userModified": false
+  },
+  "tool_use_id": "toolu_01MULTI00001",
+  "duration_ms": 21
+}

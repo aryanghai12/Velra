@@ -1,0 +1,17 @@
+/target
+**/*.rs.bk
+*.pdb
+
+# insta pending snapshots
+*.snap.new
+*.pending-snap
+
+# local benchmark output
+/bench/results/
+
+# npm wrapper build output
+/npm/**/bin/
+/npm/**/node_modules/
+
+.DS_Store
+Thumbs.db
