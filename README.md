@@ -231,6 +231,7 @@ back a byte-identical file. `--dry-run` shows the diff without writing.
 cargo test --workspace --all-features   # unit + acceptance tests
 cargo clippy --workspace --all-targets --all-features -- -D warnings
 bash bench/run.sh                        # §4 performance budgets (hyperfine optional)
+python scripts/smoke.py                  # full product pass against the release binary
 ```
 
 The workspace is two crates: `velra-core` (event log, reducer, state machine,

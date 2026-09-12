@@ -12,6 +12,11 @@ the release PR.
 | Date | |
 | Performed by | |
 
+Before starting, `python scripts/smoke.py` runs the same flow against a local
+release build in a temporary directory. It catches anything broken end to end
+without a real Claude Code session, so do that first and use this checklist
+for what only a live session can show.
+
 ## Setup
 
 1. Fresh install from the published artifact (not a local build):
