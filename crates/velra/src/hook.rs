@@ -162,8 +162,9 @@ pub fn run(command: &str, subcommand: Option<String>, ts_ms: i64) {
         WATCHDOG_SYNC_MS
     }));
     let started = Instant::now();
-    let outcome =
-        std::panic::catch_unwind(AssertUnwindSafe(|| dispatch(&sub, ts_ms, home.as_deref())));
+    let outcome = std::panic::catch_unwind(AssertUnwindSafe(|| {
+        dispatch(&sub, ts_ms, home.as_deref(), &started)
+    }));
     // A panic between arming and persisting still leaves the event spooled.
     flush_pending();
     if let Ok(Err(e)) = outcome {
@@ -173,18 +174,58 @@ pub fn run(command: &str, subcommand: Option<String>, ts_ms: i64) {
         home.as_deref(),
         &label,
         None,
-        format!("{} us", started.elapsed().as_micros()),
+        format!("{} us{}", started.elapsed().as_micros(), phases()),
     );
 }
 
-fn dispatch(sub: &str, ts_ms: i64, home: Option<&Path>) -> Result<(), String> {
+/// Per-phase timing for `VELRA_LOG=debug`. A mark costs one `Instant::now()`
+/// and is only recorded, or formatted, when debug logging is on.
+struct Phases {
+    cursor: Instant,
+    items: Vec<(&'static str, u128)>,
+}
+
+static PHASES: Mutex<Option<Phases>> = Mutex::new(None);
+
+/// Records the time since the previous mark. `origin` seeds the cursor for
+/// the first mark of the process.
+fn mark(name: &'static str, origin: &Instant) {
+    if !log::debug_enabled() {
+        return;
+    }
+    let mut guard = PHASES.lock().unwrap_or_else(|e| e.into_inner());
+    let phases = guard.get_or_insert_with(|| Phases {
+        cursor: *origin,
+        items: Vec::new(),
+    });
+    let now = Instant::now();
+    let delta = now.saturating_duration_since(phases.cursor);
+    phases.items.push((name, delta.as_micros()));
+    phases.cursor = now;
+}
+
+fn phases() -> String {
+    let taken = PHASES.lock().unwrap_or_else(|e| e.into_inner()).take();
+    let Some(phases) = taken else {
+        return String::new();
+    };
+    let mut out = String::new();
+    for (name, us) in phases.items {
+        out.push_str(&format!(" {name}={us}us"));
+    }
+    out
+}
+
+fn dispatch(sub: &str, ts_ms: i64, home: Option<&Path>, started: &Instant) -> Result<(), String> {
     fault_injection(sub);
     let Some(home) = home else { return Ok(()) };
     let raw = read_stdin_capped();
+    mark("stdin", started);
     if sub == "reduce" {
         return run_reduce(home, ts_ms);
     }
     let parsed = normalize::parse(&raw);
+    mark("parse", started);
     let malformed = parsed.is_none();
     let input = parsed.unwrap_or_default();
     let session_id = match input
@@ -200,6 +241,7 @@ fn dispatch(sub: &str, ts_ms: i64, home: Option<&Path>) -> Result<(), String> {
         return Ok(()); // read-only home: fail open
     }
     let ctx = Ctx::new(home, sub, ts_ms, input, session_id, malformed);
+    mark("context", started);
     if malformed {
         let payload = Payload::default();
         let mut ev = ctx.new_event(payload);
@@ -207,7 +249,7 @@ fn dispatch(sub: &str, ts_ms: i64, home: Option<&Path>) -> Result<(), String> {
         ctx.store(ev, Role::HookAppend);
         return Ok(());
     }
-    match sub {
+    let result = match sub {
         "session-start" => session_start(&ctx),
         "user-prompt-submit" => user_prompt_submit(&ctx),
         "pre-tool-use" => pre_tool_use(&ctx),
@@ -222,7 +264,9 @@ fn dispatch(sub: &str, ts_ms: i64, home: Option<&Path>) -> Result<(), String> {
             ctx.store(ctx.new_event(Payload::default()), Role::HookAppend);
             Ok(())
         }
-    }
+    };
+    mark("handler", started);
+    result
 }
 
 struct Ctx<'a> {
@@ -347,7 +391,10 @@ impl<'a> Ctx<'a> {
 
     /// Opens the database, or `None` when the caller should spool instead.
     fn open_db(&self, role: Role) -> Option<Db> {
-        match Db::open(&home::db_path(self.home), role) {
+        let at = Instant::now();
+        let opened = Db::open(&home::db_path(self.home), role);
+        mark("db-open", &at);
+        match opened {
             Ok(db) => {
                 if let Some(rotated) = &db.rotated_corrupt {
                     log::warn(
@@ -399,7 +446,10 @@ impl<'a> Ctx<'a> {
     /// Appends via an open database, spooling on failure. Returns the event id.
     fn append_with(&self, db: &mut Db, ev: &NewEvent) -> Option<i64> {
         arm_pending(home::spool_dir(self.home), ev);
-        match eventlog::append(&mut db.conn, ev) {
+        let at = Instant::now();
+        let appended = eventlog::append(&mut db.conn, ev);
+        mark("db-append", &at);
+        match appended {
             Ok(id) => {
                 disarm_pending();
                 id

@@ -182,7 +182,7 @@ Environment variables:
 |---|---|
 | `VELRA_HOME` | State directory (default `~/.velra`). |
 | `VELRA_DISABLE=1` | Kill switch: every hook exits immediately, touching nothing. |
-| `VELRA_LOG=debug` | Per-invocation timing to `~/.velra/logs/debug.log`. |
+| `VELRA_LOG=debug` | Per-invocation timing to `~/.velra/logs/debug.log`, broken down by phase (`stdin`, `parse`, `context`, `db-open`, `db-append`, `handler`). |
 | `VELRA_CLAUDE_VERSION` | Assume this Claude Code version when registering hooks, instead of detecting it. Useful when `claude` is not on your PATH. |
 | `CLAUDE_CONFIG_DIR` | Respected when locating `settings.json`. |
 | `CLAUDE_PROJECT_DIR` | Respected when resolving the project root. |
@@ -230,7 +230,7 @@ back a byte-identical file. `--dry-run` shows the diff without writing.
 ```sh
 cargo test --workspace --all-features   # unit + acceptance tests
 cargo clippy --workspace --all-targets --all-features -- -D warnings
-bash bench/run.sh                        # §4 performance budgets (needs hyperfine)
+bash bench/run.sh                        # §4 performance budgets (hyperfine optional)
 ```
 
 The workspace is two crates: `velra-core` (event log, reducer, state machine,

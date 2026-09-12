@@ -13,6 +13,17 @@ BIN="$ROOT/target/release/velra"
 [ -f "$BIN" ] || BIN="$ROOT/target/release/velra.exe"
 [ -f "$BIN" ] || { echo "build the release binary first: cargo build --release -p velra"; exit 1; }
 
+PY_BIN="$(command -v python3 || command -v python || true)"
+[ -n "$PY_BIN" ] || { echo "python3 is required to build the payloads and read the results"; exit 1; }
+if command -v hyperfine >/dev/null 2>&1; then
+  RUNNER=hyperfine
+else
+  RUNNER=builtin
+  echo "note: hyperfine not found; using the built-in timer. Its own spawn cost"
+  echo "      (a few ms) is included, so treat the numbers as indicative and do"
+  echo "      not gate on them. For CI-grade numbers: cargo install hyperfine."
+fi
+
 RESULTS="$ROOT/bench/results"
 WORK="$(mktemp -d "${TMPDIR:-/tmp}/velra-bench.XXXXXX")"
 export VELRA_HOME="$WORK/home"
@@ -29,7 +40,7 @@ echo "Seeding $SEED_EVENTS events into $VELRA_HOME ..."
 cargo run --release --quiet -p velra --example seed -- "$VELRA_HOME" "$SEED_EVENTS" "$CLAUDE_PROJECT_DIR"
 
 # ---------------------------------------------------------------- payloads
-python3 - "$WORK" "$CLAUDE_PROJECT_DIR" <<'PY'
+"$PY_BIN" - "$WORK" "$CLAUDE_PROJECT_DIR" <<'PY'
 import json, os, sys
 work, project = sys.argv[1], sys.argv[2]
 os.makedirs(os.path.join(work, "payloads"), exist_ok=True)
@@ -86,17 +97,42 @@ case "$(uname -s)" in
   *) WINDOWS=0 ;;
 esac
 
-fail=0
-echo "$BUDGETS" | while IFS='|' read -r name argv payload p50 p99; do
+# Runs the binary $RUNS times and writes hyperfine's JSON shape, so the
+# percentile check below is identical either way.
+measure_builtin() {
+  "$PY_BIN" - "$BIN" "$1" "$2" "$WARMUP" "$RUNS" "$3" <<'MEASURE'
+import json, subprocess, sys, time
+binary, argv, payload = sys.argv[1], sys.argv[2].split(), sys.argv[3]
+warmup, runs, out = int(sys.argv[4]), int(sys.argv[5]), sys.argv[6]
+data = open(payload, "rb").read()
+times = []
+for i in range(warmup + runs):
+    start = time.perf_counter()
+    subprocess.run([binary, *argv], input=data,
+                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    elapsed = time.perf_counter() - start
+    if i >= warmup:
+        times.append(elapsed)
+json.dump({"results": [{"times": times}]}, open(out, "w"))
+MEASURE
+}
+
+failures="$WORK/failures"
+: > "$failures"
+while IFS='|' read -r name argv payload p50 p99; do
   [ -n "$name" ] || continue
   json="$RESULTS/$name.json"
   echo
   echo "== $name (budget p50 ${p50}ms, p99 ${p99}ms)"
-  hyperfine --warmup "$WARMUP" --runs "$RUNS" --shell=none \
-    --input "$P/$payload" --export-json "$json" \
-    "$BIN $argv" >/dev/null
+  if [ "$RUNNER" = hyperfine ]; then
+    hyperfine --warmup "$WARMUP" --runs "$RUNS" --shell=none \
+      --input "$P/$payload" --export-json "$json" \
+      "$BIN $argv" >/dev/null
+  else
+    measure_builtin "$argv" "$P/$payload" "$json"
+  fi
 
-  python3 - "$json" "$name" "$p50" "$p99" "$WINDOWS" <<'PY' || exit 1
+  "$PY_BIN" - "$json" "$name" "$p50" "$p99" "$WINDOWS" <<'PY' || echo "$name" >> "$failures"
 import json, sys
 path, name, p50_budget, p99_budget, windows = sys.argv[1], sys.argv[2], float(sys.argv[3]), float(sys.argv[4]), sys.argv[5] == "1"
 times = sorted(t * 1000 for t in json.load(open(path))["results"][0]["times"])
@@ -116,7 +152,18 @@ if code:
     print(f"::error::{name} exceeded its budget")
 sys.exit(code)
 PY
-done
+done <<BUDGET_ROWS
+$BUDGETS
+BUDGET_ROWS
 
 echo
 echo "Results written to $RESULTS"
+if [ -s "$failures" ]; then
+  echo "Over budget:"; cat "$failures"
+  if [ "$RUNNER" = hyperfine ] || [ "${VELRA_BENCH_STRICT:-0}" = 1 ]; then
+    exit 1
+  fi
+  echo "(built-in timer: reported, not enforced. Set VELRA_BENCH_STRICT=1 to gate.)"
+  exit 0
+fi
+echo "All budgets met."
