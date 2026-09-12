@@ -255,21 +255,26 @@ fn cmd_enable(dry_run: bool) -> i32 {
             if claude_missing {
                 println!("{} Claude Code not detected; hooks registered and will activate when it is installed.", warn_mark());
             }
-            if !outcome.changed {
-                println!("{} Velra already enabled.", ok_mark());
-                return 0;
-            }
+            // The state file is refreshed even when the settings file needed
+            // no change, so that a moved binary is repaired by `velra enable`.
             let mut state = State::load(&home);
             if state.hooks_existed_before.is_none() {
                 state.hooks_existed_before = Some(outcome.hooks_existed_before);
             }
             state.bin_path = Some(bin.clone());
             state.settings_path = Some(outcome.target.display().to_string());
-            state.enabled_ms = Some(velra_core::time::now_ms());
             state.claude_version = detection.version().map(|v| v.to_string());
             state.velra_version = Some(env!("CARGO_PKG_VERSION").to_string());
-            state.last_backup = outcome.backup.as_ref().map(|p| p.display().to_string());
+            if outcome.changed {
+                state.enabled_ms = Some(velra_core::time::now_ms());
+                state.last_backup = outcome.backup.as_ref().map(|p| p.display().to_string());
+            }
             let _ = state.save(&home);
+
+            if !outcome.changed {
+                println!("{} Velra already enabled.", ok_mark());
+                return 0;
+            }
 
             println!("{} Velra enabled for Claude Code.", ok_mark());
             if outcome.created_file {

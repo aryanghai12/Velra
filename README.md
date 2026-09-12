@@ -176,9 +176,16 @@ Velra needs no configuration. If you want a smaller or larger capsule, create
 budget_tokens = 600
 ```
 
-Environment variables: `VELRA_HOME` (state directory), `VELRA_DISABLE=1` (kill
-switch), `VELRA_LOG=debug` (per-invocation timing to `~/.velra/logs/debug.log`),
-`CLAUDE_CONFIG_DIR` (respected when locating `settings.json`).
+Environment variables:
+
+| Variable | Effect |
+|---|---|
+| `VELRA_HOME` | State directory (default `~/.velra`). |
+| `VELRA_DISABLE=1` | Kill switch: every hook exits immediately, touching nothing. |
+| `VELRA_LOG=debug` | Per-invocation timing to `~/.velra/logs/debug.log`. |
+| `VELRA_CLAUDE_VERSION` | Assume this Claude Code version when registering hooks, instead of detecting it. Useful when `claude` is not on your PATH. |
+| `CLAUDE_CONFIG_DIR` | Respected when locating `settings.json`. |
+| `CLAUDE_PROJECT_DIR` | Respected when resolving the project root. |
 
 ## Why Rust
 

@@ -14,6 +14,7 @@ order is applied throughout: (1) never block or visibly disturb Claude Code,
 | D3 | `velra enable` falls back to reading the version from an installed VS Code extension directory (`anthropic.claude-code-<version>-…`) when `claude --version` is absent | The spec says "absent → assume latest known"; this is strictly better information, and Claude Code is frequently installed only as an IDE extension (no `claude` on PATH). Still falls back to "assume latest known". |
 | D4 | The `PreCompact` `systemMessage` ("⚡ Velra checkpoint saved: …") is emitted as specified even though Claude Code documents that it discards `systemMessage` (and `continue`) on `PreCompact` and `PostCompact` | The spec mandates the output; emitting it is harmless, and it becomes visible if Claude Code ever starts surfacing it. The user-visible confirmation in practice is the delivery message on the next `SessionStart`. |
 | D5 | Shell-form registrations (Claude Code < 2.1.139) write the binary path with forward slashes on Windows | Shell form runs under Git Bash there; backslashes inside a double-quoted Bash string are error-prone, forward slashes always work. |
+| D5a | `VELRA_CLAUDE_VERSION` overrides version detection | Acceptance test A7 must exercise the old-version code path deterministically, and users whose Claude Code is not on `PATH` (IDE-only installs) get a way to pin the assumed version instead of falling back to "latest known". |
 
 ## Settings editing (§6.2, §6.4)
 
@@ -89,3 +90,14 @@ order is applied throughout: (1) never block or visibly disturb Claude Code,
 | D43 | `TZ=UTC` (and `Etc/UTC`, `GMT`, `UTC0`) forces a zero offset on every platform | Windows ignores `TZ`, and E1 requires byte-identical goldens across operating systems. |
 | D44 | Unparseable stdin with a recoverable `session_id` is recorded as a `malformed` event; without one it is a silent no-op | §18 asks for both behaviours; the salvage scan is a plain substring search, no regex on the hot path. |
 | D45 | The async `reduce` watchdog fires at 1,000 ms while the reducer's own deadline is 900 ms | Lets the reducer finish and commit its current batch instead of being killed mid-transaction. |
+
+## Distribution (§5)
+
+| # | Decision | Rationale |
+|---|---|---|
+| D46 | The release pipeline is a hand-written GitHub Actions workflow rather than `dist`-generated | §5.2 pins installer behaviour that `dist`'s generated installers do not offer: installing to `~/.velra/bin`, the exact final two lines, and the opt-in `--enable` flag. The workflow still produces what the spec asks for — per-target archives, SHA-256 checksums, a combined `sha256.sum`, and GitHub build-provenance attestations — and `install/homebrew/velra.rb` plus `npm/` cover the remaining channels. Keeping the installers first-party also means CI has no dependency on a release tool's version. |
+| D47 | Acceptance test C1 runs 8 processes × 25 invocations by default and the full 32 × 500 when `VELRA_STRESS=1` | 16,000 process spawns take minutes on a developer laptop (and much longer on Windows). The property under test — no lost events, no duplicates — is identical at both sizes; CI runs the full shape. |
+| D48 | The watchdog spools the in-flight event before `exit(0)`, and `run()` does the same after a caught panic | The 250 ms deadline previously dropped an event that was already normalized but not yet committed, which broke the §10.3 no-loss guarantee under saturation. Re-spooling a row that did commit is harmless: ingestion deduplicates on `dedupe_key`. |
+| D49 | The watchdog deadline is overridable via `VELRA_TEST_WATCHDOG_MS`, only in `fault-injection` builds | C1 saturates the machine badly enough to trip the real deadline, which would measure the watchdog rather than the storage guarantee. Release binaries have no override at all. |
+| D50 | `velra enable` refreshes `state.json` even when the settings file needs no change | Otherwise `doctor`'s "binary missing" finding could never be repaired by the command it tells the user to run. |
+| D51 | Each log line is written with a single `write_all` | Concurrent hook processes append to the same file; two writes let their output interleave and lose line boundaries. |

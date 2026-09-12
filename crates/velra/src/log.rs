@@ -38,8 +38,12 @@ fn append(path: &Path, line: &str) {
         opts.mode(0o600);
     }
     if let Ok(mut f) = opts.open(path) {
-        let _ = f.write_all(line.as_bytes());
-        let _ = f.write_all(b"\n");
+        // One append per line: concurrent hook processes share this file,
+        // and two separate writes would let their output interleave.
+        let mut buf = String::with_capacity(line.len() + 1);
+        buf.push_str(line);
+        buf.push('\n');
+        let _ = f.write_all(buf.as_bytes());
     }
 }
 

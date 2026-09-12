@@ -48,6 +48,27 @@ fn emit(json: &str) -> bool {
     true
 }
 
+/// The event currently being persisted. The watchdog spools it on the way
+/// out, so a deadline that fires mid-write still loses nothing (§10.3).
+static PENDING: Mutex<Option<(PathBuf, NewEvent)>> = Mutex::new(None);
+
+fn arm_pending(dir: PathBuf, ev: &NewEvent) {
+    *PENDING.lock().unwrap_or_else(|e| e.into_inner()) = Some((dir, ev.clone()));
+}
+
+fn disarm_pending() {
+    *PENDING.lock().unwrap_or_else(|e| e.into_inner()) = None;
+}
+
+/// Writes any armed event to the spool. Duplicates are harmless: ingestion
+/// deduplicates on `dedupe_key`.
+fn flush_pending() {
+    let taken = PENDING.lock().unwrap_or_else(|e| e.into_inner()).take();
+    if let Some((dir, ev)) = taken {
+        let _ = spool::write(&dir, &ev);
+    }
+}
+
 fn start_watchdog(ms: u64) {
     let _ = std::thread::Builder::new()
         .name("velra-watchdog".into())
@@ -55,6 +76,7 @@ fn start_watchdog(ms: u64) {
             std::thread::sleep(Duration::from_millis(ms));
             // Wait for any in-flight write, then leave without further work.
             let _guard = EMITTED.lock().unwrap_or_else(|e| e.into_inner());
+            flush_pending();
             let _ = std::io::stdout().flush();
             std::process::exit(0);
         });
@@ -105,6 +127,18 @@ fn fault_injection(sub: &str) {
 #[cfg(not(feature = "fault-injection"))]
 fn fault_injection(_sub: &str) {}
 
+/// The watchdog deadline, overridable only in fault-injection builds so that
+/// storage tests can saturate the machine without the deadline firing.
+fn watchdog_ms(default: u64) -> u64 {
+    #[cfg(feature = "fault-injection")]
+    if let Ok(ms) = std::env::var("VELRA_TEST_WATCHDOG_MS") {
+        if let Ok(ms) = ms.parse::<u64>() {
+            return ms;
+        }
+    }
+    default
+}
+
 /// Entry point for `velra hook <event>` and `velra reduce`.
 pub fn run(command: &str, subcommand: Option<String>, ts_ms: i64) {
     let home = home::velra_home();
@@ -122,14 +156,16 @@ pub fn run(command: &str, subcommand: Option<String>, ts_ms: i64) {
         format!("hook {sub}")
     };
     silence_panics(home.clone(), label.clone());
-    start_watchdog(if command == "reduce" {
+    start_watchdog(watchdog_ms(if command == "reduce" {
         WATCHDOG_REDUCE_MS
     } else {
         WATCHDOG_SYNC_MS
-    });
+    }));
     let started = Instant::now();
     let outcome =
         std::panic::catch_unwind(AssertUnwindSafe(|| dispatch(&sub, ts_ms, home.as_deref())));
+    // A panic between arming and persisting still leaves the event spooled.
+    flush_pending();
     if let Ok(Err(e)) = outcome {
         log::error(home.as_deref(), &label, None, e);
     }
@@ -298,6 +334,7 @@ impl<'a> Ctx<'a> {
     }
 
     fn spool(&self, ev: &NewEvent) {
+        disarm_pending();
         if let Err(e) = spool::write(&home::spool_dir(self.home), ev) {
             log::error(
                 Some(self.home),
@@ -361,8 +398,12 @@ impl<'a> Ctx<'a> {
 
     /// Appends via an open database, spooling on failure. Returns the event id.
     fn append_with(&self, db: &mut Db, ev: &NewEvent) -> Option<i64> {
+        arm_pending(home::spool_dir(self.home), ev);
         match eventlog::append(&mut db.conn, ev) {
-            Ok(id) => id,
+            Ok(id) => {
+                disarm_pending();
+                id
+            }
             Err(e) => {
                 log::debug(
                     Some(self.home),
@@ -378,6 +419,7 @@ impl<'a> Ctx<'a> {
 
     /// Opens, appends and returns the database for follow-up work.
     fn store(&self, ev: NewEvent, role: Role) -> Option<Db> {
+        arm_pending(home::spool_dir(self.home), &ev);
         match self.open_db(role) {
             Some(mut db) => {
                 self.append_with(&mut db, &ev);

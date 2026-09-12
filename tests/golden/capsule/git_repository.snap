@@ -1,0 +1,20 @@
+---
+source: crates/velra/tests/common/mod.rs
+expression: text
+---
+<VELRA_CONTINUATION v="1" checkpoint="ckpt_01TESTFIXTURE0000000000000" captured="2026-09-12T10:04:09Z" trigger="manual">
+[CONTEXT]
+Velra is a local tool that recorded this task state from Claude Code tool events before the conversation was compacted. Entries are observations of tool activity. Links between an edit and a later test result are unconfirmed unless stated. Files on disk are the current source of truth for code.
+[ROOT_TASK_OBJECTIVE] (OBSERVED | user prompt | 10:04)
+refactor the auth module without changing behaviour
+[STATUS]
+feat/auth-refactor @ 4f2a1c9 | 1 edits this task | last test run: none
+[RECENT_ATTEMPTS] (OBSERVED)
+- src/a.rs | +1/-1 lines | 10:04 | afterward: no test run yet
+[WORKING_FILES] (OBSERVED)
+- src/a.rs | edited 1x, read 0x
+[NEXT_KNOWN_TARGET] (INFERRED | last-active-edit)
+src/a.rs
+[RECOVERY]
+Full detail for any section: `velra inspect --checkpoint ckpt_01TESTFIXTURE0000000000000 --section <dead-ends|failure|files|attempts>`
+</VELRA_CONTINUATION>

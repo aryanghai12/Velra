@@ -200,6 +200,14 @@ fn version_from_vscode_extension() -> Option<Version> {
 
 /// Detects the installed Claude Code version (§6.2 step 4), 3 s timeout.
 pub fn detect(timeout: Duration) -> Detection {
+    // Escape hatch: pin the assumed version (used by tests, and by anyone
+    // whose Claude Code is not on PATH).
+    if let Some(v) = std::env::var("VELRA_CLAUDE_VERSION")
+        .ok()
+        .and_then(|s| Version::parse(&s))
+    {
+        return Detection::Cli(v);
+    }
     let mut claude = Command::new("claude");
     claude.arg("--version");
     if let Some(out) = run_with_timeout(claude, timeout.min(Duration::from_secs(3))) {
