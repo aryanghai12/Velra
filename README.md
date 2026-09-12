@@ -122,6 +122,23 @@ That is the whole setup. Keep coding; the next `/compact` is handled.
 
 Run `velra inspect` right now to see what would survive a compaction.
 
+## The 30-second demo
+
+The shot list for the demo GIF. Terminal at 100x30, one take, no cuts.
+
+| t | Shot | What the viewer reads |
+|---|---|---|
+| 0:00 | `curl -LsSf https://{{VELRA_DOMAIN}}/install.sh \| sh && velra enable` | Two commands, no prompts, no sudo. |
+| 0:05 | `claude` in a repo with a failing test; type *"fix the flaky logout test"* | A real task, not a toy. |
+| 0:09 | Claude edits `session.py`, runs `pytest` -> FAIL, reverts with `git restore`, edits `cookies.py` | The dead end happens on camera. |
+| 0:17 | `/compact` -> the transcript collapses, and `⚡ Velra checkpoint saved` appears | The moment the context would normally be lost. |
+| 0:21 | Type *"what should we try next?"* | The question that exposes amnesia. |
+| 0:24 | Claude answers with the objective and the failing assertion, and does **not** re-propose `max_age=0` | The whole product, in one answer. |
+| 0:28 | `velra inspect` scrolls the capsule that did it | Nothing magic: observed tool activity. |
+
+Record with `asciinema rec --cols 100 --rows 30`, render with `agg --theme
+monokai`. Keep it under 2 MB so it plays inline on GitHub.
+
 ## What it costs you
 
 Velra runs inside Claude Code's hook path, so its budget is measured in
