@@ -26,6 +26,39 @@
 /npm/**/bin/
 /npm/**/node_modules/
 
+# Local databases. Velra's own state lives in ~/.velra, but a stray trial or a
+# manual `VELRA_HOME=. velra enable` can drop one in the tree.
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+
+# Background task captures and scratch output.
+*.output
+*.tmp
+*.bak
+/scratch/
+/tmp/
+
+# Logs, except the one debug capture the benchmark report cites as evidence.
+*.log
+!/bench/results/trials/*/velra_debug.log
+
+# Credentials and key material. Nothing here is tracked and nothing should be:
+# Velra's redaction treats these paths as sensitive at runtime too (§J2).
+.env
+.env.*
+*.pem
+*.key
+id_rsa*
+
+# Editor and OS noise
+.vscode/
+.idea/
 .DS_Store
+._*
 Thumbs.db
+desktop.ini
 __pycache__/
