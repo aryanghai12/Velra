@@ -8,8 +8,8 @@ Everything a new session needs to continue this work without re-deriving it.
 
 Velra makes a Claude Code task survive `/compact`. It registers hooks, watches
 tool activity, and at `PreCompact` freezes a checkpoint and renders a
-**Continuation Capsule** (≤ 800 estimated tokens) that is injected back into
-context exactly once after compaction.
+**Continuation Capsule** (bounded at 800 estimated tokens, hard ceiling 1,000)
+that is injected back into context exactly once after compaction.
 
 Built to `prompts doc/BUILD_PROMPT_v0.1.md` (695 lines). Scope is §2 of that
 spec and nothing more. v0.2–v0.4 specs sit in the same folder and are **out of
@@ -21,7 +21,7 @@ Three standing rules from the spec that govern every change:
    empty, stdout empty or exactly one JSON object plus a newline.
 2. **Preserve data.** An event reaches the database or the spool; never neither.
 3. **Simplest thing that satisfies the spec** — and every ambiguity resolved
-   gets a numbered row in [DECISIONS.md](DECISIONS.md) (now D1–D55).
+   gets a numbered row in [DECISIONS.md](DECISIONS.md) (now D1–D63).
 
 ---
 
@@ -36,18 +36,18 @@ Three standing rules from the spec that govern every change:
 | M5 | Checkpoint barrier, renderer, delivery state machine, messages | done (D1–D7, E1–E4) |
 | M6 | `status`, `inspect`, `doctor`, README + demo script, SECURITY.md | done (H1, I) |
 
-**Test suite: 139 passing, 0 failing, 1 ignored.**
+**Test suite: 155 passing, 0 failing, 1 ignored.**
 
 ```
-velra-core unit      42      crates/velra-core/src/*.rs
+velra-core unit      49      crates/velra-core/src/*.rs
 velra unit           11      crates/velra/src/*.rs
-tracking.rs          14      F1–F7 revert / discard / command tracking
-capsule.rs           19      E1 goldens (15), E2 budget + proptest, E4 traceability
+tracking.rs          18      F1–F7 revert / discard / command tracking
+capsule.rs           22      E1 goldens (15), E2 budget + proptest, E4 traceability
 state_machine.rs     11      D1–D7 delivery states
-settings_edit.rs     13      A2–A7 JSONC editing
-ipc_contract.rs      12      B1–B4 hook contract (1 ignored: needs a real claude binary)
-storage.rs            6      C1–C5 concurrency, corruption, schema
-fail_open.rs          8      G1–G4 chaos
+settings_edit.rs     12      A2–A7 JSONC editing
+ipc_contract.rs      13      B1–B4 hook contract (1 ignored: needs a real claude binary)
+storage.rs            7      C1–C6 concurrency, corruption, schema, migration
+fail_open.rs          7      G1–G4 chaos
 security.rs           6      J1–J3 redaction, sensitive paths, dependency audit
 ```
 
@@ -90,9 +90,11 @@ crates/velra/src/        Claude Code integration
 tests/fixtures/claude-code/2.1.268/   17 recorded hook payloads
 tests/golden/capsule/                 15 capsule goldens
 tests/golden/settings/                 5 settings goldens
+tests/fixtures/tokenizer/             2 delivered capsules + measured token counts
 crates/velra/tests/                   acceptance suite + common/mod.rs harness
 scripts/smoke.py                      full product pass against the release binary
 bench/run.sh                          §4 budgets (hyperfine optional)
+bench/run_full_benchmark.py           the empirical benchmark (≈ $2.80/replicate)
 install/ npm/ .github/workflows/      distribution
 ```
 
@@ -129,7 +131,7 @@ forces it.
 ### Commands
 
 ```bash
-cargo test --workspace --all-features                                  # 139 tests
+cargo test --workspace --all-features                                  # 155 tests
 cargo clippy --workspace --all-targets --all-features -- -D warnings   # clean
 cargo fmt --all
 INSTA_UPDATE=always cargo test --workspace --all-features              # refresh goldens
@@ -168,8 +170,8 @@ VELRA_STRESS=1 cargo test -p velra --all-features --test storage       # full C1
 
 ### Performance, measured
 
-Profiled with `VELRA_LOG=debug` (which now logs a phase breakdown), release
-build, 100k-event database, on this Windows box:
+Profiled with `VELRA_LOG=debug` (which logs a phase breakdown), release build,
+100k-event database, on this Windows box:
 
 ```
 stdin=30us parse=27us context=160us db-open=1340us db-append=1050us handler=1170us
@@ -177,9 +179,44 @@ stdin=30us parse=27us context=160us db-open=1340us db-append=1050us handler=1170
 
 `db-open` at ~1.3 ms is the floor, not an inefficiency: Python's own SQLite
 opens the same file in 1.6 ms. The §4 p50 budgets (2 ms for post-tool-use)
-therefore describe Linux, which is where CI measures them with hyperfine; §4's
-Windows allowance (p99 ≤ 15 ms) covers the wall-clock case here. Recorded as
-D54.
+therefore describe Linux, which is where CI measures them with hyperfine.
+
+**On Windows, only the marginal number means anything.** The benchmark timed a
+spawn control — the same binary with `VELRA_DISABLE=1`, which exits before it
+opens the database — at a p99 of 7.2 ms against a small database and 25.0 ms
+against a 38 MiB one. Bare process creation there already costs more than §4's
+whole 15 ms allowance, so that allowance was never a statement about Velra.
+Against the control, Velra's own cost is +3.4 to +11.0 ms at p50 and barely
+moves between the two database sizes. README and D54 now state the Windows
+budget that way. Re-measure with `python bench/harness/hook_overhead.py`.
+
+### The benchmark, and what it found
+
+`python bench/run_full_benchmark.py` runs the real experiment: two arms of a
+16-turn Claude Code session over a generated 88-file repository with a planted
+one-cent rounding defect, `/compact` at turn 14, differing only in
+`velra enable` vs `velra disable`. Roughly $2.80 per replicate.
+[BENCHMARK_REPORT.md](BENCHMARK_REPORT.md) is the write-up; §15 is the addendum
+recording the fixes made afterwards.
+
+It found four real defects — the token estimator under-reading by a third, a
+`git_pre` row silently deleting `[DEAD_ENDS]` from a delivered capsule, a revert
+chained with a failing command being lost entirely, and an audit sweep evicting
+the files the task was about. All are fixed and all are covered by tests that
+run offline. **The two things it could not settle are still open:** the trials
+have not been re-run, so no verdict row has changed, and recommendation 7 stands
+— H1 needs a harder defect (several coordinated edits, or two competing dead
+ends) before any claim of advantage over vanilla compaction is honest. §16 of
+the report lists what a re-run would establish and what it would cost.
+
+The finding worth remembering: **Claude Code 2.1.269's own compaction summary is
+better than expected at exactly the things Velra carries.** It named the
+objective, the failing assertion and the reverted dead end unprompted, and the
+baseline arm solved the task in the same two tool calls as the Velra arm. Velra's
+measured advantage is that its record is *bounded* (the native summary ranged
+670–6,937 tokens across four runs of an identical script) and *deterministic*
+(twice, the model treated the compaction template as a prompt injection and
+declined to summarise at all). Do not claim more than that without new data.
 
 ---
 
@@ -200,8 +237,17 @@ D54.
   settings goldens were written one level above the repository root before this
   was caught.
 - **Heredocs through the Bash tool collapse doubled backslashes.** Patch scripts
-  needing a literal backslash should build it with `chr(92)` or edit by line
-  index.
+  needing a literal backslash should build it with `chr(92)`, use a Python raw
+  string, or edit by line index.
+- **Python on Windows defaults stdout to cp1252**, which raises
+  `UnicodeEncodeError` on Velra's own `✓` and `⚡`. `scripts/smoke.py`
+  reconfigures its streams; the bench harness pins `encoding="utf-8"` on every
+  `subprocess.run`, because the locale codec was quietly writing mojibake into
+  the evidence files.
+- **Spooled events arrive with an old timestamp and a new row id.** Anything
+  that reasons about "what happened after what" must order by `ts_ms`, not by
+  row id — reading `file_versions` in insertion order is what deleted
+  `[DEAD_ENDS]` from a delivered capsule (D56).
 
 ---
 
@@ -222,20 +268,32 @@ D54.
 
 ## 8. What is left
 
-Nothing in the v0.1 spec is unimplemented. The open items are all external:
+Nothing in the v0.1 spec is unimplemented, and the defects the benchmark found
+are fixed. The open items are measurement and release logistics:
 
-1. **Placeholders to fill before publishing.** `{{VELRA_DOMAIN}}` and
+1. **Re-run the benchmark.** The four trials in `BENCHMARK_REPORT.md` were run
+   against the binary *before* the fixes, so no verdict row has been rewritten.
+   §16 of that report says exactly what a re-run would settle and what it costs:
+   H3 needs only `bench/harness/measure_tokens.py` against one trial (~$3), H2
+   needs one Velra-arm replicate (~$3). Do not claim H2 or H3 pass on the
+   strength of the unit tests alone — they prove the mechanism, not the delivery.
+2. **A harder defect for H1.** Both arms solved the planted one-cent bug in two
+   tool calls, so the task cannot separate them. Recommendation 7 of the report
+   asks for a defect needing several coordinated edits, or two competing
+   plausible dead ends, before any claim of advantage over vanilla compaction.
+   This is the single most valuable thing left to do.
+3. **Placeholders to fill before publishing.** `{{VELRA_DOMAIN}}` and
    `{{GITHUB_ORG}}` appear in `README.md`, `install/install.sh`,
    `install/install.ps1`, `install/homebrew/velra.rb`, `npm/velra/package.json`
    and `Cargo.toml`. They need real values at first release.
-2. **The §21 I checklist** (`docs/E2E_CHECKLIST.md`) needs one pass against a
+4. **The §21 I checklist** (`docs/E2E_CHECKLIST.md`) needs one pass against a
    live Claude Code session — specifically the auto-compaction case and the
    Ctrl+C replay case, which no script can fake. `python scripts/smoke.py`
    covers everything else.
-3. **CI has never run.** There is no remote; the workflows are untested against
+5. **CI has never run.** There is no remote; the workflows are untested against
    GitHub's runners.
-4. **No GIF recorded** — the README carries the shot list for it.
-5. **hyperfine is not installed locally**, so local budget numbers come from the
+6. **No GIF recorded** — the README carries the shot list for it.
+7. **hyperfine is not installed locally**, so local budget numbers come from the
    built-in timer (reported, not gated). CI installs it and gates.
 
 ---

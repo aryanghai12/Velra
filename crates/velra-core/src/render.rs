@@ -515,10 +515,13 @@ fn enforce_ceiling(text: String, ceiling: u32, max_chars: usize) -> String {
         return text;
     }
     let lines: Vec<&str> = text.split('\n').collect();
+    // Everything from [RECOVERY] on is the tail that must survive, closing tag
+    // included. If the marker is somehow absent, keep the last line, which is
+    // that tag: a capsule that does not close itself is worse than a short one.
     let recovery = lines
         .iter()
         .position(|l| l.starts_with("[RECOVERY]"))
-        .unwrap_or(lines.len());
+        .unwrap_or_else(|| lines.len().saturating_sub(1));
     // The protected head: the opening tag, [CONTEXT] and its paragraph, the
     // objective, and [STATUS] with its line.
     let head = lines
@@ -543,8 +546,14 @@ fn enforce_ceiling(text: String, ceiling: u32, max_chars: usize) -> String {
     }
     // Only reachable if the protected head alone is oversized, which needs a
     // pathological checkpoint id. Cut hard and close the tag.
-    let mut out = truncate_chars(&candidate, max_chars.min(2_000)).into_owned();
-    out.push_str("\n</VELRA_CONTINUATION>");
+    const CLOSE: &str = "</VELRA_CONTINUATION>";
+    let mut out = truncate_chars(&candidate, max_chars.min(2_000))
+        .trim_end()
+        .to_string();
+    if !out.ends_with(CLOSE) {
+        out.push('\n');
+        out.push_str(CLOSE);
+    }
     out
 }
 

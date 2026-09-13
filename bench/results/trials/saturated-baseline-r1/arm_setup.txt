@@ -1,0 +1,5 @@
+$ velra disable
+exit=0
+âœ“ Velra was not enabled; nothing to remove.
+
+

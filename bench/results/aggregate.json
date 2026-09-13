@@ -1,0 +1,106 @@
+{
+  "trials": [
+    {
+      "dir": "saturated-baseline-r1",
+      "protocol": "saturated",
+      "arm": "baseline",
+      "replicate": 1,
+      "model": "sonnet",
+      "session_id": "29fec1cc-4225-4384-8826-e05c00f5a4d9",
+      "final_pytest_exit": 0
+    },
+    {
+      "dir": "saturated-baseline-r2",
+      "protocol": "saturated",
+      "arm": "baseline",
+      "replicate": 2,
+      "model": "sonnet",
+      "session_id": "2de362de-3a63-40a3-89db-82ec4800e97b",
+      "final_pytest_exit": 0
+    },
+    {
+      "dir": "saturated-velra-r1",
+      "protocol": "saturated",
+      "arm": "velra",
+      "replicate": 1,
+      "model": "sonnet",
+      "session_id": "65bcd198-09d7-4422-a8e2-f5e80f4d9656",
+      "final_pytest_exit": 0
+    },
+    {
+      "dir": "saturated-velra-r2",
+      "protocol": "saturated",
+      "arm": "velra",
+      "replicate": 2,
+      "model": "sonnet",
+      "session_id": "d7179229-1e02-41d7-b590-4468663055f7",
+      "final_pytest_exit": 0
+    }
+  ],
+  "groups": {
+    "saturated/baseline": {
+      "n": 2,
+      "sessions": [
+        "29fec1cc-4225-4384-8826-e05c00f5a4d9",
+        "2de362de-3a63-40a3-89db-82ec4800e97b"
+      ],
+      "compaction_succeeded": 2,
+      "source_rereads_mean": 0.0,
+      "source_rereads_each": [
+        0,
+        0
+      ],
+      "tool_calls_mean": 2.0,
+      "tool_calls_each": [
+        2,
+        2
+      ],
+      "hit_true_file": 2,
+      "hit_true_symbol": 2,
+      "dead_end_reexplored": 0,
+      "dead_end_mentioned_in_prose": 0,
+      "fixed_the_test": 2,
+      "read_bucket_mean": 0.0,
+      "edit_bucket_mean": 1.0,
+      "bash_bucket_mean": 1.0,
+      "search_bucket_mean": 0.0,
+      "cost_usd_each": [
+        1.2825154000000003,
+        1.4247006999999998
+      ],
+      "wall_seconds_mean": 420.98
+    },
+    "saturated/velra": {
+      "n": 2,
+      "sessions": [
+        "65bcd198-09d7-4422-a8e2-f5e80f4d9656",
+        "d7179229-1e02-41d7-b590-4468663055f7"
+      ],
+      "compaction_succeeded": 2,
+      "source_rereads_mean": 0.0,
+      "source_rereads_each": [
+        0,
+        0
+      ],
+      "tool_calls_mean": 2.0,
+      "tool_calls_each": [
+        2,
+        2
+      ],
+      "hit_true_file": 2,
+      "hit_true_symbol": 2,
+      "dead_end_reexplored": 0,
+      "dead_end_mentioned_in_prose": 0,
+      "fixed_the_test": 2,
+      "read_bucket_mean": 0.0,
+      "edit_bucket_mean": 1.0,
+      "bash_bucket_mean": 1.0,
+      "search_bucket_mean": 0.0,
+      "cost_usd_each": [
+        1.5298271,
+        0.9582246000000001
+      ],
+      "wall_seconds_mean": 348.5
+    }
+  }
+}

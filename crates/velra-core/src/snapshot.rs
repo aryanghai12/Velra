@@ -5,11 +5,11 @@ use crate::git;
 use crate::model::{CommandKind, IntentLevel, Mechanism, Outcome, Trigger};
 use crate::paths;
 use crate::reducer::{project_root, session_epoch};
-use crate::shell;
 use crate::render::{
     AttemptView, CommandRef, DeadEndView, FailureView, IntentView, NextTarget, Snapshot,
     WorkingFileView,
 };
+use crate::shell;
 use rusqlite::{params, Connection, OptionalExtension};
 use std::path::PathBuf;
 

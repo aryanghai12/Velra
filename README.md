@@ -38,8 +38,15 @@ calls an LLM, and never touches the network.
 ```
 
 At `PreCompact` it freezes an immutable checkpoint and renders a compact
-capsule (≤ 800 estimated tokens). After compaction it injects that capsule back
-into context, exactly once, through whichever channel fires first.
+capsule, bounded at 800 estimated tokens with a hard ceiling of 1,000. After
+compaction it injects that capsule back into context, exactly once, through
+whichever channel fires first.
+
+Bounded is the point. Across four runs of an identical 16-turn script, Claude
+Code's own compaction summary measured 670, 802, 4,410 and 6,937 tokens — a 10×
+spread with no ceiling, and twice, in earlier trials, the model declined to
+produce one at all. Velra's capsule is rendered from tool events by a pure
+function, so it has a size you can predict and cannot be talked out of.
 
 Here is what Claude receives:
 
@@ -151,13 +158,25 @@ milliseconds of wall time per tool call:
 | `user-prompt-submit` | ≤ 2 ms | ≤ 4 ms |
 | `pre-compact` (the checkpoint barrier) | ≤ 6 ms | ≤ 10 ms |
 
-These are enforced in CI with `hyperfine` against a database holding 100,000
-events; the build fails on regression. An internal watchdog abandons work at
-250 ms, so a pathological case degrades to "Velra recorded nothing this time"
-rather than "Claude Code is waiting".
+These are enforced in CI with `hyperfine` on Linux against a database holding
+100,000 events; the build fails on regression. An internal watchdog abandons
+work at 250 ms, so a pathological case degrades to "Velra recorded nothing this
+time" rather than "Claude Code is waiting".
+
+**On Windows the number that means anything is the marginal one.** Starting a
+process there is expensive enough to swamp everything Velra does: the same
+binary with `VELRA_DISABLE=1`, which exits before it opens the database,
+measures a p99 of 7.2 ms against a small database and 25.0 ms against a 38 MiB
+one. Against that control Velra's own cost is **+3.4 to +11.0 ms at p50**, and
+it barely moves between those two database sizes. The budget on Windows is
+therefore stated as marginal cost over an empty run, not as total wall time;
+`bench/harness/hook_overhead.py` measures both columns, and
+[DECISIONS.md](DECISIONS.md) D54 has the numbers.
 
 Velra also **cannot break your session**: hooks always exit 0, never write to
-stderr, and print either nothing or a single JSON object.
+stderr, and print either nothing or a single JSON object. Across the 4,338 hook
+invocations observed during the v0.1 benchmark, zero exited non-zero and zero
+wrote a byte to stderr.
 
 ## Privacy
 

@@ -408,3 +408,64 @@ fn b2_extended_fuzz() {
         println!("{subcommand}: {runs} fuzz runs");
     }
 }
+
+/// A `git restore` that is not the first word of the command line, observed
+/// through the real binary.
+///
+/// Both halves of this failed in the v0.1 benchmark. `PreToolUse` was
+/// registered with an `if` rule of `Bash(git *)`, a prefix match that never
+/// saw `cd "..." && git restore ...`; and `PostToolUse` only read git effects
+/// from calls that succeeded, while `git restore x && pytest` is reported as a
+/// failure whenever the suite still fails. Between them, Velra could observe
+/// nothing at all about a revert the agent had just performed.
+#[test]
+fn b1_a_chained_git_restore_is_observed_on_both_sides_and_on_failure() {
+    let env = Env::new();
+    env.write_file("src/money.py", "ROUND_HALF_EVEN\n");
+    let command = format!(
+        "cd \"{}\" && git restore src/money.py && python -m pytest -q",
+        env.project.to_string_lossy()
+    );
+
+    let pre = json!({
+        "session_id": env.session,
+        "hook_event_name": "PreToolUse",
+        "cwd": env.project.to_string_lossy(),
+        "tool_name": "Bash",
+        "tool_use_id": "toolu_chain",
+        "tool_input": { "command": command },
+    });
+    env.hook("pre-tool-use", &pre).assert_contract();
+
+    // The suite still fails, so Claude Code reports the whole call as failed.
+    env.write_file("src/money.py", "ROUND_HALF_UP\n");
+    let post = json!({
+        "session_id": env.session,
+        "hook_event_name": "PostToolUseFailure",
+        "cwd": env.project.to_string_lossy(),
+        "tool_name": "Bash",
+        "tool_use_id": "toolu_chain",
+        "tool_input": { "command": command },
+        "error": "Exit code 1\nFAILED tests/test_engine.py::test_exact_payment\n1 failed",
+    });
+    env.hook("post-tool-use-failure", &post).assert_contract();
+
+    let db = env.open_db();
+    let payloads: Vec<(String, String)> = db
+        .conn
+        .prepare("SELECT hook_event, payload FROM events ORDER BY id")
+        .expect("prepare")
+        .query_map([], |r| Ok((r.get(0)?, r.get(1)?)))
+        .expect("query")
+        .collect::<Result<_, _>>()
+        .expect("rows");
+    for (event, payload) in &payloads {
+        let v: serde_json::Value = serde_json::from_str(payload).expect("payload json");
+        assert_eq!(
+            v["git"]["restore"].as_str(),
+            Some("git restore src/money.py"),
+            "{event} records the restore subcommand, not the whole line: {payload}"
+        );
+    }
+    assert_eq!(payloads.len(), 2, "both sides were recorded: {payloads:?}");
+}

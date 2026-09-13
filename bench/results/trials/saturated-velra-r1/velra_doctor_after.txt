@@ -1,0 +1,8 @@
+exit=0
+âœ“ settings parse: C:\Users\aryan\.claude\settings.json
+âœ“ binary: C:\Users\aryan\Videos\Velra\target\release\velra.exe
+âœ“ hooks registered for 13 events
+âœ“ database: WAL, schema v1
+âœ“ last hook event 0s ago
+âœ“ no recent errors
+

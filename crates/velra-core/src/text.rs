@@ -318,7 +318,10 @@ mod tests {
             (2.5..=4.0).contains(&prose_per_token),
             "prose should estimate near 3 chars/token, got {prose_per_token:.2}"
         );
-        assert!(prose_per_token > per_token, "prose must be cheaper than paths");
+        assert!(
+            prose_per_token > per_token,
+            "prose must be cheaper than paths"
+        );
     }
 
     #[test]

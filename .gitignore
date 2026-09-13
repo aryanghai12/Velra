@@ -6,8 +6,21 @@
 *.snap.new
 *.pending-snap
 
-# local benchmark output
-/bench/results/
+# Benchmark output. The derived measurements are tracked -- they are what
+# BENCHMARK_REPORT.md cites -- but the raw session captures are not: they run
+# to megabytes per trial, they embed absolute paths from whichever machine
+# produced them, and bench/run_full_benchmark.py regenerates them.
+/bench/results/trials/*/stream.jsonl
+/bench/results/trials/*/transcript.jsonl
+/bench/results/trials/*/velra.db
+/bench/results/trials/*/velra.db-wal
+/bench/results/trials/*/velra.db-shm
+/bench/results/trials/*/velra_home/
+/bench/results/superseded/
+/bench/results/post-tool-use-*.json
+/bench/results/pre-tool-use-*.json
+/bench/results/pre-compact.json
+/bench/results/user-prompt-submit.json
 
 # npm wrapper build output
 /npm/**/bin/
@@ -15,3 +28,4 @@
 
 .DS_Store
 Thumbs.db
+__pycache__/

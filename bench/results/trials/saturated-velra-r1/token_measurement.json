@@ -1,0 +1,27 @@
+{
+  "trial": "C:\\Users\\aryan\\Videos\\Velra\\bench\\results\\trials\\saturated-velra-r1",
+  "model": "sonnet",
+  "budget_tokens": 800,
+  "injections": [
+    {
+      "index": 0,
+      "hook_name": "SessionStart:compact",
+      "exit_code": 0,
+      "hook_stdout_bytes": 2264,
+      "context_chars": 2056,
+      "context_bytes": 2056,
+      "measured_tokens": 951,
+      "budget_tokens": 800,
+      "within_budget": false,
+      "with_sentinel_total": 10458,
+      "baseline_total": 9507,
+      "first_line": "<VELRA_CONTINUATION v=\"1\" checkpoint=\"ckpt_01M2CTC9YJB1B9Y581TDKJ9AHP\" captured=\"2026-09-13T07:23:18Z\" trigger=\"manual\">"
+    }
+  ],
+  "control": {
+    "a": 9507,
+    "b": 9507,
+    "delta": 0
+  },
+  "control_valid": true
+}

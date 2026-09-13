@@ -521,10 +521,12 @@ fn e2_truncation_ladder_runs_in_order() {
 /// shipped 951 and 1,147.
 #[test]
 fn estimator_is_above_real_tokenizer_counts() {
-    let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/fixtures/tokenizer");
-    let measured: serde_json::Value =
-        serde_json::from_str(&std::fs::read_to_string(dir.join("measured.json")).expect("measured"))
-            .expect("json");
+    let dir =
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/fixtures/tokenizer");
+    let measured: serde_json::Value = serde_json::from_str(
+        &std::fs::read_to_string(dir.join("measured.json")).expect("measured"),
+    )
+    .expect("json");
     let mut checked = 0;
     for (name, entry) in measured.as_object().expect("object") {
         let text = std::fs::read_to_string(dir.join(name)).expect("fixture");

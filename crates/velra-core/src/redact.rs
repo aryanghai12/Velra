@@ -138,7 +138,11 @@ pub fn redact(s: &str) -> Cow<'_, str> {
         return Cow::Borrowed(s);
     }
     let pf = prefilter();
-    let mut hit = [false; 16];
+    // Sized from the table itself. A hand-written bound silently becomes an
+    // out-of-bounds index the moment a detector is added, and this runs on the
+    // hook path where the panic is caught and the only visible effect is that
+    // redaction quietly stops happening.
+    let mut hit = [false; DETECTORS.len()];
     let mut any = false;
     for m in pf.ac.find_overlapping_iter(s) {
         hit[pf.owner[m.pattern().as_usize()]] = true;

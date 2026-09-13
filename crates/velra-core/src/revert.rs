@@ -133,7 +133,7 @@ pub fn is_settled_source(source: VersionSource) -> bool {
 /// really gone: the observation must describe a settled state
 /// ([`is_settled_source`]), and it must not predate the dead end itself.
 pub fn reapplied(obs: &Observation<'_>, open: &[OpenDeadEnd]) -> Vec<i64> {
-    if !is_settled_source(obs.source) || obs.hash == crate::hash::UNREADABLE {
+    if !is_settled_source(obs.source) || !crate::hash::is_content(obs.hash) {
         return Vec::new();
     }
     open.iter()
@@ -290,13 +290,23 @@ mod tests {
         assert_eq!(reapplied(&obs("B", TurnScan, 100), &open), vec![7]);
     }
 
+    /// Only real content can show a change coming back: `absent` and
+    /// `unreadable` are sentinels, and two of either compare equal without
+    /// meaning the same bytes are on disk.
     #[test]
-    fn an_unreadable_file_proves_nothing() {
+    fn a_sentinel_hash_proves_nothing() {
         let open = vec![OpenDeadEnd {
             id: 7,
             post_hashes: vec![crate::hash::UNREADABLE.to_string()],
             resolved_ms: 100,
         }];
         assert!(reapplied(&obs(crate::hash::UNREADABLE, TurnScan, 200), &open).is_empty());
+        // Nor does a file that is simply gone.
+        let open = vec![OpenDeadEnd {
+            id: 8,
+            post_hashes: vec![crate::hash::ABSENT.to_string()],
+            resolved_ms: 100,
+        }];
+        assert!(reapplied(&obs(crate::hash::ABSENT, TurnScan, 200), &open).is_empty());
     }
 }

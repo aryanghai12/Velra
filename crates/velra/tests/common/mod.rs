@@ -404,7 +404,13 @@ impl Log {
     /// A restore-family command reported as a *failed* tool call, which is what
     /// Claude Code sends for `git restore x && pytest` whenever the suite still
     /// fails afterwards.
-    pub fn git_restore_failed(&mut self, command: &str, exit: i64, output: &str, changes: &[(&str, &str)]) {
+    pub fn git_restore_failed(
+        &mut self,
+        command: &str,
+        exit: i64,
+        output: &str,
+        changes: &[(&str, &str)],
+    ) {
         self.git_command_with(command, changes, true, false, Some((exit, output)))
     }
 
@@ -414,13 +420,7 @@ impl Log {
     }
 
     /// A commit reported as a failed tool call.
-    pub fn git_commit_failed(
-        &mut self,
-        command: &str,
-        exit: i64,
-        output: &str,
-        files: &[&str],
-    ) {
+    pub fn git_commit_failed(&mut self, command: &str, exit: i64, output: &str, files: &[&str]) {
         let changes: Vec<(&str, &str)> = files.iter().map(|f| (*f, "")).collect();
         self.git_command_with(command, &changes, false, true, Some((exit, output)))
     }

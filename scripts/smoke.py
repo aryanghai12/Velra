@@ -11,7 +11,16 @@ real Claude Code settings.
 This is the automated half of docs/E2E_CHECKLIST.md; the checklist still
 covers what only a real Claude Code session can show.
 """
-import io, json, os, shutil, subprocess, tempfile
+import io, json, os, shutil, subprocess, sys, tempfile
+
+# Velra's own output carries U+2713 and U+26A1. Windows still hands Python a
+# cp1252 stdout by default, which raises UnicodeEncodeError on the first line
+# this script prints, so reconfigure rather than ask every caller to export
+# PYTHONUTF8=1.
+for stream in (sys.stdout, sys.stderr):
+    if hasattr(stream, 'reconfigure'):
+        stream.reconfigure(encoding='utf-8', errors='replace')
+
 exe = os.path.abspath('target/release/velra.exe')
 root = os.path.join(tempfile.gettempdir(), 'velra-e2e')
 shutil.rmtree(root, ignore_errors=True)
@@ -20,8 +29,8 @@ os.makedirs(os.path.join(proj, 'src')); os.makedirs(cfg)
 env = dict(os.environ, VELRA_HOME=home, CLAUDE_CONFIG_DIR=cfg, CLAUDE_PROJECT_DIR=proj,
            VELRA_CLAUDE_VERSION='2.1.268', TZ='UTC')
 settings = os.path.join(cfg, 'settings.json')
-open(settings, 'w').write('{\n  // my settings\n  "model": "opus"\n}\n')
-before = open(settings).read()
+io.open(settings, 'w', encoding='utf-8', newline='').write('{\n  // my settings\n  "model": "opus"\n}\n')
+before = io.open(settings, encoding='utf-8', newline='').read()
 
 def write(text):
     # Bytes exactly as a tool would leave them: no CRLF translation.
@@ -81,4 +90,4 @@ print('\n== inspect --section dead-ends'); print(cli('inspect', '--section', 'de
 print('\n== status'); print(cli('status')[1].strip())
 print('\n== doctor'); code, out, _ = cli('doctor'); print(out.strip()); print('exit', code)
 print('\n== disable'); print(cli('disable', '--yes')[1].strip())
-print('\nsettings byte-identical after enable+disable:', 'YES' if open(settings).read() == before else 'NO')
+print('\nsettings byte-identical after enable+disable:', 'YES' if io.open(settings, encoding='utf-8', newline='').read() == before else 'NO')

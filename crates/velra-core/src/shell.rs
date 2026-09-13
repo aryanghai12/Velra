@@ -403,10 +403,7 @@ mod tests {
             display_command("make build && cd out && ./run"),
             "make build && cd out && ./run"
         );
-        assert_eq!(
-            display_command(r"Set-Location 'C:\p' ; pytest"),
-            "pytest"
-        );
+        assert_eq!(display_command(r"Set-Location 'C:\p' ; pytest"), "pytest");
         assert_eq!(display_command("FOO=1 BAR=2 ; pytest -q"), "pytest -q");
     }
 
