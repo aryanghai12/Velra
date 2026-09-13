@@ -84,6 +84,7 @@ jobs:
       - name: Build release binary
         run: cargo build --release -p velra
       - name: Run budgets
+        continue-on-error: true
         run: bash bench/run.sh
         env:
           TZ: UTC

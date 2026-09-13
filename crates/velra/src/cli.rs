@@ -706,12 +706,12 @@ fn on_network_fs(path: &Path) -> bool {
                 best = Some((mount.len(), fstype.to_string()));
             }
         }
-        return best.is_some_and(|(_, fs)| {
+        best.is_some_and(|(_, fs)| {
             matches!(
                 fs.as_str(),
                 "nfs" | "nfs4" | "cifs" | "smbfs" | "afpfs" | "fuse.sshfs" | "9p"
             )
-        });
+        })
     }
     #[cfg(not(target_os = "linux"))]
     false
