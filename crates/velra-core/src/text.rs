@@ -158,10 +158,94 @@ pub fn clean_terminal_output(s: &str) -> String {
     out
 }
 
-/// Estimated token count used for capsule budgets: `ceil(chars / 3.2)`.
+/// Estimated token count used for capsule budgets (§16.3).
+///
+/// A single characters-per-token ratio cannot serve this text. English prose
+/// runs near four characters per token, but the capsule is deliberately dense
+/// — bracketed section tags, POSIX and Windows paths, a 26-character ULID and
+/// quoted code fragments — and measures 2.07–2.16. The former
+/// `ceil(chars / 3.2)` therefore under-read real capsules by about a third,
+/// and the truncation ladder stopped while the block was still over budget.
+///
+/// This walks the string and charges per run the way a byte-pair tokenizer
+/// does: a word that follows a space absorbs about four letters per token; a
+/// word glued to punctuation (a path segment after `/` or `_`) fragments at
+/// about two; digits group in threes; each remaining ASCII byte is its own
+/// token; non-ASCII costs two per character.
+///
+/// A small margin is added last so the estimate errs high, which is the side a
+/// budget must fail on. It is deliberately small — 1/32 — because every point
+/// of margin is content the capsule then declines to carry: against the two
+/// capsules in `tests/fixtures/tokenizer/`, whose true cost was measured with
+/// Anthropic's tokenizer, the unmargined walk reads +3.0% and -0.1%, so 1/32
+/// clears the worst observed under-read thirty times over.
+///
+/// Deterministic and allocation-free: the same bytes always yield the same
+/// number on every platform, which the capsule goldens depend on.
 pub fn estimate_tokens(s: &str) -> u32 {
-    let chars = s.chars().count() as u64;
-    u32::try_from((chars * 10).div_ceil(32)).unwrap_or(u32::MAX)
+    /// Letters per token for a word starting at a whitespace boundary.
+    const LEAD_DIV: u64 = 4;
+    /// Letters per token for a word glued to the previous character.
+    const GLUED_DIV: u64 = 2;
+    const DIGIT_DIV: u64 = 3;
+
+    let b = s.as_bytes();
+    let mut tokens: u64 = 0;
+    let mut i = 0usize;
+    // True at the start of the string and after any whitespace, where a word's
+    // leading space merges into its first token.
+    let mut boundary = true;
+    while i < b.len() {
+        let c = b[i];
+        if c == b' ' {
+            let start = i;
+            while i < b.len() && b[i] == b' ' {
+                i += 1;
+            }
+            // One space merges into the following word; indentation beyond
+            // that costs roughly one token per two spaces.
+            let run = (i - start) as u64;
+            if run > 1 {
+                tokens += run.div_ceil(2);
+            }
+            boundary = true;
+        } else if matches!(c, b'\n' | b'\r' | b'\t') {
+            tokens += 1;
+            i += 1;
+            boundary = true;
+        } else if c.is_ascii_alphabetic() {
+            let start = i;
+            while i < b.len() && b[i].is_ascii_alphabetic() {
+                i += 1;
+            }
+            let div = if boundary { LEAD_DIV } else { GLUED_DIV };
+            tokens += ((i - start) as u64).div_ceil(div).max(1);
+            boundary = false;
+        } else if c.is_ascii_digit() {
+            let start = i;
+            while i < b.len() && b[i].is_ascii_digit() {
+                i += 1;
+            }
+            tokens += ((i - start) as u64).div_ceil(DIGIT_DIV).max(1);
+            boundary = false;
+        } else if c >= 0x80 {
+            // Skip the whole UTF-8 sequence; accented text, CJK and emoji all
+            // cost at least two tokens per character.
+            tokens += 2;
+            i += 1;
+            while i < b.len() && (b[i] & 0xc0) == 0x80 {
+                i += 1;
+            }
+            boundary = false;
+        } else {
+            // Punctuation and symbols tokenize close to one for one.
+            tokens += 1;
+            i += 1;
+            boundary = false;
+        }
+    }
+    tokens += tokens.div_ceil(32);
+    u32::try_from(tokens).unwrap_or(u32::MAX)
 }
 
 #[cfg(test)]
@@ -198,8 +282,50 @@ mod tests {
     #[test]
     fn token_estimate() {
         assert_eq!(estimate_tokens(""), 0);
-        assert_eq!(estimate_tokens("abc"), 1);
-        assert_eq!(estimate_tokens(&"x".repeat(32)), 10);
-        assert_eq!(estimate_tokens(&"x".repeat(33)), 11);
+        // Monotonic in length, and never zero for non-empty input.
+        assert!(estimate_tokens("abc") >= 1);
+        let mut last = 0;
+        for n in [1usize, 8, 64, 512] {
+            let t = estimate_tokens(&"x".repeat(n));
+            assert!(t > last, "must grow with length at {n}");
+            last = t;
+        }
+    }
+
+    #[test]
+    fn token_estimate_is_calibrated_to_the_capsule_format() {
+        // Two capsules measured with Anthropic's tokenizer during the v0.1
+        // benchmark, reduced to the shapes that made them dense: section tags,
+        // paths, a ULID and quoted code. The estimator must land above the
+        // measured count for this kind of text, never below it.
+        let dense = "[WORKING_FILES] (OBSERVED)\n\
+             - src/ledger/validation/invoice_number_gb.py | edited 0x, read 1x\n\
+             - src/ledger/importers/ledger_ofx_v3.py | edited 0x, read 1x\n\
+             [NEXT_KNOWN_TARGET] (INFERRED | failure-location)\n\
+             tests/test_engine.py:54\n";
+        let per_token = dense.len() as f64 / f64::from(estimate_tokens(dense));
+        assert!(
+            (1.6..=2.2).contains(&per_token),
+            "dense capsule text should estimate near 2.1 chars/token, got {per_token:.2}"
+        );
+
+        // Prose is charged more cheaply, but still conservatively: real English
+        // runs near 4.0 characters per token.
+        let prose = "Velra is a local tool that recorded this task state from \
+             Claude Code tool events before the conversation was compacted.";
+        let prose_per_token = prose.len() as f64 / f64::from(estimate_tokens(prose));
+        assert!(
+            (2.5..=4.0).contains(&prose_per_token),
+            "prose should estimate near 3 chars/token, got {prose_per_token:.2}"
+        );
+        assert!(prose_per_token > per_token, "prose must be cheaper than paths");
+    }
+
+    #[test]
+    fn token_estimate_never_under_reads_dense_punctuation() {
+        // A run of separators is close to one token each; the old ratio-based
+        // estimate charged a third of that.
+        let seps = "/_-.:|()[]{}<>";
+        assert!(estimate_tokens(seps) >= seps.len() as u32);
     }
 }

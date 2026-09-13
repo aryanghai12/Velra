@@ -3,6 +3,7 @@
 mod common;
 
 use common::Log;
+use velra_core::event::{GitObservation, Payload};
 use velra_core::model::EditStatus;
 
 fn statuses(log: &Log) -> Vec<String> {
@@ -125,6 +126,226 @@ fn f5_reapplied_dead_ends_are_excluded_from_the_capsule() {
     assert!(
         !capsule.contains("[DEAD_ENDS]"),
         "reapplied dead ends are not rendered:\n{capsule}"
+    );
+}
+
+/// The defect that deleted `[DEAD_ENDS]` from a real capsule, replayed offline.
+///
+/// In `saturated-velra-r1` of the v0.1 benchmark the agent tried a rounding
+/// change, discarded it with `git restore`, and the capsule it received after
+/// `/compact` had no `[DEAD_ENDS]` section at all — the most distinctive thing
+/// the product produces, silently gone. The dead end was in the database the
+/// whole time; it was filtered out on the way to the page, because
+/// `file_versions` held this exact sequence:
+///
+/// ```text
+/// 1 pre_edit  original     4 post_edit  dead-end content
+/// 2 post_edit intermediate 5 turn_scan  original      <- the revert, seen
+/// 3 pre_edit  intermediate 6 git_pre    dead-end content
+///                          7 git_post   original
+/// ```
+///
+/// Row 6 is the `PreToolUse` snapshot taken *before* the restore ran, so it
+/// carries the discarded content by construction. Its event could not reach the
+/// database at the time and went to the spool, so it was ingested after row 5
+/// and looked newer than it. Reapplication matched its hash against the dead
+/// end post-edit hashes, marked the dead end `reapplied = 1`, and the renderer
+/// selects `WHERE reapplied = 0`.
+///
+/// No Claude Code session and no network: the sequence is replayed straight
+/// into the event log, and `append_late` reproduces the one thing that mattered
+/// — an old hook timestamp arriving with a new row id.
+#[test]
+fn f5c_a_late_git_pre_row_does_not_resurrect_a_dead_end() {
+    const ORIGINAL: &str = "rounding = ROUND_HALF_UP\n";
+    const INTERMEDIATE: &str = "rounding = ROUND_HALF_UP  # ?\n";
+    const DEAD_END: &str = "rounding = ROUND_HALF_EVEN\n";
+
+    let mut log = Log::new();
+    log.env.write_file("src/money.py", ORIGINAL);
+    log.prompt("the gap is one cent, so start with the rounding hypothesis");
+
+    // Rows 1-4: two edits arriving at the dead-end content.
+    log.edit("src/money.py", INTERMEDIATE);
+    log.edit("src/money.py", DEAD_END);
+    let dead_end_files = log.observe(&["src/money.py"]);
+    let restore_ts = log.ts + 1_000;
+
+    // The restore runs. Its `PreToolUse` hook could not open the database and
+    // spooled the event, so nothing of it is ingested yet.
+    log.env.write_file("src/money.py", ORIGINAL);
+    let restored_files = log.observe(&["src/money.py"]);
+
+    // Row 5: the turn-end scan sees the file back at its original content and
+    // opens the dead end.
+    log.stop();
+    log.reduce();
+    let dead_ends = log.dead_ends();
+    assert_eq!(
+        dead_ends.len(),
+        1,
+        "the turn scan opens a dead end: {dead_ends:?}"
+    );
+    assert_eq!(dead_ends[0].3, 0, "and it is open");
+
+    // Rows 6-7: the spool is drained. Both rows carry timestamps from before
+    // the turn scan and row ids from after it.
+    log.append_late(
+        "PreToolUse",
+        Some("Bash"),
+        Payload {
+            command: Some("git restore src/money.py".into()),
+            git: Some(GitObservation {
+                restore: Some("git restore src/money.py".into()),
+                commit: false,
+                files: dead_end_files,
+            }),
+            ..Default::default()
+        },
+        restore_ts,
+    );
+    log.append_late(
+        "PostToolUse",
+        Some("Bash"),
+        Payload {
+            command: Some("git restore src/money.py".into()),
+            cwd: Some(log.env.project.to_string_lossy().into_owned()),
+            stdout_tail: Some(String::new()),
+            git: Some(GitObservation {
+                restore: Some("git restore src/money.py".into()),
+                commit: false,
+                files: restored_files,
+            }),
+            ..Default::default()
+        },
+        restore_ts + 1,
+    );
+    log.reduce();
+
+    // Every observation is still recorded.
+    let sources: Vec<String> = log
+        .versions("src/money.py")
+        .into_iter()
+        .map(|(s, _)| s)
+        .collect();
+    assert!(
+        sources.iter().any(|s| s == "git_pre") && sources.iter().any(|s| s == "git_post"),
+        "the late rows are kept: {sources:?}"
+    );
+
+    // But they change no conclusion.
+    let dead_ends = log.dead_ends();
+    assert_eq!(
+        dead_ends.len(),
+        1,
+        "still exactly one dead end: {dead_ends:?}"
+    );
+    assert_eq!(
+        dead_ends[0].3, 0,
+        "a pre-restore snapshot is not evidence the change came back"
+    );
+    assert!(
+        !log.edits()
+            .iter()
+            .any(|(_, s, _)| s == EditStatus::Reapplied.as_str()),
+        "no edit is marked REAPPLIED: {:?}",
+        log.edits()
+    );
+
+    let capsule = log.capsule();
+    assert!(
+        capsule.contains("[DEAD_ENDS]"),
+        "the section reaches the capsule:\n{capsule}"
+    );
+    assert!(
+        capsule.contains("src/money.py"),
+        "naming the file that was tried and discarded:\n{capsule}"
+    );
+}
+
+/// A genuine reapplication still closes the dead end, so the guard above did
+/// not simply switch the feature off.
+#[test]
+fn f5d_a_later_edit_that_restores_the_content_still_reapplies() {
+    let mut log = Log::new();
+    log.env.write_file("src/a.rs", "v0\n");
+    log.prompt("try the approach, undo it, then put it back");
+    log.edit("src/a.rs", "v1\n");
+    log.edit("src/a.rs", "v0\n");
+    log.reduce();
+    assert_eq!(log.dead_ends()[0].3, 0);
+
+    log.edit("src/a.rs", "v1\n");
+    log.reduce();
+    assert_eq!(log.dead_ends()[0].3, 1, "a real reapplication still counts");
+}
+
+/// The second way the v0.1 benchmark lost a revert: the agent ran
+/// `git restore … && pytest`, the suite still failed, and Claude Code reported
+/// the whole call as a failure. Velra read git effects only from calls that
+/// succeeded, so no `git_post` observation was taken; the turn-end scan picked
+/// the revert up later and called it "changed outside the agent", with no
+/// command text, for a command the agent had just run itself.
+#[test]
+fn f2b_a_restore_chained_with_a_failing_command_is_still_attributed() {
+    let mut log = Log::new();
+    log.env.write_file("src/money.py", "ROUND_HALF_UP\n");
+    log.prompt("that made things worse, discard it and run the suite again");
+    log.edit("src/money.py", "ROUND_HALF_EVEN\n");
+    log.git_restore_failed(
+        "cd \"/tmp/proj\" && git restore src/money.py && python -m pytest -q",
+        1,
+        "FAILED tests/test_engine.py::test_exact_payment\n1 failed, 5 passed",
+        &[("src/money.py", "ROUND_HALF_UP\n")],
+    );
+    log.reduce();
+
+    let dead_ends = log.dead_ends();
+    assert_eq!(dead_ends.len(), 1, "{dead_ends:?}");
+    assert_eq!(
+        dead_ends[0].1, "git_command",
+        "attributed to the git command, not to something outside the agent"
+    );
+    assert!(
+        dead_ends[0]
+            .2
+            .as_deref()
+            .is_some_and(|c| c.contains("git restore")),
+        "and it records which command did it: {:?}",
+        dead_ends[0].2
+    );
+    assert_eq!(statuses(&log), vec![EditStatus::Discarded.as_str()]);
+
+    // The capsule quotes the command without the `cd` that preceded it.
+    let capsule = log.capsule();
+    assert!(capsule.contains("[DEAD_ENDS]"), "{capsule}");
+    assert!(
+        !capsule.contains("cd \"/tmp/proj\""),
+        "the working-directory prefix is not worth capsule budget:\n{capsule}"
+    );
+}
+
+/// A failed `git commit` must not mark edits COMMITTED. Unlike a restore, a
+/// commit leaves no trace in the content of the file, so a call that failed
+/// proves nothing about it either way.
+#[test]
+fn f4b_a_failed_commit_leaves_edits_active() {
+    let mut log = Log::new();
+    log.env.write_file("src/a.rs", "v0\n");
+    log.prompt("apply the fix and commit it");
+    log.edit("src/a.rs", "v1\n");
+    log.git_commit_failed(
+        "git commit -am fix && npm test",
+        1,
+        "1 failing",
+        &["src/a.rs"],
+    );
+    log.reduce();
+
+    assert_eq!(
+        statuses(&log),
+        vec![EditStatus::Active.as_str()],
+        "the edit is still live"
     );
 }
 

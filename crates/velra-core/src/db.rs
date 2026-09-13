@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 /// Schema version stored in `PRAGMA user_version`.
-pub const SCHEMA_VERSION: i64 = 1;
+pub const SCHEMA_VERSION: i64 = 2;
 
 /// Schema v1 (§10.4) plus secondary indexes used by the reducer and renderer.
 const SCHEMA_V1: &str = r#"
@@ -129,8 +129,21 @@ CREATE INDEX ix_compactions_session ON compactions(session_id, id);
 INSERT INTO reducer_cursor (id, last_event_id) VALUES (1, 0);
 "#;
 
+/// Schema v2: when a file was *first* touched in the epoch.
+///
+/// `last_touch_ms` alone decides ties in the working-file ranking, and it
+/// always favours whatever was touched most recently — so a breadth-first read
+/// sweep across a codebase evicts the handful of files the task is actually
+/// about, every one of which scores the same single read. First touch is the
+/// stable half of the same signal: among files with equally weak evidence, the
+/// ones the session opened with are the ones that framed it (D59).
+const SCHEMA_V2: &str = r#"
+ALTER TABLE file_stats ADD COLUMN first_touch_ms INTEGER NOT NULL DEFAULT 0;
+UPDATE file_stats SET first_touch_ms = last_touch_ms;
+"#;
+
 /// Forward-only migrations; index `i` upgrades from version `i` to `i + 1`.
-const MIGRATIONS: &[&str] = &[SCHEMA_V1];
+const MIGRATIONS: &[&str] = &[SCHEMA_V1, SCHEMA_V2];
 
 /// Connection role, which determines lock waiting (§10.2).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

@@ -10,6 +10,10 @@ pub struct Version {
     pub hash: String,
     pub source: VersionSource,
     pub event_id: i64,
+    /// Hook timestamp of the event that produced the observation. This is the
+    /// *logical* order of the observation; `id` is only the order it happened
+    /// to be ingested in, which a spooled event can invert.
+    pub ts_ms: i64,
 }
 
 /// An ACTIVE edit on the file.
@@ -88,13 +92,53 @@ pub struct OpenDeadEnd {
     pub id: i64,
     /// `post_hash` of each edit grouped in the dead end.
     pub post_hashes: Vec<String>,
+    /// When the dead end was recorded. An observation older than this
+    /// describes a state that predates the revert and cannot witness the
+    /// change coming back.
+    pub resolved_ms: i64,
+}
+
+/// A new observation of a file's content, with the ordering and provenance
+/// needed to judge what it proves.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Observation<'a> {
+    pub hash: &'a str,
+    pub source: VersionSource,
+    /// Hook timestamp of the producing event (logical order, not ingestion
+    /// order).
+    pub ts_ms: i64,
+}
+
+/// Whether an observation from `source` describes the file *after* its
+/// event's effect, and so can witness a change coming back.
+///
+/// `git_pre`, `pre_edit` and `original` are all snapshots taken *before* a
+/// command or edit runs. The `git_pre` row written for the very command that
+/// discards a change carries, by construction, the discarded content: if a
+/// spooled `PreToolUse` event is ingested after the turn-end scan that opened
+/// the dead end, treating that row as evidence marks the dead end reapplied
+/// and deletes `[DEAD_ENDS]` from the capsule. Observed in the v0.1 benchmark;
+/// see `f5c_a_late_git_pre_row_does_not_resurrect_a_dead_end`.
+pub fn is_settled_source(source: VersionSource) -> bool {
+    matches!(
+        source,
+        VersionSource::PostEdit | VersionSource::GitPost | VersionSource::TurnScan
+    )
 }
 
 /// Dead ends reapplied by a new observation (§13.4): the file returned to a
 /// hash produced by one of the dead end's edits.
-pub fn reapplied(new_hash: &str, open: &[OpenDeadEnd]) -> Vec<i64> {
+///
+/// Two guards keep a stale observation from resurrecting a change that is
+/// really gone: the observation must describe a settled state
+/// ([`is_settled_source`]), and it must not predate the dead end itself.
+pub fn reapplied(obs: &Observation<'_>, open: &[OpenDeadEnd]) -> Vec<i64> {
+    if !is_settled_source(obs.source) || obs.hash == crate::hash::UNREADABLE {
+        return Vec::new();
+    }
     open.iter()
-        .filter(|d| d.post_hashes.iter().any(|h| h == new_hash))
+        .filter(|d| obs.ts_ms >= d.resolved_ms)
+        .filter(|d| d.post_hashes.iter().any(|h| h == obs.hash))
         .map(|d| d.id)
         .collect()
 }
@@ -121,6 +165,9 @@ mod tests {
             hash: hash.into(),
             source,
             event_id,
+            // Tests that do not care about ordering use the event id as the
+            // clock, which keeps logical and ingestion order the same.
+            ts_ms: event_id,
         }
     }
 
@@ -196,13 +243,60 @@ mod tests {
         assert!(!is_discarded(Some("B"), Some("B"), "A", false));
     }
 
+    fn obs(hash: &str, source: VersionSource, ts_ms: i64) -> Observation<'_> {
+        Observation {
+            hash,
+            source,
+            ts_ms,
+        }
+    }
+
     #[test]
     fn reapplication() {
         let open = vec![OpenDeadEnd {
             id: 7,
             post_hashes: vec!["B".into()],
+            resolved_ms: 100,
         }];
-        assert_eq!(reapplied("B", &open), vec![7]);
-        assert!(reapplied("C", &open).is_empty());
+        assert_eq!(reapplied(&obs("B", PostEdit, 200), &open), vec![7]);
+        assert!(reapplied(&obs("C", PostEdit, 200), &open).is_empty());
+    }
+
+    #[test]
+    fn a_pre_state_observation_never_reapplies() {
+        let open = vec![OpenDeadEnd {
+            id: 7,
+            post_hashes: vec!["B".into()],
+            resolved_ms: 100,
+        }];
+        // The `git_pre` snapshot of the command that discarded the change
+        // carries the discarded content by construction.
+        assert!(reapplied(&obs("B", GitPre, 200), &open).is_empty());
+        assert!(reapplied(&obs("B", PreEdit, 200), &open).is_empty());
+        assert!(reapplied(&obs("B", Original, 200), &open).is_empty());
+        // Settled sources still count.
+        assert_eq!(reapplied(&obs("B", GitPost, 200), &open), vec![7]);
+        assert_eq!(reapplied(&obs("B", TurnScan, 200), &open), vec![7]);
+    }
+
+    #[test]
+    fn an_observation_older_than_the_dead_end_never_reapplies() {
+        let open = vec![OpenDeadEnd {
+            id: 7,
+            post_hashes: vec!["B".into()],
+            resolved_ms: 100,
+        }];
+        assert!(reapplied(&obs("B", TurnScan, 99), &open).is_empty());
+        assert_eq!(reapplied(&obs("B", TurnScan, 100), &open), vec![7]);
+    }
+
+    #[test]
+    fn an_unreadable_file_proves_nothing() {
+        let open = vec![OpenDeadEnd {
+            id: 7,
+            post_hashes: vec![crate::hash::UNREADABLE.to_string()],
+            resolved_ms: 100,
+        }];
+        assert!(reapplied(&obs(crate::hash::UNREADABLE, TurnScan, 200), &open).is_empty());
     }
 }

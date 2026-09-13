@@ -195,10 +195,16 @@ pub fn section_detail(
         }
         Section::Files => {
             out.push_str(&header("WORKING FILES"));
+            // Same ranking the capsule uses (`snapshot::working_score`), minus
+            // the bonus for files another section already names — this view
+            // lists every file, so nothing is competing for a slot. Ordering
+            // still matches, or "full detail for this section" would hand the
+            // reader a differently sorted list than the one they came from.
             let mut stmt = conn.prepare(
                 "SELECT path, edits, reads, in_failure, last_touch_ms FROM file_stats \
                  WHERE session_id = ?1 AND epoch = ?2 AND last_touch_ms <= ?3 \
-                 ORDER BY (3 * edits + MIN(reads, 5) + 4 * in_failure) DESC, last_touch_ms DESC, path",
+                 ORDER BY (4 * in_failure + 3 * MIN(edits, 3) + 2 * (reads >= 2) + MIN(reads, 3)) DESC, \
+                   edits DESC, reads DESC, first_touch_ms ASC, path ASC",
             )?;
             let rows = stmt.query_map(params![session_id, epoch, as_of_ms], |r| {
                 Ok((

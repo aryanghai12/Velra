@@ -129,6 +129,7 @@ pub struct Snapshot {
 struct Limits {
     working_max: usize,
     attempts_max: usize,
+    dead_ends_max: usize,
     dead_excerpts_removed: usize,
     failure_lines: usize,
     latest_chars: usize,
@@ -139,12 +140,14 @@ struct Limits {
     observed: bool,
     next_target: bool,
     latest: bool,
+    subtask: bool,
 }
 
 impl Limits {
     const FULL: Limits = Limits {
         working_max: 8,
         attempts_max: 4,
+        dead_ends_max: 4,
         dead_excerpts_removed: 0,
         failure_lines: 8,
         latest_chars: 200,
@@ -155,6 +158,7 @@ impl Limits {
         observed: true,
         next_target: true,
         latest: true,
+        subtask: true,
     };
 }
 
@@ -242,7 +246,7 @@ fn render_with(s: &Snapshot, lim: &Limits, trace: bool) -> String {
             o.push("(not captured)", "intents:none");
         }
     }
-    if let Some(st) = &s.subtask {
+    if let Some(st) = s.subtask.as_ref().filter(|_| lim.subtask) {
         let src = format!("intents:{}", st.id);
         o.push(
             format!(
@@ -329,11 +333,12 @@ fn render_with(s: &Snapshot, lim: &Limits, trace: bool) -> String {
         }
     }
 
-    if !s.dead_ends.is_empty() {
-        let all: Vec<i64> = s.dead_ends.iter().map(|d| d.id).collect();
+    let dead_ends: Vec<&DeadEndView> = s.dead_ends.iter().take(lim.dead_ends_max).collect();
+    if !dead_ends.is_empty() {
+        let all: Vec<i64> = dead_ends.iter().map(|d| d.id).collect();
         o.push("[DEAD_ENDS] (OBSERVED)", &ids("dead_ends", &all));
-        let n = s.dead_ends.len();
-        for (i, d) in s.dead_ends.iter().enumerate() {
+        let n = dead_ends.len();
+        for (i, d) in dead_ends.iter().enumerate() {
             let src = format!("dead_ends:{},{}", d.id, ids("edits", &d.edit_ids));
             o.push(
                 format!(
@@ -469,6 +474,15 @@ const SPEC_STEPS: &[Step] = &[
 ];
 
 /// Additional steps applied only above the hard ceiling (see DECISIONS.md).
+///
+/// §16.3 protects `CONTEXT`, the `ROOT` line, `STATUS`, the `ACTIVE_FAILURE`
+/// header, the `DEAD_ENDS` header and `RECOVERY` from removal. Everything else
+/// may go, and the last few steps here go further than the spec's ladder
+/// because the ladder alone cannot always reach the ceiling: a path or a
+/// command made almost entirely of separators costs close to one token per
+/// character, so four dead-end lines at 200 characters each are 800 tokens on
+/// their own. Narrowing the section to its most recent entry keeps the header
+/// and one example, which is what the section is protected for.
 const CEILING_STEPS: &[Step] = &[
     |l, _| std::mem::replace(&mut l.observed, false),
     |l, _| std::mem::replace(&mut l.next_target, false),
@@ -479,7 +493,60 @@ const CEILING_STEPS: &[Step] = &[
     |l, _| std::mem::replace(&mut l.command_chars, 80) != 80,
     |l, _| std::mem::replace(&mut l.latest, false),
     |l, _| std::mem::replace(&mut l.root_chars, 100) != 100,
+    |l, _| std::mem::replace(&mut l.dead_ends_max, 2) != 2,
+    |l, _| std::mem::replace(&mut l.subtask, false),
+    |l, _| std::mem::replace(&mut l.dead_ends_max, 1) != 1,
+    |l, _| std::mem::replace(&mut l.path_chars, 40) != 40,
+    |l, _| std::mem::replace(&mut l.command_chars, 40) != 40,
+    |l, _| std::mem::replace(&mut l.root_chars, 60) != 60,
 ];
+
+/// Last-resort guarantee that the block never exceeds the ceiling (E2).
+///
+/// Every ladder step above is a judgement about which content matters least.
+/// This is not a judgement — it is the backstop that makes "≤ 1,000 tokens and
+/// ≤ 9,500 characters, always" a property rather than an expectation. It drops
+/// whole lines from the end of the body, keeping the opening tag through
+/// `[STATUS]` and the `[RECOVERY]` tail, so whatever survives is still a well
+/// formed capsule that closes its own tag.
+fn enforce_ceiling(text: String, ceiling: u32, max_chars: usize) -> String {
+    let fits = |t: &str| estimate_tokens(t) <= ceiling && t.chars().count() <= max_chars;
+    if fits(&text) {
+        return text;
+    }
+    let lines: Vec<&str> = text.split('\n').collect();
+    let recovery = lines
+        .iter()
+        .position(|l| l.starts_with("[RECOVERY]"))
+        .unwrap_or(lines.len());
+    // The protected head: the opening tag, [CONTEXT] and its paragraph, the
+    // objective, and [STATUS] with its line.
+    let head = lines
+        .iter()
+        .position(|l| l.starts_with("[STATUS]"))
+        .map_or(6, |i| i + 2)
+        .min(recovery);
+    let joined = |end: usize| {
+        let mut out: Vec<&str> = lines[..end].to_vec();
+        out.extend_from_slice(&lines[recovery..]);
+        out.join("\n")
+    };
+    for end in (head..recovery).rev() {
+        let candidate = joined(end);
+        if fits(&candidate) {
+            return candidate;
+        }
+    }
+    let candidate = joined(head);
+    if fits(&candidate) {
+        return candidate;
+    }
+    // Only reachable if the protected head alone is oversized, which needs a
+    // pathological checkpoint id. Cut hard and close the tag.
+    let mut out = truncate_chars(&candidate, max_chars.min(2_000)).into_owned();
+    out.push_str("\n</VELRA_CONTINUATION>");
+    out
+}
 
 fn run_steps(
     s: &Snapshot,
@@ -520,10 +587,7 @@ fn render_impl(s: &Snapshot, cfg: &RenderConfig, trace: bool) -> Rendered {
             &mut steps,
         );
     }
-    if text.chars().count() > ABSOLUTE_MAX_CHARS {
-        // Unreachable with the caps above; kept as a hard guarantee.
-        text = truncate_chars(&text, ABSOLUTE_MAX_CHARS).into_owned();
-    }
+    text = enforce_ceiling(text, HARD_CEILING_TOKENS, ABSOLUTE_MAX_CHARS);
     Rendered {
         tokens: estimate_tokens(&text),
         text,

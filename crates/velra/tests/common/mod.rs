@@ -246,6 +246,53 @@ impl Log {
             .unwrap_or(0)
     }
 
+    /// Appends an event carrying `ts_ms` instead of the log's own clock.
+    ///
+    /// This is the shape a spooled event takes: the hook stamped it when it
+    /// happened, could not reach the database, wrote it to the spool, and the
+    /// reducer ingested it later — so it lands with an old timestamp and a row
+    /// id newer than events that really came after it.
+    pub fn append_late(
+        &mut self,
+        hook_event: &str,
+        tool: Option<&str>,
+        payload: Payload,
+        ts_ms: i64,
+    ) -> i64 {
+        self.seq += 1;
+        let tool_use_id = format!("toolu_late_{:04}", self.seq);
+        let session = self.env.session.clone();
+        let ev = NewEvent {
+            dedupe_key: dedupe_key(hook_event, &session, Some(&tool_use_id), None, ts_ms, None),
+            session_id: session,
+            project_id: self.env.project_id(),
+            agent_id: None,
+            hook_event: hook_event.to_string(),
+            tool_name: tool.map(str::to_string),
+            tool_use_id: Some(tool_use_id),
+            ts_ms,
+            payload: payload.to_json(),
+            project: Some(self.env.project_info()),
+        };
+        eventlog::append(&mut self.db.conn, &ev)
+            .expect("append")
+            .unwrap_or(0)
+    }
+
+    /// Hashes the files as they are on disk right now, as a hook would.
+    pub fn observe(&self, rels: &[&str]) -> Vec<velra_core::event::FileObservation> {
+        rels.iter()
+            .map(|rel| {
+                let (h, size) = hash::hash_file(&self.env.project.join(rel));
+                velra_core::event::FileObservation {
+                    path: rel.to_string(),
+                    hash: h,
+                    size,
+                }
+            })
+            .collect()
+    }
+
     pub fn prompt(&mut self, text: &str) {
         self.append(
             "UserPromptSubmit",
@@ -354,9 +401,28 @@ impl Log {
         self.git_command(command, changes, true, false)
     }
 
+    /// A restore-family command reported as a *failed* tool call, which is what
+    /// Claude Code sends for `git restore x && pytest` whenever the suite still
+    /// fails afterwards.
+    pub fn git_restore_failed(&mut self, command: &str, exit: i64, output: &str, changes: &[(&str, &str)]) {
+        self.git_command_with(command, changes, true, false, Some((exit, output)))
+    }
+
     pub fn git_commit(&mut self, command: &str, files: &[&str]) {
         let changes: Vec<(&str, &str)> = files.iter().map(|f| (*f, "")).collect();
         self.git_command(command, &changes, false, true)
+    }
+
+    /// A commit reported as a failed tool call.
+    pub fn git_commit_failed(
+        &mut self,
+        command: &str,
+        exit: i64,
+        output: &str,
+        files: &[&str],
+    ) {
+        let changes: Vec<(&str, &str)> = files.iter().map(|f| (*f, "")).collect();
+        self.git_command_with(command, &changes, false, true, Some((exit, output)))
     }
 
     fn git_command(
@@ -366,6 +432,17 @@ impl Log {
         restore: bool,
         commit: bool,
     ) {
+        self.git_command_with(command, changes, restore, commit, None)
+    }
+
+    fn git_command_with(
+        &mut self,
+        command: &str,
+        changes: &[(&str, &str)],
+        restore: bool,
+        commit: bool,
+        failure: Option<(i64, &str)>,
+    ) {
         let observe = |env: &Env, rel: &str| {
             let (h, size) = hash::hash_file(&env.project.join(rel));
             velra_core::event::FileObservation {
@@ -374,6 +451,13 @@ impl Log {
                 size,
             }
         };
+        // The hook records the restore-family *subcommand*, not the whole line
+        // it was chained into; mirror that here or the harness tests something
+        // the product never produces.
+        let restore = restore
+            .then(|| velra_core::shell::git_effects(command, &|_| false).restore)
+            .flatten()
+            .or_else(|| restore.then(|| command.to_string()));
         let pre: Vec<_> = changes
             .iter()
             .map(|(rel, _)| observe(&self.env, rel))
@@ -384,7 +468,7 @@ impl Log {
             Payload {
                 command: Some(command.into()),
                 git: Some(velra_core::event::GitObservation {
-                    restore: restore.then(|| command.to_string()),
+                    restore: restore.clone(),
                     commit,
                     files: pre,
                 }),
@@ -400,21 +484,37 @@ impl Log {
             .iter()
             .map(|(rel, _)| observe(&self.env, rel))
             .collect();
-        self.append(
-            "PostToolUse",
-            Some("Bash"),
-            Payload {
-                command: Some(command.into()),
-                cwd: Some(self.env.project.to_string_lossy().into_owned()),
-                stdout_tail: Some(String::new()),
-                git: Some(velra_core::event::GitObservation {
-                    restore: restore.then(|| command.to_string()),
-                    commit,
-                    files: post,
-                }),
-                ..Default::default()
-            },
-        );
+        let git = Some(velra_core::event::GitObservation {
+            restore,
+            commit,
+            files: post,
+        });
+        match failure {
+            None => self.append(
+                "PostToolUse",
+                Some("Bash"),
+                Payload {
+                    command: Some(command.into()),
+                    cwd: Some(self.env.project.to_string_lossy().into_owned()),
+                    stdout_tail: Some(String::new()),
+                    git,
+                    ..Default::default()
+                },
+            ),
+            Some((exit, output)) => self.append(
+                "PostToolUseFailure",
+                Some("Bash"),
+                Payload {
+                    command: Some(command.into()),
+                    cwd: Some(self.env.project.to_string_lossy().into_owned()),
+                    error: Some(format!("Exit code {exit}\n{output}")),
+                    is_interrupt: Some(false),
+                    tool_name: Some("Bash".into()),
+                    git,
+                    ..Default::default()
+                },
+            ),
+        };
     }
 
     pub fn stop(&mut self) {

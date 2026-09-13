@@ -21,13 +21,13 @@ Result: FAIL (exit 101)
 - src/mod8.rs | +1/-1 lines | 10:04 | afterward: `cargo test` FAIL
 [WORKING_FILES] (OBSERVED)
 - src/mod3.rs | edited 1x, read 1x, in failure output
-- src/mod11.rs | edited 1x, read 1x
-- src/mod10.rs | edited 1x, read 1x
-- src/mod9.rs | edited 1x, read 1x
 - src/mod8.rs | edited 1x, read 1x
-- src/mod7.rs | edited 1x, read 1x
-- src/mod6.rs | edited 1x, read 1x
-- src/mod5.rs | edited 1x, read 1x
+- src/mod9.rs | edited 1x, read 1x
+- src/mod10.rs | edited 1x, read 1x
+- src/mod11.rs | edited 1x, read 1x
+- src/mod0.rs | edited 1x, read 1x
+- src/mod1.rs | edited 1x, read 1x
+- src/mod2.rs | edited 1x, read 1x
 [NEXT_KNOWN_TARGET] (INFERRED | failure-location)
 src/mod3.rs:1
 [RECOVERY]

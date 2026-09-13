@@ -27,8 +27,8 @@ Result: FAIL (exit 1)
 - src/auth/cookies.py | +1/-1 lines | 10:04 | afterward: no test run yet
 [WORKING_FILES] (OBSERVED)
 - tests/test_auth.py | edited 0x, read 1x, in failure output
-- src/auth/cookies.py | edited 1x, read 0x
 - src/auth/session.py | edited 1x, read 0x
+- src/auth/cookies.py | edited 1x, read 0x
 [NEXT_KNOWN_TARGET] (INFERRED | failure-location)
 tests/test_auth.py:88
 [RECOVERY]

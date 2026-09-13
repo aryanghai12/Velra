@@ -756,10 +756,14 @@ fn post_tool_use(ctx: &Ctx<'_>, failure: bool) -> Result<(), String> {
                 .stderr
                 .as_deref()
                 .map(|s| normalize::redact_tail(s, limits::OUTPUT_TAIL));
-            let effects = shell::git_effects(&command, &|p| ctx.resolve(p).is_file());
-            if effects.any() {
-                git_effects = Some(effects);
-            }
+        }
+        // Observed for failed calls as well: `git restore x && pytest` fails
+        // as a whole whenever the suite still fails, and that is the usual
+        // shape of discarding an attempt. The file hashes below are taken
+        // after the call returned either way (D57).
+        let effects = shell::git_effects(&command, &|p| ctx.resolve(p).is_file());
+        if effects.any() {
+            git_effects = Some(effects);
         }
     }
     normalize::enforce_budget(&mut payload, limits::PAYLOAD);

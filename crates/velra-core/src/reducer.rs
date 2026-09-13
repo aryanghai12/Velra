@@ -367,23 +367,32 @@ fn apply_prompt(ctx: &mut Ctx<'_>) -> Result<()> {
 fn bump_stats(ctx: &Ctx<'_>, path: &str, reads: i64, edits: i64, in_failure: bool) -> Result<()> {
     ctx.tx
         .prepare_cached(
-            "INSERT INTO file_stats (session_id, epoch, path, reads, edits, in_failure, last_touch_ms) \
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7) \
+            "INSERT INTO file_stats (session_id, epoch, path, reads, edits, in_failure, last_touch_ms, first_touch_ms) \
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?7) \
              ON CONFLICT(session_id, epoch, path) DO UPDATE SET \
                reads = reads + excluded.reads, edits = edits + excluded.edits, \
                in_failure = MAX(in_failure, excluded.in_failure), \
-               last_touch_ms = MAX(last_touch_ms, excluded.last_touch_ms)",
+               last_touch_ms = MAX(last_touch_ms, excluded.last_touch_ms), \
+               first_touch_ms = MIN(first_touch_ms, excluded.first_touch_ms)",
         )?
         .execute(params![ctx.ev.session_id, ctx.epoch, path, reads, edits, i64::from(in_failure), ctx.ev.ts_ms])?;
     Ok(())
 }
 
+/// Version history for `(session, path)`, oldest first, in **logical** order.
+///
+/// Ordering is by hook timestamp and only then by row id. A hook that cannot
+/// reach the database spools its event and the reducer ingests it later, which
+/// gives it a row id newer than events that really happened after it; reading
+/// history in insertion order therefore makes an old snapshot look like the
+/// newest state of the file. Revert and reapplication decisions are made from
+/// this sequence, so it has to be the order things happened in.
 fn versions(ctx: &Ctx<'_>, path: &str) -> Result<Vec<Version>> {
     let mut rows: Vec<Version> = ctx
         .tx
         .prepare_cached(
-            "SELECT id, content_hash, source, event_id FROM file_versions \
-             WHERE session_id = ?1 AND path = ?2 ORDER BY id DESC LIMIT ?3",
+            "SELECT id, content_hash, source, event_id, ts_ms FROM file_versions \
+             WHERE session_id = ?1 AND path = ?2 ORDER BY ts_ms DESC, id DESC LIMIT ?3",
         )?
         .query_map(params![ctx.ev.session_id, path, HISTORY_LIMIT], |r| {
             let source: String = r.get(2)?;
@@ -392,6 +401,7 @@ fn versions(ctx: &Ctx<'_>, path: &str) -> Result<Vec<Version>> {
                 hash: r.get(1)?,
                 source: VersionSource::parse(&source).unwrap_or(VersionSource::TurnScan),
                 event_id: r.get(3)?,
+                ts_ms: r.get(4)?,
             })
         })?
         .collect::<rusqlite::Result<_>>()?;
@@ -416,13 +426,13 @@ fn active_edits(ctx: &Ctx<'_>, path: &str) -> Result<Vec<ActiveEdit>> {
 }
 
 fn open_dead_ends(ctx: &Ctx<'_>, path: &str) -> Result<Vec<OpenDeadEnd>> {
-    let rows: Vec<(i64, String)> = ctx
+    let rows: Vec<(i64, String, i64)> = ctx
         .tx
-        .prepare_cached("SELECT id, edit_ids FROM dead_ends WHERE session_id = ?1 AND path = ?2 AND reapplied = 0")?
-        .query_map(params![ctx.ev.session_id, path], |r| Ok((r.get(0)?, r.get(1)?)))?
+        .prepare_cached("SELECT id, edit_ids, resolved_ms FROM dead_ends WHERE session_id = ?1 AND path = ?2 AND reapplied = 0")?
+        .query_map(params![ctx.ev.session_id, path], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))?
         .collect::<rusqlite::Result<_>>()?;
     let mut out = Vec::with_capacity(rows.len());
-    for (id, edit_ids) in rows {
+    for (id, edit_ids, resolved_ms) in rows {
         let ids: Vec<i64> = serde_json::from_str(&edit_ids).unwrap_or_default();
         let mut post_hashes = Vec::with_capacity(ids.len());
         for eid in ids {
@@ -435,7 +445,11 @@ fn open_dead_ends(ctx: &Ctx<'_>, path: &str) -> Result<Vec<OpenDeadEnd>> {
                 post_hashes.push(h);
             }
         }
-        out.push(OpenDeadEnd { id, post_hashes });
+        out.push(OpenDeadEnd {
+            id,
+            post_hashes,
+            resolved_ms,
+        });
     }
     Ok(out)
 }
@@ -504,6 +518,13 @@ fn insert_dead_end(
 
 /// Records a version and runs reapplication, then hash-return revert
 /// detection (§13.2, §13.4).
+///
+/// An observation that is *older* than something already recorded for the file
+/// is stored but draws no conclusions. Spooled events keep their original hook
+/// timestamp and get a fresh row id when they are finally ingested, so they can
+/// arrive after events that happened later; such a row describes a state the
+/// file has already left, and letting it decide a revert or a reapplication
+/// produces exactly the wrong answer (D56).
 fn record_version(
     ctx: &Ctx<'_>,
     path: &str,
@@ -529,7 +550,15 @@ fn record_version(
     if history.last().is_some_and(|v| v.hash == hash) {
         return Ok(());
     }
-    let reapplied = revert::reapplied(hash, &open_dead_ends(ctx, path)?);
+    if history.iter().any(|v| v.ts_ms > ctx.ev.ts_ms) {
+        return Ok(());
+    }
+    let observation = revert::Observation {
+        hash,
+        source,
+        ts_ms: ctx.ev.ts_ms,
+    };
+    let reapplied = revert::reapplied(&observation, &open_dead_ends(ctx, path)?);
     if !reapplied.is_empty() {
         let mut upd = ctx
             .tx
@@ -713,9 +742,13 @@ fn apply_shell(ctx: &Ctx<'_>, failure: bool) -> Result<()> {
             bump_stats(ctx, path, 0, 0, true)?;
         }
     }
-    if failure {
-        return Ok(());
-    }
+    // Git effects are read from failed calls too. A chained
+    // `git restore x && pytest` is reported as one failed tool call whenever
+    // the suite still fails — which is the normal shape of discarding an
+    // attempt — and skipping the observation loses the revert's attribution
+    // entirely, leaving it to the turn-end scan to report as "changed outside
+    // the agent". Every rule below compares hashes that were measured after
+    // the call returned, so they hold whether or not the call succeeded (D57).
     let Some(git) = &p.git else { return Ok(()) };
     for f in &git.files {
         if let Some(restore) = &git.restore {
@@ -754,7 +787,10 @@ fn apply_shell(ctx: &Ctx<'_>, failure: bool) -> Result<()> {
                 )?;
             }
         }
-        if git.commit {
+        // A commit, unlike a restore, is not self-evident from the file's
+        // content: an edit that was never committed hashes the same as one
+        // that was. Only a call that reported success is taken as proof.
+        if git.commit && !failure {
             let active = active_edits(ctx, &f.path)?;
             if let Some(pos) = active.iter().rposition(|e| e.post_hash == f.hash) {
                 let ids: Vec<i64> = active[..=pos].iter().map(|e| e.id).collect();

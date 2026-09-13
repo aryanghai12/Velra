@@ -1,0 +1,10 @@
+{
+  "capsule-r1.txt": {
+    "chars": 2056,
+    "measured_tokens": 951
+  },
+  "capsule-r2.txt": {
+    "chars": 2377,
+    "measured_tokens": 1147
+  }
+}

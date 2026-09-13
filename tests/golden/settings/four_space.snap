@@ -93,7 +93,6 @@ expression: text
                             "hook",
                             "pre-tool-use"
                         ],
-                        "if": "Bash(git *)",
                         "timeout": 10
                     }
                 ]
@@ -108,7 +107,6 @@ expression: text
                             "hook",
                             "pre-tool-use"
                         ],
-                        "if": "PowerShell(git *)",
                         "timeout": 10
                     }
                 ]

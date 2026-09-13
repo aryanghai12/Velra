@@ -5,6 +5,7 @@ use crate::git;
 use crate::model::{CommandKind, IntentLevel, Mechanism, Outcome, Trigger};
 use crate::paths;
 use crate::reducer::{project_root, session_epoch};
+use crate::shell;
 use crate::render::{
     AttemptView, CommandRef, DeadEndView, FailureView, IntentView, NextTarget, Snapshot,
     WorkingFileView,
@@ -46,13 +47,41 @@ fn command_ref(conn: &Connection, id: i64) -> rusqlite::Result<Option<CommandRef
     conn.prepare_cached("SELECT command_text, outcome FROM commands WHERE id = ?1")?
         .query_row([id], |r| {
             let outcome: String = r.get(1)?;
+            let command: String = r.get(0)?;
             Ok(CommandRef {
                 id,
-                command: r.get(0)?,
+                command: shell::display_command(&command).to_string(),
                 outcome: Outcome::parse(&outcome).unwrap_or(Outcome::Unknown),
             })
         })
         .optional()
+}
+
+/// One `file_stats` row plus whether the capsule already names the file.
+struct FileStat {
+    path: String,
+    edits: u32,
+    reads: u32,
+    in_failure: bool,
+    first_touch_ms: i64,
+    /// Named by a dead end, a live attempt, or the failing output.
+    pinned: bool,
+}
+
+/// Rank of a file in `[WORKING_FILES]`, highest first.
+///
+/// The weights separate scarce evidence from abundant evidence. Editing a file
+/// or seeing it named in a failing test's output happens to a handful of files
+/// per task; reading one happens to dozens, and a single read is the weakest
+/// thing the log records — it is what a breadth-first sweep leaves behind.
+/// Coming *back* to a file is worth more than the second read itself, because
+/// that is the difference between skimming and working.
+fn working_score(s: &FileStat) -> u32 {
+    6 * u32::from(s.pinned)
+        + 4 * u32::from(s.in_failure)
+        + 3 * s.edits.min(3)
+        + 2 * u32::from(s.reads >= 2)
+        + s.reads.min(3)
 }
 
 /// Splits a stored `- old\n+ new` excerpt into its two lines.
@@ -166,7 +195,10 @@ pub fn build(
         FailureView {
             id,
             kind: CommandKind::parse(&kind).unwrap_or(CommandKind::Test),
-            command,
+            // The capsule quotes this under a character cap and cuts from the
+            // right; a leading `cd "<absolute path>" &&` would spend the whole
+            // allowance before naming the runner.
+            command: shell::display_command(&command).to_string(),
             exit_code,
             excerpt: excerpt
                 .map(|e| e.lines().map(str::to_string).collect())
@@ -229,7 +261,7 @@ pub fn build(
             subagent,
             edit_ids,
             mechanism: Mechanism::parse(&mechanism).unwrap_or(Mechanism::External),
-            command,
+            command: command.map(|c| shell::display_command(&c).to_string()),
             resolved_ms,
             minus,
             plus,
@@ -278,34 +310,64 @@ pub fn build(
         });
     }
 
-    // Working files: score = 3·edits + min(reads, 5) + 4·in_failure.
-    let mut stats: Vec<(String, u32, u32, bool, i64)> = conn
+    // Working files (§16.2).
+    //
+    // Two signals decide the list. Evidence comes first: a file the capsule
+    // already talks about (a dead end, a live attempt, a path named in the
+    // failing output) is kept whatever else competes, then the rest are ranked
+    // by how much the session invested in them.
+    //
+    // Recency decides nothing but the very last tie, and deliberately in the
+    // *older* direction. Ranking ties by "most recently touched" hands the
+    // whole list to whatever the agent did last: in the v0.1 benchmark an
+    // audit sweep across 84 unrelated modules, each read exactly once, filled
+    // `[WORKING_FILES]` and pushed out the two files the failing test ran
+    // through. Among files with equally thin evidence the ones the session
+    // opened with are the ones that framed it, so first touch wins (D59).
+    let pinned: std::collections::HashSet<&str> = dead_ends
+        .iter()
+        .map(|d| d.path.as_str())
+        .chain(attempts.iter().map(|a| a.path.as_str()))
+        .chain(failure_mentions.iter().filter_map(|m| m["path"].as_str()))
+        .collect();
+    let mut stats: Vec<FileStat> = conn
         .prepare_cached(
-            "SELECT path, edits, reads, in_failure, last_touch_ms FROM file_stats WHERE session_id = ?1 AND epoch = ?2",
+            "SELECT path, edits, reads, in_failure, last_touch_ms, first_touch_ms \
+             FROM file_stats WHERE session_id = ?1 AND epoch = ?2",
         )?
         .query_map(params![sid, epoch], |r| {
-            Ok((r.get(0)?, r.get::<_, i64>(1)? as u32, r.get::<_, i64>(2)? as u32, r.get::<_, i64>(3)? != 0, r.get(4)?))
+            Ok(FileStat {
+                path: r.get(0)?,
+                edits: r.get::<_, i64>(1)? as u32,
+                reads: r.get::<_, i64>(2)? as u32,
+                in_failure: r.get::<_, i64>(3)? != 0,
+                first_touch_ms: r.get(5)?,
+                pinned: false,
+            })
         })?
         .collect::<rusqlite::Result<_>>()?;
     if let Some(root) = &root_path {
-        stats.retain(|(p, ..)| paths::resolve(p, root).exists());
+        stats.retain(|s| paths::resolve(&s.path, root).exists());
+    }
+    for s in &mut stats {
+        s.pinned = pinned.contains(s.path.as_str());
     }
     stats.sort_by(|a, b| {
-        let score =
-            |x: &(String, u32, u32, bool, i64)| 3 * x.1 + x.2.min(5) + if x.3 { 4 } else { 0 };
-        score(b)
-            .cmp(&score(a))
-            .then(b.4.cmp(&a.4))
-            .then(a.0.cmp(&b.0))
+        working_score(b)
+            .cmp(&working_score(a))
+            .then(b.edits.cmp(&a.edits))
+            .then(b.reads.cmp(&a.reads))
+            .then(a.first_touch_ms.cmp(&b.first_touch_ms))
+            .then(a.path.cmp(&b.path))
     });
     let working_files: Vec<WorkingFileView> = stats
         .into_iter()
         .take(WORKING_MAX)
-        .map(|(path, edits, reads, in_failure, _)| WorkingFileView {
-            path,
-            edits,
-            reads,
-            in_failure,
+        .map(|s| WorkingFileView {
+            path: s.path,
+            edits: s.edits,
+            reads: s.reads,
+            in_failure: s.in_failure,
         })
         .collect();
 

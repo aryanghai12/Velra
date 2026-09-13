@@ -365,3 +365,54 @@ fn spooled_events_keep_their_original_timestamps_and_dedupe_keys() {
         "deduplicated, original timestamp kept"
     );
 }
+
+/// C5: a database written by the previous schema is migrated forward in place,
+/// carrying its rows with it.
+///
+/// `file_stats.first_touch_ms` arrived in schema v2. Nothing in the acceptance
+/// suite exercises a real upgrade otherwise, and a migration that fails on a
+/// populated database fails only in the field, where the damage is a hook that
+/// silently stops recording.
+#[test]
+fn c6_a_v1_database_migrates_forward_with_its_rows() {
+    let env = Env::new();
+    // The parts of schema v1 this migration touches, in their v1 shape:
+    // `meta`, which every migration stamps, and `file_stats`, which gains a
+    // column.
+    {
+        let conn = rusqlite::Connection::open(env.db_path()).expect("create");
+        conn.execute_batch(
+            "CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT NOT NULL) STRICT;
+             INSERT INTO meta VALUES ('created_by', 'velra 0.1.0');
+             CREATE TABLE file_stats (
+               session_id TEXT NOT NULL, epoch INTEGER NOT NULL, path TEXT NOT NULL,
+               reads INTEGER NOT NULL DEFAULT 0, edits INTEGER NOT NULL DEFAULT 0,
+               in_failure INTEGER NOT NULL DEFAULT 0, last_touch_ms INTEGER NOT NULL,
+               PRIMARY KEY (session_id, epoch, path)
+             ) STRICT;
+             INSERT INTO file_stats VALUES ('s1', 1, 'src/a.rs', 2, 1, 0, 1700000000000);
+             PRAGMA user_version = 1;",
+        )
+        .expect("v1 schema");
+    }
+
+    let db = Db::open(&env.db_path(), Role::Cli).expect("migrate");
+    assert_eq!(
+        db::user_version(&db.conn).expect("version"),
+        db::SCHEMA_VERSION,
+        "the file is now at the current schema"
+    );
+    let (reads, first, last): (i64, i64, i64) = db
+        .conn
+        .query_row(
+            "SELECT reads, first_touch_ms, last_touch_ms FROM file_stats WHERE path = 'src/a.rs'",
+            [],
+            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+        )
+        .expect("row survives");
+    assert_eq!(reads, 2, "existing counts are untouched");
+    assert_eq!(
+        first, last,
+        "a row with no recorded first touch is seeded from its last touch"
+    );
+}

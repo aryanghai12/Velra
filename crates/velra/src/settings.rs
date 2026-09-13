@@ -53,10 +53,20 @@ pub const REGISTRATIONS: &[Registration] = &[
         timeout: 10,
         supported: |_| true,
     },
+    // §6.3 pairs these with `if` rules of `Bash(git *)` / `PowerShell(git *)`.
+    // Those rules are prefix matches, so they see `git restore src/a.py` but
+    // not `cd "/path" && git restore src/a.py`, which is how an agent phrases
+    // the same command whenever it needs a working directory first. A revert
+    // missed here has no `git_pre` snapshot, and the capsule then reports the
+    // discard as "changed outside the agent" with no command text — observed
+    // in the v0.1 benchmark. There is no rule syntax for "git anywhere in the
+    // command line", so the filter moves into the binary: `pre-tool-use`
+    // parses the command itself and returns before opening the database when
+    // there is no git subcommand in it (D58).
     Registration {
         event: "PreToolUse",
         matcher: Some("Bash"),
-        if_rule: Some("Bash(git *)"),
+        if_rule: None,
         args: &["hook", "pre-tool-use"],
         is_async: false,
         timeout: 10,
@@ -65,7 +75,7 @@ pub const REGISTRATIONS: &[Registration] = &[
     Registration {
         event: "PreToolUse",
         matcher: Some("PowerShell"),
-        if_rule: Some("PowerShell(git *)"),
+        if_rule: None,
         args: &["hook", "pre-tool-use"],
         is_async: false,
         timeout: 10,

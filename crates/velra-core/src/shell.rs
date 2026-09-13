@@ -7,10 +7,21 @@
 /// Splits a command line into subcommands on `&&`, `||`, `;`, `|` and
 /// newlines, honoring single and double quotes. Empty parts are dropped.
 pub fn split_subcommands(cmd: &str) -> Vec<&str> {
-    fn push<'a>(cmd: &'a str, from: usize, to: usize, parts: &mut Vec<&'a str>) {
-        let piece = cmd[from..to].trim();
-        if !piece.is_empty() {
-            parts.push(piece);
+    subcommand_ranges(cmd)
+        .into_iter()
+        .map(|(a, b)| &cmd[a..b])
+        .collect()
+}
+
+/// Byte ranges of [`split_subcommands`]'s parts, for callers that need to
+/// slice the original line rather than rebuild it.
+pub fn subcommand_ranges(cmd: &str) -> Vec<(usize, usize)> {
+    fn push(cmd: &str, from: usize, to: usize, parts: &mut Vec<(usize, usize)>) {
+        let piece = &cmd[from..to];
+        let lead = piece.len() - piece.trim_start().len();
+        let trimmed = piece.trim();
+        if !trimmed.is_empty() {
+            parts.push((from + lead, from + lead + trimmed.len()));
         }
     }
     let b = cmd.as_bytes();
@@ -189,6 +200,58 @@ pub fn command_words(sub: &str) -> Vec<String> {
     words
 }
 
+/// Whether a subcommand only prepares the environment and says nothing about
+/// what the command line did.
+fn is_setup_only(sub: &str) -> bool {
+    let words = command_words(sub);
+    // `command_words` strips leading env assignments, so a subcommand that was
+    // nothing but assignments comes back empty.
+    let Some(first) = words.first() else {
+        return true;
+    };
+    matches!(
+        exe_basename(first).as_str(),
+        "cd" | "chdir"
+            | "pushd"
+            | "popd"
+            | "set-location"
+            | "sl"
+            | "export"
+            | "set"
+            | "setx"
+            | "unset"
+            | "source"
+            | "."
+            | "clear"
+            | "cls"
+    )
+}
+
+/// A command line with its leading setup subcommands removed, as a slice of
+/// the original.
+///
+/// Agents habitually prefix a command with `cd "<absolute path>" &&`, and on
+/// Windows that is sixty or more characters of path before the first byte that
+/// says anything. The capsule quotes commands under a character cap and cuts
+/// from the right, so the raw line spends its whole allowance on the prefix:
+/// one v0.1 benchmark capsule reported its active failure as
+/// ``Command: cd "C:\Users\…\s2-velra-r2" && git restore...``, which names
+/// neither the test that failed nor the runner that ran it.
+///
+/// Only a *leading* run is dropped, and the remainder is returned verbatim, so
+/// pipelines and separators keep their meaning. A line that is nothing but
+/// setup is returned unchanged — there is nothing better to show.
+pub fn display_command(cmd: &str) -> &str {
+    let trimmed = cmd.trim();
+    for (start, end) in subcommand_ranges(trimmed) {
+        if is_setup_only(&trimmed[start..end]) {
+            continue;
+        }
+        return trimmed[start..].trim_end();
+    }
+    trimmed
+}
+
 /// A parsed `git` invocation: the subcommand and its arguments.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GitInvocation {
@@ -314,6 +377,48 @@ mod tests {
             command_words("& git restore a.txt"),
             vec!["git", "restore", "a.txt"]
         );
+    }
+
+    #[test]
+    fn display_drops_leading_setup_only() {
+        assert_eq!(
+            display_command(r#"cd "C:\Users\me\proj" && python -m pytest -q"#),
+            "python -m pytest -q"
+        );
+        assert_eq!(
+            display_command("cd /tmp/x && git restore a.py && pytest -q"),
+            "git restore a.py && pytest -q"
+        );
+        // Pipelines keep their separators because the tail is returned verbatim.
+        assert_eq!(
+            display_command("cd /tmp && pytest -q | tail -5"),
+            "pytest -q | tail -5"
+        );
+        // Nothing to drop.
+        assert_eq!(display_command("  pytest -q  "), "pytest -q");
+        // Setup only: there is nothing better to show than the line itself.
+        assert_eq!(display_command("cd /tmp"), "cd /tmp");
+        // Only a leading run is dropped; a later `cd` stays.
+        assert_eq!(
+            display_command("make build && cd out && ./run"),
+            "make build && cd out && ./run"
+        );
+        assert_eq!(
+            display_command(r"Set-Location 'C:\p' ; pytest"),
+            "pytest"
+        );
+        assert_eq!(display_command("FOO=1 BAR=2 ; pytest -q"), "pytest -q");
+    }
+
+    #[test]
+    fn subcommand_ranges_slice_the_original() {
+        let cmd = "cd a && npm test || echo x";
+        for ((start, end), part) in subcommand_ranges(cmd)
+            .into_iter()
+            .zip(split_subcommands(cmd))
+        {
+            assert_eq!(&cmd[start..end], part);
+        }
     }
 
     #[test]

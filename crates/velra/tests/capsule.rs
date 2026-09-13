@@ -507,3 +507,126 @@ fn e2_truncation_ladder_runs_in_order() {
     assert!(tight.text.matches("\n- src/file").count() <= 4);
     assert!(tight.tokens <= HARD_CEILING_TOKENS);
 }
+
+/// E2/H3: the budget estimator must stay at or above what the real tokenizer
+/// charges, or the truncation ladder stops while the block is still over
+/// budget.
+///
+/// The fixtures are two `<VELRA_CONTINUATION>` blocks Claude Code actually
+/// received during the v0.1 benchmark, alongside the token count each one
+/// really cost — measured, not modelled, by differencing billed input tokens
+/// between two otherwise identical minimal sessions. With the original
+/// `ceil(chars / 3.2)` estimator those blocks read as 643 and 743 tokens
+/// against a declared budget of 800, so nothing was ever trimmed and Velra
+/// shipped 951 and 1,147.
+#[test]
+fn estimator_is_above_real_tokenizer_counts() {
+    let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/fixtures/tokenizer");
+    let measured: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(dir.join("measured.json")).expect("measured"))
+            .expect("json");
+    let mut checked = 0;
+    for (name, entry) in measured.as_object().expect("object") {
+        let text = std::fs::read_to_string(dir.join(name)).expect("fixture");
+        let real = entry["measured_tokens"].as_u64().expect("count") as u32;
+        let est = velra_core::text::estimate_tokens(&text);
+        assert!(
+            est >= real,
+            "{name}: estimate {est} is below the {real} tokens it really costs"
+        );
+        assert!(
+            est <= real + real / 4,
+            "{name}: estimate {est} overshoots {real} by more than a quarter, \
+             which spends budget on content the capsule could have carried"
+        );
+        checked += 1;
+    }
+    assert_eq!(checked, 2, "both fixtures were checked");
+}
+
+/// H2: a session in which an approach was tried and discarded must render a
+/// `[DEAD_ENDS]` section. This is the product feature the benchmark found
+/// missing from a delivered capsule, so it is asserted end to end rather than
+/// only at the unit level.
+#[test]
+fn a_discarded_approach_always_reaches_the_capsule() {
+    let mut log = Log::new();
+    log.env.write_file("src/money.py", "ROUND_HALF_UP\n");
+    log.prompt("the gap is one cent, so try the rounding hypothesis first");
+    log.edit("src/money.py", "ROUND_HALF_EVEN\n");
+    log.command_fail(
+        "python -m pytest -q",
+        1,
+        "FAILED tests/test_engine.py::test_exact_payment\n2 failed, 4 passed",
+    );
+    log.git_restore(
+        "git restore src/money.py",
+        &[("src/money.py", "ROUND_HALF_UP\n")],
+    );
+
+    let capsule = log.capsule();
+    assert!(capsule.contains("[DEAD_ENDS]"), "{capsule}");
+    assert!(capsule.contains("src/money.py"), "{capsule}");
+    assert!(
+        capsule.contains("reverted via `git restore src/money.py`"),
+        "the mechanism and the command that caused it:\n{capsule}"
+    );
+}
+
+/// The `[WORKING_FILES]` defect the benchmark found, reproduced offline.
+///
+/// In `saturated-velra-r1` the agent spent eight turns auditing 84 unrelated
+/// modules after finding the failure. Every one of those reads scored the same
+/// single point as the three modules the bug actually lived in, ties went to
+/// whatever was touched most recently, and the capsule listed
+/// `validation/invoice_number_gb.py` and friends while `engine.py` and
+/// `rules.py` did not appear at all.
+#[test]
+fn an_unrelated_read_sweep_does_not_evict_the_files_the_task_is_about() {
+    let mut log = Log::new();
+    for f in ["src/money.py", "src/rules.py", "src/engine.py"] {
+        log.env.write_file(f, "x = 1\n");
+    }
+    log.prompt("a test is failing by one cent; find out why and fix it");
+    log.command_fail(
+        "python -m pytest -q",
+        1,
+        "E       AssertionError: assert 'UNDERPAID' == 'SETTLED'\n\
+         tests/test_engine.py:54: AssertionError\n1 failed, 5 passed",
+    );
+    // The three modules the task is about, read early.
+    for f in ["src/money.py", "src/rules.py", "src/engine.py"] {
+        log.read(f);
+    }
+    // The rounding hypothesis, tried and discarded.
+    log.edit("src/money.py", "x = 2\n");
+    log.git_restore("git restore src/money.py", &[("src/money.py", "x = 1\n")]);
+
+    // Then an audit: forty unrelated modules, each read exactly once, each of
+    // them more recently than anything above.
+    for i in 0..40 {
+        let path = format!("src/validation/rule_{i:02}.py");
+        log.env.write_file(&path, "y = 1\n");
+        log.read(&path);
+    }
+
+    let capsule = log.capsule();
+    let working: Vec<&str> = capsule
+        .lines()
+        .skip_while(|l| !l.starts_with("[WORKING_FILES]"))
+        .skip(1)
+        .take_while(|l| l.starts_with("- "))
+        .collect();
+    assert!(!working.is_empty(), "{capsule}");
+    for f in ["src/money.py", "src/engine.py", "src/rules.py"] {
+        assert!(
+            working.iter().any(|l| l.contains(f)),
+            "{f} must survive the sweep, got {working:#?}\n{capsule}"
+        );
+    }
+    // The sweep may fill what is left, but not the front of the list.
+    assert!(
+        working[0].contains("src/money.py"),
+        "the discarded file ranks first: {working:#?}"
+    );
+}
