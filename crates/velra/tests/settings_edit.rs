@@ -416,7 +416,15 @@ fn status_and_doctor_report_the_installation() {
     assert_eq!(out.status.code(), Some(0), "{}", stdout(&out));
     let report = stdout(&out);
     assert!(report.contains("settings parse"));
-    assert!(report.contains("hooks registered"));
+    assert!(
+        report.contains("hook handlers registered across"),
+        "{report}"
+    );
+    // The count is handlers, not events: `Stop` alone carries two.
+    assert!(
+        report.contains("13 hook handlers registered across 10 events"),
+        "{report}"
+    );
 
     let out = env
         .cmd()

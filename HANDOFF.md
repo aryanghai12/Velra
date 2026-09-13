@@ -36,11 +36,11 @@ Three standing rules from the spec that govern every change:
 | M5 | Checkpoint barrier, renderer, delivery state machine, messages | done (D1–D7, E1–E4) |
 | M6 | `status`, `inspect`, `doctor`, README + demo script, SECURITY.md | done (H1, I) |
 
-**Test suite: 155 passing, 0 failing, 1 ignored.**
+**Test suite: 157 passing, 0 failing, 1 ignored.**
 
 ```
 velra-core unit      49      crates/velra-core/src/*.rs
-velra unit           11      crates/velra/src/*.rs
+velra unit           13      crates/velra/src/*.rs
 tracking.rs          18      F1–F7 revert / discard / command tracking
 capsule.rs           22      E1 goldens (15), E2 budget + proptest, E4 traceability
 state_machine.rs     11      D1–D7 delivery states
@@ -50,6 +50,10 @@ storage.rs            7      C1–C6 concurrency, corruption, schema, migration
 fail_open.rs          7      G1–G4 chaos
 security.rs           6      J1–J3 redaction, sensitive paths, dependency audit
 ```
+
+Two of those are `#[cfg(unix)]` (`g1_read_only_home_never_blocks_a_hook`,
+`state_files_are_private_on_posix`) and do not compile on Windows, so the same
+tree reports 159 on Linux. Nothing is missing when the local count is lower.
 
 Release binary: **5.12 MB** (budget 8 MB), `velra 0.1.0 (x86_64-pc-windows-gnu)`.
 
@@ -131,7 +135,7 @@ forces it.
 ### Commands
 
 ```bash
-cargo test --workspace --all-features                                  # 155 tests
+cargo test --workspace --all-features                                  # 157 tests
 cargo clippy --workspace --all-targets --all-features -- -D warnings   # clean
 cargo fmt --all
 INSTA_UPDATE=always cargo test --workspace --all-features              # refresh goldens

@@ -775,9 +775,16 @@ fn cmd_doctor(json: bool) -> i32 {
             "no Velra hooks registered — run `velra enable`".into(),
         ));
     } else if missing.is_empty() {
+        // One event can carry several handlers (`Stop` runs both the hook and
+        // the async reducer), so counting registrations and calling them events
+        // overstates the coverage.
+        let mut events: Vec<&str> = expected.iter().map(|r| r.event).collect();
+        events.sort_unstable();
+        events.dedup();
         checks.push(Check::Ok(format!(
-            "hooks registered for {} events",
-            expected.len()
+            "{} hook handlers registered across {} events",
+            expected.len(),
+            events.len()
         )));
     } else {
         checks.push(Check::Warn(format!(

@@ -793,7 +793,7 @@ non-zero exits, zero bytes of stderr.
   v1 database. It has one now: a migration that fails on real data fails only in
   the field.
 
-The suite is 155 passing tests (plus one that needs a live `claude` binary), from 139.
+The suite is 157 passing tests (plus one that needs a live `claude` binary), from 139.
 
 ---
 

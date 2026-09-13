@@ -1203,3 +1203,48 @@ pub fn installed_handlers(text: &str) -> Vec<InstalledHandler> {
     }
     out
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Every shipped registration filters git commands inside the binary
+    /// rather than through an `if` rule (D58). The rule machinery is kept
+    /// because §6.3 specifies it and a future registration may need it, so it
+    /// stays covered here: unexercised compat gates rot.
+    #[test]
+    fn the_if_field_is_gated_on_the_claude_code_version() {
+        assert!(
+            REGISTRATIONS.iter().all(|r| r.if_rule.is_none()),
+            "a registration grew an `if` rule again; see DECISIONS.md D58"
+        );
+        let reg = Registration {
+            event: "PreToolUse",
+            matcher: Some("Bash"),
+            if_rule: Some("Bash(git *)"),
+            args: &["hook", "pre-tool-use"],
+            is_async: false,
+            timeout: 10,
+            supported: |_| true,
+        };
+        let new = Features::for_version(crate::compat::Version::parse("2.1.268"));
+        let old = Features::for_version(crate::compat::Version::parse("2.1.80"));
+        assert!(new.if_field && !old.if_field, "version gate moved");
+        assert_eq!(
+            handler_value("/bin/velra", &reg, &new)["if"],
+            json!("Bash(git *)")
+        );
+        assert!(handler_value("/bin/velra", &reg, &old).get("if").is_none());
+    }
+
+    /// `enable` reports handlers and events separately, and the two differ:
+    /// `Stop` and `PreToolUse` each carry more than one handler.
+    #[test]
+    fn registrations_cover_more_handlers_than_events() {
+        let mut events: Vec<&str> = REGISTRATIONS.iter().map(|r| r.event).collect();
+        events.sort_unstable();
+        events.dedup();
+        assert_eq!(REGISTRATIONS.len(), 13);
+        assert_eq!(events.len(), 10);
+    }
+}
