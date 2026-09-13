@@ -551,6 +551,18 @@ impl Log {
         velra_core::render::render(&snap, &RenderConfig::default()).text
     }
 
+    /// Renders at an explicit budget.
+    ///
+    /// The shipped default is deliberately below the spec's 800 to absorb the
+    /// estimator's error (see `render::DEFAULT_BUDGET_TOKENS`). Tests about
+    /// *what the ladder keeps* rather than *what the default trims* pin the
+    /// spec figure here, so they keep testing section coverage instead of
+    /// silently becoming tests of the margin.
+    pub fn capsule_at(&mut self, budget_tokens: u32) -> String {
+        let snap = self.snapshot();
+        velra_core::render::render(&snap, &RenderConfig { budget_tokens }).text
+    }
+
     /// Creates a checkpoint the way `pre-compact` does.
     pub fn checkpoint(&mut self) -> String {
         self.reduce();

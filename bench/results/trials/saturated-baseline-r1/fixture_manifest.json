@@ -1,5 +1,5 @@
 {
-  "repo": "C:\\Users\\aryan\\AppData\\Local\\Temp\\claude\\c--Users-aryan-Videos-Velra\\edd134d0-454f-46b1-90bd-f58694106ef3\\scratchpad\\fixtures\\s2-baseline-r1",
+  "repo": "C:\\Users\\aryan\\AppData\\Local\\Temp\\velra-bench-fixtures\\saturated-baseline-r1",
   "failing_test": "tests/test_engine.py::test_exact_payment_settles_invoice",
   "failing_assertion_line": 54,
   "failing_assertion_text": "assert result.status == \"SETTLED\"",
@@ -7,8 +7,8 @@
   "true_fix_file": "src/ledger/engine.py",
   "dead_end_symbol": "scaled",
   "dead_end_file": "src/ledger/money.py",
-  "historical_dead_end_commit": "865937d",
-  "historical_revert_commit": "81fde77",
+  "historical_dead_end_commit": "ff45d0a",
+  "historical_revert_commit": "1c368f0",
   "uncommitted_files": [
     "src/ledger/rules.py"
   ],

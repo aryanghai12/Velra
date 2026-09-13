@@ -1,7 +1,7 @@
 exit=1
-âœ“ settings parse: C:\Users\aryan\.claude\settings.json
+✓ settings parse: C:\Users\aryan\.claude\settings.json
 ! binary path not recorded; run `velra enable`
-âœ— no Velra hooks registered â€” run `velra enable`
+✗ no Velra hooks registered — run `velra enable`
 ! no database yet at C:\Users\aryan\Videos\Velra\bench\results\trials\saturated-baseline-r1\velra_home\velra.db
-âœ“ no recent errors
+✓ no recent errors
 

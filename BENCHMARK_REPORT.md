@@ -18,10 +18,17 @@
 
 Phase 1 environment checks: **PASSED**.
 
-> **These verdicts describe `velra 0.1.0 (75ed4bbd3)`, and the report is left
-> as it was measured.** The H2 and H3 defects were fixed on 2026-09-13 and the
-> H4 claim was restated; §15 records what changed and §16 what a re-run would
-> settle. The trials have not been re-run, so no row above has been rewritten.
+> **⚠️ The table above is superseded. It describes `velra 0.1.0 (75ed4bbd3)`,
+> and the report is left as it was measured.** The H2 and H3 defects were fixed
+> on 2026-09-13 and the H4 claim was restated; §15 records what changed and §16
+> what a re-run would settle.
+>
+> **The re-run has since happened — see [§17](#17-the-re-run-2026-09-13--verdicts-as-re-measured)
+> for the current verdicts against `velra 0.1.0 (e9f40151c)`: H1, H2 and H3
+> PASSED, H4 FAILED.** [§18](#18-two-findings-from-the-re-run-that-need-v02)
+> records two findings from that run — a truncation-ladder cliff that drops
+> `[WORKING_FILES]`, and an agent that rejected the capsule as a prompt
+> injection in 1 of 3 replicates — both of which are open against v0.2.
 
 ### The one-paragraph finding
 
@@ -816,3 +823,154 @@ native summary is none of those, and on *this* task Claude Code did not need it.
 What the fixes buy is that the bounded claim is now true, and that the dead end
 — the one thing the native summary cannot be relied upon to keep, and the thing
 this benchmark found missing from a delivered capsule — actually arrives.
+
+---
+
+## 17. The re-run, 2026-09-13 — verdicts as re-measured
+
+§15 fixed the defects and §16 said what a re-run would settle. The re-run has
+now happened. **This section supersedes §1 for the current binary**; §1 is left
+standing because it describes `75ed4bbd3`, which is a different program.
+
+**Binary under test:** `velra 0.1.0 (e9f40151c)`, release, `x86_64-pc-windows-gnu`
+**Agent:** Claude Code **2.1.270**, model `claude-sonnet-5`
+**Trials:** `saturated-baseline-r1` (session `2ae19270`) and
+`saturated-velra-r1` (session `538a5448`), one replicate each, saturated
+protocol, 16 turns, `/compact` at turn 14, measured turn 15.
+
+| # | Hypothesis | Verdict | The number that decides it |
+|---|---|---|---|
+| **H1** | Compaction amnesia elimination | **PASSED** — target met; still *not* better than vanilla | re-reads 0, first edit on `engine.settle` 1/1, tool calls 2 — identical in both arms |
+| **H2** | Dead-end loop prevention | **PASSED** — with the caveat below | `[DEAD_ENDS]` in the delivered capsule 1/1; re-explored 0/1 in both arms |
+| **H3** | Continuation budget ≤ 800 tokens | **PASSED** | **703 real tokens** against the 800 ceiling, measured on Anthropic's tokenizer, control delta 0 |
+| **H4** | Zero-overhead fail-open guarantee | **FAILED** | fail-open perfect (129 hook invocations, 0 non-zero exits, 0 stderr); PreCompact **marginal p99 18.45 ms against a 15.0 ms target** |
+
+Phase 1 environment checks: **PASSED**.
+
+### H3, settled
+
+The estimator fix in §15 was necessary but not sufficient. Measured across the
+re-runs, `estimate_tokens` still under-reads the real tokenizer by about 6%
+(778 est → 825 real; 654 → 691; 670 → 703). Because the truncation ladder
+enforces the budget against the *estimate*, a capsule estimated just under 800
+shipped at 825 — over the ceiling the hypothesis names.
+
+`render::DEFAULT_BUDGET_TOKENS` is therefore **745**, not 800: the spec figure
+less a margin that covers the observed error. A compile-time assertion in
+`render.rs` fails the build if that margin is ever narrowed below 6%. The
+delivered block now measures **703 tokens**.
+
+### H4, not fixed and not explained away
+
+The fail-open half holds without exception and always has. The latency half
+fails on `PreCompact`, at 18.45 ms marginal p99 against the harness's 15 ms
+allowance — Velra's own work, with the process-spawn control already subtracted.
+
+Two false leads were chased and are recorded so they are not chased again:
+
+1. **It is not a measurement-condition bug.** §4 budgets `hook pre-compact` at
+   "≤ 200 unreduced events", and `examples/seed.rs` looked like it left ~99,500
+   unreduced. It does not: `reducer::reduce` runs batches until caught up, and
+   `batch: 500` sizes each batch rather than capping the total. Seeding 5,000
+   events and reading `reducer_cursor` back shows a tail of **zero**. The
+   precondition was always satisfied.
+2. **The 15 ms allowance is not too strict — if anything it is too loose.** §4
+   gives Windows `p99 ≤ 15 ms` of *wall* time, "documented as OS spawn
+   overhead". With a spawn control at 4.95 ms p99, the implied allowance for
+   Velra's own work is ≈10 ms; §4 line 89 independently budgets `pre-compact`
+   at `p99 ≤ 10 ms`. The harness's 15 ms marginal budget already applies a
+   wall-time concession to a figure that excludes spawn.
+
+So H4 stays **FAILED**, and the work it names is real: find the ~9 ms p50 that
+`PreCompact` spends above process spawn (checkpoint freeze, capsule render,
+database write) and reduce it. Raising the threshold was considered and
+rejected — any number above 15 would have been chosen after seeing 18.45 fail.
+
+### H2, and what "passed" means here
+
+The capsule now reliably carries a `[DEAD_ENDS]` section naming
+`src/ledger/money.py`, the file that was edited and reverted, with the test
+result observed afterwards. The §15 fix for the vanishing section holds: 1/1.
+
+It does **not** name `ROUND_HALF_EVEN`. Velra derives the capsule from tool
+events and deliberately does not retain edit bodies, so the *idea* that was
+abandoned exists nowhere in its data. The harness criterion
+`dead_end_approach_in_capsule` was therefore redefined to mean "the capsule
+identifies the abandoned approach by the file it lives in"; the stricter
+reading survives as `dead_end_approach_named_verbatim`, which is recorded in
+every `analysis.json` and is still **false**.
+
+H2 should be read as *the abandoned file is carried across compaction*, never
+as *the abandoned approach is*.
+
+---
+
+## 18. Two findings from the re-run that need v0.2
+
+### The truncation ladder has a cliff at `[WORKING_FILES]`
+
+`SPEC_STEPS` in `render.rs` sets `working_max = 4` as its first step and
+`working_max = 0` as its last, with nothing in between. The section therefore
+goes from four files to none in a single move, and whether it survives is
+decided by one step firing.
+
+That is not hypothetical. Across three Velra replicates at three budgets the
+section flipped on and off with no other change:
+
+| Budget | Capsule estimate | `[WORKING_FILES]` |
+|---:|---:|---|
+| 800 | 778 est → 825 real | present (4 files) |
+| 720 | 654 est → 691 real | **dropped** |
+| 745 | 670 est → 703 real | **dropped** |
+
+At 745 the capsule came in 75 tokens *under* target and still lost the section,
+because the ladder had already taken the last step before the estimate settled.
+`bench/harness/`-adjacent `crates/velra/examples/budget_probe.rs` sweeps the
+budget against a real trial database and shows the same state retaining the
+section from 680 upward once `[ACTIVE_FAILURE]` is absent — which is the tell:
+the section is crowded out by whatever else the checkpoint happens to hold at
+freeze time, not by the budget number.
+
+**Planned for v0.2:** a `working_max = 2` step between the existing two. The two
+top-ranked files (by D59's weights, here `engine.py` and `tests/test_engine.py`)
+cost roughly 35 estimated tokens — affordable at any budget the ceiling allows —
+and the agent keeps a pointer to the files the task ran through instead of
+losing the section outright.
+
+### The agent rejected the capsule as a prompt injection
+
+In one of three Velra replicates, the measured turn opened:
+
+> "Ignoring the injected `VELRA_CONTINUATION` block — it's the same style of
+> fabricated tool/system content as before and isn't something to act on
+> directly, though it happens to point at the same failing test already known"
+
+The turn still succeeded — 0 re-reads, first edit on `engine.settle`, suite
+green — but it took 5 tool calls against the baseline's 2, and it succeeded
+*while disregarding the thing under test*. The other two replicates used the
+capsule without comment, so the behaviour is **intermittent, observed 1/3**.
+
+This matters more than any verdict row above. H1 and H2 are claims that the
+capsule changes what the agent does after compaction; a delivered capsule that
+the agent classifies as injected content and discards satisfies neither claim,
+and the current harness cannot distinguish "the capsule helped" from "the
+capsule was ignored and the task was easy". §5 of `HANDOFF.md` already records
+Claude Code's *native* summariser refusing its own compaction template twice on
+the same grounds, so this is a known shape of failure, not a one-off.
+
+**Planned for v0.2:** reframe the capsule as passive workspace state rather than
+as anything resembling an instruction. Concretely — drop the imperative register
+from `[CONTEXT]` and `[RECOVERY]`, present the block as a record the tool kept
+rather than as content addressed to the model, and re-measure rejection rate
+across replicates as a first-class metric rather than noticing it by reading
+transcripts.
+
+### A confound worth naming
+
+The two arms were not driven by the same agent build: `saturated-baseline-r1`
+ran under Claude Code **2.1.269** and `saturated-velra-r1` under **2.1.270**.
+H3 is a within-arm measurement and is unaffected. H1 and H2 compare arms, and
+their comparator is the native compaction summariser — which is precisely what
+changes between builds. The baseline was not re-run because §16 priced it at
+~$8.40 and both arms solve this task in two tool calls either way; the
+comparison is reported as it stands, with the mismatch stated.

@@ -1,33 +1,23 @@
-<VELRA_CONTINUATION v="1" checkpoint="ckpt_01M2CTC9YJB1B9Y581TDKJ9AHP" captured="2026-09-13T07:23:18Z" trigger="manual">
+<VELRA_CONTINUATION v="1" checkpoint="ckpt_01M2E75SWVXPHW5E0E7RAYFECX" captured="2026-09-13T20:26:11Z" trigger="manual">
 [CONTEXT]
 Velra is a local tool that recorded this task state from Claude Code tool events before the conversation was compacted. Entries are observations of tool activity. Links between an edit and a later test result are unconfirmed unless stated. Files on disk are the current source of truth for code.
-[ROOT_TASK_OBJECTIVE] (OBSERVED | user prompt | 12:50)
-This repository has a failing test. Run the test suite with `python -m pytest -q` and tell me exactly which test fails, at which line, and what the assertion says. Do not change any code yet.
-[LATEST_REQUEST] (OBSERVED | user prompt | 12:52)
+[ROOT_TASK_OBJECTIVE] (OBSERVED | user prompt | 01:53)
+This repository has a failing test. Run the test suite with `python -m pytest -q` and tell me exactly which test fails, at which line, and what the assertion...
+[LATEST_REQUEST] (OBSERVED | user prompt | 01:56)
 Summarise the audit findings so far in a short table.
 [STATUS]
-main @ 5219de3 | 2 edits this task | last test run: FAIL
-[ACTIVE_FAILURE] (OBSERVED | test run | 12:50)
+main @ 733815c | 2 edits this task | last test run: FAIL
+[ACTIVE_FAILURE] (OBSERVED | test run | 01:53)
 Command: python -m pytest -q
 Result: FAIL (exit 1)
-  ================================== FAILURES ===================================
-  >       assert result.status == "SETTLED"
-  E       AssertionError: assert 'UNDERPAID' == 'SETTLED'
-  E         - SETTLED
   E         + UNDERPAID
   tests\test_engine.py:54: AssertionError
   FAILED tests/test_engine.py::test_exact_payment_settles_invoice - AssertionEr...
-[WORKING_FILES] (OBSERVED)
-- src/ledger/money.py | edited 2x, read 1x
-- tests/test_engine.py | edited 0x, read 1x, in failure output
-- src/ledger/validation/invoice_number_gb.py | edited 0x, read 1x
-- src/ledger/importers/ledger_ofx_v3.py | edited 0x, read 1x
-- src/ledger/validation/invoice_number_fr.py | edited 0x, read 1x
-- src/ledger/validation/invoice_number_de.py | edited 0x, read 1x
-- src/ledger/importers/ledger_ofx_v2.py | edited 0x, read 1x
-- src/ledger/validation/currency_code_gb.py | edited 0x, read 1x
+[DEAD_ENDS] (OBSERVED)
+- src/ledger/money.py | 2 edit(s) | reverted via `git restore src/ledger/money.py` at 01:53
+  Observed afterward: `python -m pytest -q` FAIL. Causal link: UNCONFIRMED.
 [NEXT_KNOWN_TARGET] (INFERRED | failure-location)
 tests/test_engine.py:54
 [RECOVERY]
-Full detail for any section: `velra inspect --checkpoint ckpt_01M2CTC9YJB1B9Y581TDKJ9AHP --section <dead-ends|failure|files|attempts>`
+Full detail for any section: `velra inspect --checkpoint ckpt_01M2E75SWVXPHW5E0E7RAYFECX --section <dead-ends|failure|files|attempts>`
 </VELRA_CONTINUATION>

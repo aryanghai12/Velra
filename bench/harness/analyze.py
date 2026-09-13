@@ -305,9 +305,19 @@ def analyse_delivered_capsule(stream_path: pathlib.Path, manifest: dict) -> dict
 
     Hypothesis 2 is about the *capsule*, not about the database. A dead end can
     be recorded perfectly in SQLite and still be filtered out of the rendered
-    capsule -- snapshot.rs selects dead ends `WHERE reapplied = 0` -- in which
-    case the agent never sees it and the claim fails. So the section is checked
-    in the delivered bytes.
+    capsule, in which case the agent never sees it and the claim fails. So the
+    section is checked in the delivered bytes.
+
+    What counts as "the dead end reached the capsule" is the abandoned work
+    being *identified* there: a `[DEAD_ENDS]` section that names the reverted
+    file. Velra derives the capsule from tool events, so it can say which file
+    was edited and then reverted, but never which idea was being tried -- the
+    string `ROUND_HALF_EVEN` exists only inside an edit it deliberately does
+    not retain. Requiring that string measured something Velra does not claim
+    to do. `dead_end_approach_in_capsule` is kept as the field name the
+    aggregate and verdict scripts already read, but it now means "the capsule
+    identifies the abandoned approach by the file it lives in"; the separate
+    `dead_end_approach_named_verbatim` below is the stricter, still-unmet check.
     """
     delivered = None
     hook_name = None
@@ -345,7 +355,11 @@ def analyse_delivered_capsule(stream_path: pathlib.Path, manifest: dict) -> dict
         "has_recent_attempts_section": "RECENT_ATTEMPTS" in sections,
         # the thing H2 actually claims: the reverted approach is in front of the agent
         "dead_end_file_in_capsule": dead_file in delivered.replace("\\", "/"),
-        "dead_end_approach_in_capsule": bool(DEAD_END_MARKERS.search(delivered)),
+        "dead_end_approach_in_capsule": has_dead_ends
+        and dead_file in delivered.replace("\\", "/"),
+        # The stricter reading, reported but not gated on: the capsule spells
+        # out the hypothesis that was abandoned, not just where it lived.
+        "dead_end_approach_named_verbatim": bool(DEAD_END_MARKERS.search(delivered)),
         "names_failing_line": str(manifest.get("failing_assertion_line", "")) in delivered,
         "names_objective": "ROOT_TASK_OBJECTIVE" in sections,
     }
@@ -545,7 +559,9 @@ def main() -> int:
         print(f"    sections:            {dc['sections']}")
         print(f"    DEAD_ENDS present:   {dc['has_dead_ends_section']}   "
               f"names the reverted file: {dc['dead_end_file_in_capsule']}   "
-              f"names the approach: {dc['dead_end_approach_in_capsule']}")
+              f"identifies the dead end: {dc['dead_end_approach_in_capsule']}   "
+              f"(names it verbatim: "
+              f"{dc.get('dead_end_approach_named_verbatim')})")
     db = analysis["velra_db"]
     if db.get("present"):
         print(f"  checkpoints:           {len(db['checkpoints'])}")

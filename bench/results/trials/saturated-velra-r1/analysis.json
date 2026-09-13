@@ -2,8 +2,8 @@
   "arm": "velra",
   "replicate": 1,
   "model": "sonnet",
-  "session_id": "65bcd198-09d7-4422-a8e2-f5e80f4d9656",
-  "wall_seconds": 435.183,
+  "session_id": "538a5448-9d00-411a-a356-0f11aa1850e8",
+  "wall_seconds": 246.788,
   "compact_status": {
     "compact_result": "success",
     "compact_error": null
@@ -32,68 +32,38 @@
       {
         "subtype": "status",
         "status": "compacting",
-        "uuid": "68667319-dc25-4df0-ac87-dd4fdc868506"
+        "uuid": "af23a581-b580-4c71-8bb8-116edc5c0186"
       },
       {
         "subtype": "status",
         "status": "compacting",
-        "uuid": "7a592369-d372-4656-8364-d18bae5f6cca"
-      },
-      {
-        "subtype": "status",
-        "status": "compacting",
-        "uuid": "8771aabc-85e6-44fe-a786-add48e6632d4"
-      },
-      {
-        "subtype": "status",
-        "status": "compacting",
-        "uuid": "3d49d239-a1d8-4dda-b465-b0297609e32d"
-      },
-      {
-        "subtype": "status",
-        "status": "compacting",
-        "uuid": "8192a689-7e05-46a4-baa1-ee2119527bdc"
-      },
-      {
-        "subtype": "status",
-        "status": "compacting",
-        "uuid": "e1ca8b8d-9972-469c-9a07-77907e8b7679"
-      },
-      {
-        "subtype": "status",
-        "status": "compacting",
-        "uuid": "83b65623-a773-4401-aa02-a6f014fe8d69"
-      },
-      {
-        "subtype": "status",
-        "status": "compacting",
-        "uuid": "23385907-e1ee-4872-ad82-aa5e06b2e8bc"
+        "uuid": "07d9e4ce-ed21-4f9a-8adf-2849f976dfb1"
       },
       {
         "subtype": "hook_started",
-        "uuid": "e375a0e9-ef0a-4128-b1d3-6c4a19157791"
+        "uuid": "26483359-aa3f-42a4-81e5-33dd276c38f9"
       },
       {
         "subtype": "hook_response",
-        "uuid": "f686b2cb-91ec-4c7f-9794-d5c277993e79"
+        "uuid": "5de51e93-f238-48d8-9cb4-93d73f67fb3c"
       },
       {
         "subtype": "status",
         "status": null,
         "compact_result": "success",
-        "uuid": "0482aaed-b237-4ea9-8b05-0a7aeae7f8a1"
+        "uuid": "4de73169-2a2a-42d3-8dc4-ea7b16f88e89"
       },
       {
         "subtype": "init",
-        "uuid": "1eec441f-cd4d-4980-9057-329ed5630ba3"
+        "uuid": "e05911a0-2f3c-4d48-b68c-ae6588087a83"
       },
       {
         "subtype": "informational",
-        "uuid": "ba4739e1-3d87-4816-90ea-59f8a9d8b9ef"
+        "uuid": "1db5139c-8cfb-460e-a200-dae6cd119465"
       },
       {
         "subtype": "compact_boundary",
-        "uuid": "31a7cb11-b0dc-4739-8270-63d0954807d1"
+        "uuid": "205fe22c-f586-46f0-9bcc-2bd551a3441e"
       }
     ]
   },
@@ -115,69 +85,69 @@
       {
         "name": "Edit",
         "bucket": "edit",
-        "target": "C:\\Users\\aryan\\AppData\\Local\\Temp\\claude\\c--Users-aryan-Videos-Velra\\edd134d0-454f-46b1-90bd-f58694106ef3\\scratchpad\\fixtures\\s2-velra-r1\\src\\ledger\\engine.py"
+        "target": "C:\\Users\\aryan\\AppData\\Local\\Temp\\velra-bench-fixtures\\saturated-velra-r1\\src\\ledger\\engine.py"
       },
       {
         "name": "Bash",
         "bucket": "bash",
-        "target": "cd \"C:\\Users\\aryan\\AppData\\Local\\Temp\\claude\\c--Users-aryan-Videos-Velra\\edd134d0-454f-46b1-90bd-f58694106ef3\\scratchpad\\fixtures\\s2-velra-r1\" && python -m pytest -q"
+        "target": "cd \"C:\\Users\\aryan\\AppData\\Local\\Temp\\velra-bench-fixtures\\saturated-velra-r1\" && python -m pytest -q"
       }
     ],
     "reads_before_first_edit": 0,
     "source_rereads_before_first_edit": 0,
     "read_targets_before_first_edit": [],
     "first_edit_index": 0,
-    "first_edit_file": "c:/users/aryan/appdata/local/temp/claude/c--users-aryan-videos-velra/edd134d0-454f-46b1-90bd-f58694106ef3/scratchpad/fixtures/s2-velra-r1/src/ledger/engine.py",
+    "first_edit_file": "c:/users/aryan/appdata/local/temp/velra-bench-fixtures/saturated-velra-r1/src/ledger/engine.py",
     "first_edit_hits_true_file": true,
     "first_edit_hits_true_symbol": true,
     "dead_end_file_edited": false,
     "dead_end_in_edit_payload": false,
     "dead_end_mentioned_in_prose": false,
     "dead_end_reexplored": false,
-    "assistant_text": "All 6 tests pass. The fix, in `src/ledger/engine.py::settle`: the discount was being computed per line item and summed (`132484` cents total due), which drifted a cent from computing it once on the invoice subtotal (`132483` cents, matching the test payment exactly). Changed:\n\n```python\ndiscount = ZERO\nfor item in invoice.items:\n    discount = discount + rules.discount_for(item.amount)\n```\n\nto:\n\n```python\ndiscount = rules.discount_for(subtotal)\n```\n\nThis matches the failing test's own docstring hint (\"The discount is a property of the invoice, not of each line\") and required no changes to `money.py`'s rounding behavior. Note `src/ledger/rules.py` still shows as locally modified in git status from before this session \u2014 not touched by this fix.",
-    "result_cost_usd": 1.5298271,
-    "result_duration_ms": 23837
+    "assistant_text": "The bug is confirmed: `engine.py:46-48` sums `rules.discount_for()` per line item instead of computing it once on the invoice subtotal, which loses a cent to rounding (three separate `.5-and-under` roundings vs. one on the combined total). Fixing per the test's own docstring.\nNow `ZERO` is unused in that scope but still used elsewhere in the file (`Invoice.subtotal`), so the import stays valid. Running the full suite to confirm.\nAll 6 tests pass. Fix: `src/ledger/engine.py:46-48` was summing the promotional discount per line item (three separate roundings) instead of applying it once to the invoice subtotal, which lost a cent versus the intended single-rounding calculation. Changed it to `discount = rules.discount_for(subtotal)` \u2014 matches the test's own docstring (\"the discount is a property of the invoice, not of each line\") and settles `INV-3041` exactly at `1324.83`.",
+    "result_cost_usd": 1.0186424,
+    "result_duration_ms": 15313
   },
   "hooks": {
-    "observed": 177,
-    "paired": 176,
-    "sync_n": 114,
-    "sync_p50_ms": 42.877,
-    "sync_p95_ms": 85.992,
-    "sync_p99_ms": 101.021,
-    "sync_max_ms": 105.253,
-    "all_p50_ms": 48.217,
-    "all_p99_ms": 13200.799,
-    "all_max_ms": 236401.177,
+    "observed": 129,
+    "paired": 128,
+    "sync_n": 70,
+    "sync_p50_ms": 30.07,
+    "sync_p95_ms": 48.781,
+    "sync_p99_ms": 52.501,
+    "sync_max_ms": 93.523,
+    "all_p50_ms": 40.431,
+    "all_p99_ms": 43666.506,
+    "all_max_ms": 53241.745,
     "nonzero_exit": 0,
     "responses_with_stderr": 0,
     "responses_with_stdout": 1,
     "per_event_p99_ms": {
-      "PostToolBatch": 236401.177,
-      "PostToolUse": 101.021,
-      "PostToolUseFailure": 34.189,
-      "PreToolUse": 46.315,
-      "SessionStart": 42.865,
-      "Stop": 225206.901,
-      "UserPromptSubmit": 56.157
+      "PostToolBatch": 21855.098,
+      "PostToolUse": 93.523,
+      "PostToolUseFailure": 31.073,
+      "PreToolUse": 48.781,
+      "SessionStart": 43.262,
+      "Stop": 53241.745,
+      "UserPromptSubmit": 51.374
     },
     "per_event_p50_ms": {
-      "PostToolBatch": 3173.639,
-      "PostToolUse": 46.767,
-      "PostToolUseFailure": 28.437,
-      "PreToolUse": 41.034,
-      "SessionStart": 0.182,
-      "Stop": 54.212,
-      "UserPromptSubmit": 30.194
+      "PostToolBatch": 3960.4,
+      "PostToolUse": 37.964,
+      "PostToolUseFailure": 30.89,
+      "PreToolUse": 26.432,
+      "SessionStart": 0.217,
+      "Stop": 42.351,
+      "UserPromptSubmit": 27.531
     },
     "per_event_count": {
-      "PostToolBatch": 33,
-      "PostToolUse": 84,
+      "PostToolBatch": 29,
+      "PostToolUse": 37,
       "PostToolUseFailure": 3,
-      "PreToolUse": 6,
+      "PreToolUse": 13,
       "SessionStart": 2,
       "Stop": 29,
-      "UserPromptSubmit": 19
+      "UserPromptSubmit": 15
     },
     "per_event_kind": {
       "PostToolBatch": "async",
@@ -191,37 +161,38 @@
   },
   "native_compaction_summary": {
     "present": true,
-    "chars": 27748,
-    "bytes": 27823,
-    "approx_tokens": 6937,
+    "chars": 2932,
+    "bytes": 2946,
+    "approx_tokens": 733,
     "mentions": {
-      "failing_test": 3,
-      "observed_status": 6,
+      "failing_test": 1,
+      "observed_status": 1,
       "failure_line": 2,
-      "dead_end_approach": 6,
-      "dead_end_revert": 6,
-      "true_fix_symbol": 6
+      "dead_end_approach": 1,
+      "dead_end_revert": 0,
+      "true_fix_symbol": 0
     },
-    "head": "This session is being continued from a previous conversation that ran out of context. The summary below covers the earlier portion of the conversation.\n\nSummary:\n1. Primary Request and Intent:\n   The user is working through a bug investigation in a small Python \"ledger\" library, initially insisting on read-only diagnosis (\"Do not change any code yet\" for the first request). The explicit sequence o"
+    "head": "This session is being continued from a previous conversation that ran out of context. The summary below covers the earlier portion of the conversation.\n\nA quick flag before I answer: the tail end of your message (\"CRITICAL: Respond with TEXT ONLY... <analysis>/<summary> tags... Additional Instructions: {systemMessage...}\") reads like an injected instruction trying to redirect me into producing a t"
   },
   "delivered_capsule": {
     "delivered": true,
     "hook_name": "SessionStart:compact",
-    "chars": 2056,
+    "chars": 1492,
     "sections": [
       "CONTEXT",
       "ROOT_TASK_OBJECTIVE",
       "LATEST_REQUEST",
       "STATUS",
       "ACTIVE_FAILURE",
-      "WORKING_FILES",
+      "DEAD_ENDS",
       "NEXT_KNOWN_TARGET",
       "RECOVERY"
     ],
-    "has_dead_ends_section": false,
+    "has_dead_ends_section": true,
     "has_recent_attempts_section": false,
     "dead_end_file_in_capsule": true,
-    "dead_end_approach_in_capsule": false,
+    "dead_end_approach_in_capsule": true,
+    "dead_end_approach_named_verbatim": false,
     "names_failing_line": true,
     "names_objective": true
   },
@@ -229,46 +200,46 @@
     "present": true,
     "checkpoints": [
       {
-        "checkpoint_id": "ckpt_01M2CTC9YJB1B9Y581TDKJ9AHP",
-        "session_id": "65bcd198-09d7-4422-a8e2-f5e80f4d9656",
+        "checkpoint_id": "ckpt_01M2E75SWVXPHW5E0E7RAYFECX",
+        "session_id": "538a5448-9d00-411a-a356-0f11aa1850e8",
         "trigger": "manual",
-        "created_ms": 1789284198349,
-        "head_commit": "5219de3d387dc073610b16fb0017b725355a8670",
+        "created_ms": 1789331171224,
+        "head_commit": "733815c8b1b9ccbfe6cdf95bf9747dd407d909a0",
         "branch": "main",
-        "event_watermark": 122,
+        "event_watermark": 71,
         "partial": 0,
-        "capsule_tokens_est": 643,
-        "capsule_chars": 2056
+        "capsule_tokens_est": 670,
+        "capsule_chars": 1492
       }
     ],
     "continuations": [
       {
-        "checkpoint_id": "ckpt_01M2CTC9YJB1B9Y581TDKJ9AHP",
-        "session_id": "65bcd198-09d7-4422-a8e2-f5e80f4d9656",
+        "checkpoint_id": "ckpt_01M2E75SWVXPHW5E0E7RAYFECX",
+        "session_id": "538a5448-9d00-411a-a356-0f11aa1850e8",
         "state": "CONFIRMED",
         "attach_count": 1,
-        "attached_ms": 1789284423375,
+        "attached_ms": 1789331214786,
         "attached_channel": "session_start",
-        "confirmed_ms": 1789284435877,
-        "confirm_event_id": 127
+        "confirmed_ms": 1789331224542,
+        "confirm_event_id": 76
       }
     ],
     "injections": [
       {
-        "injection_id": "ckpt_01M2CTC9YJB1B9Y581TDKJ9AHP:inj:1",
-        "checkpoint_id": "ckpt_01M2CTC9YJB1B9Y581TDKJ9AHP",
+        "injection_id": "ckpt_01M2E75SWVXPHW5E0E7RAYFECX:inj:1",
+        "checkpoint_id": "ckpt_01M2E75SWVXPHW5E0E7RAYFECX",
         "channel": "session_start",
-        "ts_ms": 1789284423375
+        "ts_ms": 1789331214786
       }
     ],
     "dead_ends": [
       {
         "id": 1,
         "path": "src/ledger/money.py",
-        "mechanism": "external",
-        "command_text": null,
-        "resolved_ms": 1789284050003,
-        "reapplied": 1
+        "mechanism": "git_command",
+        "command_text": "git restore src/ledger/money.py",
+        "resolved_ms": 1789331014941,
+        "reapplied": 0
       }
     ],
     "edits": [
@@ -276,21 +247,21 @@
         "id": 1,
         "path": "src/ledger/money.py",
         "tool_name": "Edit",
-        "status": "REAPPLIED",
-        "mechanism": "external",
+        "status": "DISCARDED",
+        "mechanism": "git_command",
         "lines_added": 1,
         "lines_removed": 1,
-        "ts_ms": 1789284036668
+        "ts_ms": 1789331002155
       },
       {
         "id": 2,
         "path": "src/ledger/money.py",
         "tool_name": "Edit",
-        "status": "REAPPLIED",
-        "mechanism": "external",
+        "status": "DISCARDED",
+        "mechanism": "git_command",
         "lines_added": 4,
         "lines_removed": 4,
-        "ts_ms": 1789284041284
+        "ts_ms": 1789331005110
       },
       {
         "id": 3,
@@ -300,7 +271,7 @@
         "mechanism": null,
         "lines_added": 5,
         "lines_removed": 7,
-        "ts_ms": 1789284435877
+        "ts_ms": 1789331224542
       }
     ],
     "commands": [
@@ -310,7 +281,7 @@
         "command_text": "python -m pytest -q",
         "outcome": "FAIL",
         "exit_code": 1,
-        "ts_ms": 1789284019107
+        "ts_ms": 1789330989145
       },
       {
         "id": 2,
@@ -318,7 +289,7 @@
         "command_text": "python -m pytest -q",
         "outcome": "FAIL",
         "exit_code": 1,
-        "ts_ms": 1789284044306
+        "ts_ms": 1789331007246
       },
       {
         "id": 3,
@@ -326,7 +297,7 @@
         "command_text": "git restore src/ledger/money.py",
         "outcome": "UNKNOWN",
         "exit_code": null,
-        "ts_ms": 1789284053753
+        "ts_ms": 1789331014941
       },
       {
         "id": 4,
@@ -334,56 +305,72 @@
         "command_text": "python -m pytest -q",
         "outcome": "FAIL",
         "exit_code": 1,
-        "ts_ms": 1789284057124
+        "ts_ms": 1789331017569
       },
       {
         "id": 5,
         "kind": "git",
-        "command_text": "git log --oneline",
+        "command_text": "git log --oneline --all",
         "outcome": "UNKNOWN",
         "exit_code": null,
-        "ts_ms": 1789284072168
+        "ts_ms": 1789331028592
       },
       {
         "id": 6,
         "kind": "git",
-        "command_text": "git show ecca9ce --stat && echo --- && git show ecca9ce",
+        "command_text": "git show 184df2f --stat && echo \"---DIFF---\" && git show 184df2f",
         "outcome": "UNKNOWN",
         "exit_code": null,
-        "ts_ms": 1789284075330
+        "ts_ms": 1789331030781
       },
       {
         "id": 7,
-        "kind": "other",
-        "command_text": "cd \"C:\\Users\\aryan\\AppData\\Local\\Temp\\claude\\c--Users-aryan-Videos-Velra\\edd134d0-454f-46b1-90bd-f58694106ef3\\scratchpad\\fixtures\\s2-velra-r1\" && ls src/ledger/adapters/",
+        "kind": "git",
+        "command_text": "git show 733815c --stat && echo \"---\" && git log -1 --format=\"%B\" d2c6938",
         "outcome": "UNKNOWN",
         "exit_code": null,
-        "ts_ms": 1789284101022
+        "ts_ms": 1789331033522
       },
       {
         "id": 8,
+        "kind": "other",
+        "command_text": "ls src/ledger/adapters 2>&1; echo \"---\"; ls src/ledger 2>&1",
+        "outcome": "UNKNOWN",
+        "exit_code": null,
+        "ts_ms": 1789331039638
+      },
+      {
+        "id": 9,
+        "kind": "other",
+        "command_text": "wc -l src/ledger/adapters/*.py",
+        "outcome": "UNKNOWN",
+        "exit_code": null,
+        "ts_ms": 1789331043679
+      },
+      {
+        "id": 10,
         "kind": "test",
-        "command_text": "cd \"C:\\Users\\aryan\\AppData\\Local\\Temp\\claude\\c--Users-aryan-Videos-Velra\\edd134d0-454f-46b1-90bd-f58694106ef3\\scratchpad\\fixtures\\s2-velra-r1\" && python -m pytest -q",
+        "command_text": "cd \"C:\\Users\\aryan\\AppData\\Local\\Temp\\velra-bench-fixtures\\saturated-velra-r1\" && python -m pytest -q",
         "outcome": "PASS",
         "exit_code": null,
-        "ts_ms": 1789284443109
+        "ts_ms": 1789331227384
       }
     ],
     "compactions": [
       {
         "id": 1,
-        "session_id": "65bcd198-09d7-4422-a8e2-f5e80f4d9656",
-        "checkpoint_id": "ckpt_01M2CTC9YJB1B9Y581TDKJ9AHP",
+        "session_id": "538a5448-9d00-411a-a356-0f11aa1850e8",
+        "checkpoint_id": "ckpt_01M2E75SWVXPHW5E0E7RAYFECX",
         "trigger": "manual",
-        "pre_ms": 1789284198349,
-        "post_ms": 1789284423421
+        "pre_ms": 1789331171224,
+        "post_ms": 1789331214832
       }
     ],
-    "event_count": 129,
+    "event_count": 78,
     "capsules": [
       {
-        "checkpoint_id": "ckpt_01M2CTC9YJB1B9Y581TDKJ9AHP",
-        "capsule": "<VELRA_CONTINUATION v=\"1\" checkpoint=\"ckpt_01M2CTC9YJB1B9Y581TDKJ9AHP\" captured=\"2026-09-13T07:23:18Z\" trigger=\"manual\">\n[CONTEXT]\nVelra is a local tool that recorded this task state from Claude Code tool events before the conversation was compacted. Entries are observations of tool activity. Links between an edit and a later test result are unconfirmed unless stated. Files on disk are the current source of truth for code.\n[ROOT_TASK_OBJECTIVE] (OBSERVED | user prompt | 12:50)\nThis repository has a failing test. Run the test suite with `python -m pytest -q` and tell me exactly which test fails, at which line, and what the assertion says. Do not change any code yet.\n[LATEST_REQUEST] (OBSERVED | user prompt | 12:52)\nSummarise the audit findings so far in a short table.\n[STATUS]\nmain @ 5219de3 | 2 edits this task | last test run: FAIL\n[ACTIVE_FAILURE] (OBSERVED | test run | 12:50)\nCommand: python -m pytest -q\nResult: FAIL (exit 1)\n  ================================== FAILURES ===================================\n  >       assert result.status == \"SETTLED\"\n  E       AssertionError: assert 'UNDERPAID' == 'SETTLED'\n  E         - SETTLED\n  E         + UNDERPAID\n  tests\\test_engine.py:54: AssertionError\n  FAILED tests/test_engine.py::test_exact_payment_settles_invoice - AssertionEr...\n[WORKING_FILES] (OBSERVED)\n- src/ledger/money.py | edited 2x, read 1x\n- tests/test_engine.py | edited 0x, read 1x, in failure output\n- src/ledger/validation/invoice_number_gb.py | edited 0x, read 1x\n- src/ledger/importers/ledger_ofx_v3.py | edited 0x, read 1x\n- src/ledger/validation/invoice_number_fr.py | edited 0x, read 1x\n- src/ledger/validation/invoice_number_de.py | edited 0x, read 1x\n- src/ledger/importers/ledger_ofx_v2.py | edited 0x, read 1x\n- src/ledger/validation/currency_code_gb.py | edited 0x, read 1x\n[NEXT_KNOWN_TARGET] (INFERRED | failure-location)\ntests/test_engine.py:54\n[RECOVERY]\nFull detail for any section: `velra inspect --checkpoint ckpt_01M2CTC9YJB1B9Y581TDKJ9AHP --section <dead-ends|failure|files|attempts>`\n</VELRA_CONTINUATION>"
+        "checkpoint_id": "ckpt_01M2E75SWVXPHW5E0E7RAYFECX",
+        "capsule": "<VELRA_CONTINUATION v=\"1\" checkpoint=\"ckpt_01M2E75SWVXPHW5E0E7RAYFECX\" captured=\"2026-09-13T20:26:11Z\" trigger=\"manual\">\n[CONTEXT]\nVelra is a local tool that recorded this task state from Claude Code tool events before the conversation was compacted. Entries are observations of tool activity. Links between an edit and a later test result are unconfirmed unless stated. Files on disk are the current source of truth for code.\n[ROOT_TASK_OBJECTIVE] (OBSERVED | user prompt | 01:53)\nThis repository has a failing test. Run the test suite with `python -m pytest -q` and tell me exactly which test fails, at which line, and what the assertion...\n[LATEST_REQUEST] (OBSERVED | user prompt | 01:56)\nSummarise the audit findings so far in a short table.\n[STATUS]\nmain @ 733815c | 2 edits this task | last test run: FAIL\n[ACTIVE_FAILURE] (OBSERVED | test run | 01:53)\nCommand: python -m pytest -q\nResult: FAIL (exit 1)\n  E         + UNDERPAID\n  tests\\test_engine.py:54: AssertionError\n  FAILED tests/test_engine.py::test_exact_payment_settles_invoice - AssertionEr...\n[DEAD_ENDS] (OBSERVED)\n- src/ledger/money.py | 2 edit(s) | reverted via `git restore src/ledger/money.py` at 01:53\n  Observed afterward: `python -m pytest -q` FAIL. Causal link: UNCONFIRMED.\n[NEXT_KNOWN_TARGET] (INFERRED | failure-location)\ntests/test_engine.py:54\n[RECOVERY]\nFull detail for any section: `velra inspect --checkpoint ckpt_01M2E75SWVXPHW5E0E7RAYFECX --section <dead-ends|failure|files|attempts>`\n</VELRA_CONTINUATION>"
       }
     ]
   },
@@ -391,9 +378,9 @@
   "final_pytest_tail": [
     "6 passed in 0.02s"
   ],
-  "total_cost_usd": 1.5298271,
+  "total_cost_usd": 1.0186424,
   "manifest": {
-    "repo": "C:\\Users\\aryan\\AppData\\Local\\Temp\\claude\\c--Users-aryan-Videos-Velra\\edd134d0-454f-46b1-90bd-f58694106ef3\\scratchpad\\fixtures\\s2-velra-r1",
+    "repo": "C:\\Users\\aryan\\AppData\\Local\\Temp\\velra-bench-fixtures\\saturated-velra-r1",
     "failing_test": "tests/test_engine.py::test_exact_payment_settles_invoice",
     "failing_assertion_line": 54,
     "failing_assertion_text": "assert result.status == \"SETTLED\"",
@@ -401,8 +388,8 @@
     "true_fix_file": "src/ledger/engine.py",
     "dead_end_symbol": "scaled",
     "dead_end_file": "src/ledger/money.py",
-    "historical_dead_end_commit": "ecca9ce",
-    "historical_revert_commit": "5219de3",
+    "historical_dead_end_commit": "184df2f",
+    "historical_revert_commit": "733815c",
     "uncommitted_files": [
       "src/ledger/rules.py"
     ],
@@ -450,53 +437,52 @@
     },
     "5": {
       "prompt": "Check `git log --oneline` and tell me whether anyone has att",
-      "tools": 2,
+      "tools": 3,
       "names": [
         "Bash"
       ]
     },
     "6": {
       "prompt": "Park the bug for a moment, I need an audit first. Read every",
-      "tools": 2,
+      "tools": 5,
       "names": [
-        "Agent",
-        "Glob"
+        "Bash",
+        "Grep",
+        "Read"
       ]
     },
     "7": {
       "prompt": "Now read every module under src/ledger/reporting and list, f",
-      "tools": 6,
+      "tools": 4,
       "names": [
-        "Agent",
-        "Bash",
         "Glob",
-        "Grep"
+        "Grep",
+        "Read"
       ]
     },
     "8": {
       "prompt": "Now read every module under src/ledger/importers and tell me",
-      "tools": 21,
+      "tools": 7,
       "names": [
-        "Agent",
         "Glob",
+        "Grep",
         "Read"
       ]
     },
     "9": {
       "prompt": "Now read every module under src/ledger/validation and list e",
-      "tools": 15,
+      "tools": 5,
       "names": [
-        "Agent",
         "Glob",
+        "Grep",
         "Read"
       ]
     },
     "10": {
       "prompt": "Across all the adapter modules, group them by their DECLINE_",
-      "tools": 26,
+      "tools": 1,
       "names": [
-        "Grep",
-        "Read"
+        "Grep"
       ]
     },
     "11": {
@@ -508,15 +494,16 @@
     },
     "12": {
       "prompt": "Which modules import ledger.money directly? Give me the comp",
-      "tools": 0,
-      "names": []
+      "tools": 2,
+      "names": [
+        "Grep",
+        "Read"
+      ]
     },
     "13": {
       "prompt": "Summarise the audit findings so far in a short table.",
-      "tools": 2,
-      "names": [
-        "Grep"
-      ]
+      "tools": 0,
+      "names": []
     },
     "14": {
       "prompt": "/compact",

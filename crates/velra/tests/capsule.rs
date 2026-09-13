@@ -8,7 +8,7 @@ use velra_core::git::GitInfo;
 use velra_core::model::{CommandKind, Mechanism, Outcome, Trigger};
 use velra_core::render::{
     self, AttemptView, CommandRef, DeadEndView, FailureView, IntentView, NextTarget, RenderConfig,
-    Snapshot, WorkingFileView, ABSOLUTE_MAX_CHARS, HARD_CEILING_TOKENS,
+    Snapshot, WorkingFileView, ABSOLUTE_MAX_CHARS, DEFAULT_BUDGET_TOKENS, HARD_CEILING_TOKENS,
 };
 
 const CAUSAL_WORDS: [&str; 4] = ["caused", "because", "due to", "led to"];
@@ -235,7 +235,10 @@ fn e1_many_files() {
         101,
         "error[E0308]: mismatched types\n  --> src/mod3.rs:1:1\n",
     );
-    let capsule = log.capsule();
+    // Rendered at the spec's 800: this asserts what the ladder keeps at the
+    // documented budget, not how much the shipped default's safety margin
+    // trims. See Log::capsule_at.
+    let capsule = log.capsule_at(800);
     check(&capsule);
     assert_eq!(
         capsule.matches("\n- src/mod").count(),
@@ -284,7 +287,10 @@ fn e1_full_state() {
     );
     log.edit("src/auth/cookies.py", "secure = True\n");
     log.prompt("what else could be keeping the cookie alive?");
-    let capsule = log.capsule();
+    // Rendered at the spec's 800 for the same reason as e1_many_files: the
+    // claim under test is that a full state yields every section, which is a
+    // statement about the ladder, not about the default's margin.
+    let capsule = log.capsule_at(800);
     check(&capsule);
     for section in [
         "[ROOT_TASK_OBJECTIVE]",
@@ -437,7 +443,11 @@ proptest! {
         let mut snapshot = arb_snapshot_minimal();
         snapshot.root = Some(IntentView { id: 1, text: root, ts_ms: common::BASE_MS });
         let rendered = render::render(&snapshot, &RenderConfig::default());
-        prop_assert!(rendered.tokens <= 800, "{} tokens", rendered.tokens);
+        prop_assert!(
+            rendered.tokens <= DEFAULT_BUDGET_TOKENS,
+            "{} tokens",
+            rendered.tokens
+        );
         prop_assert_eq!(rendered.steps, 0);
     }
 }

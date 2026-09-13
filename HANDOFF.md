@@ -8,7 +8,8 @@ Everything a new session needs to continue this work without re-deriving it.
 
 Velra makes a Claude Code task survive `/compact`. It registers hooks, watches
 tool activity, and at `PreCompact` freezes a checkpoint and renders a
-**Continuation Capsule** (bounded at 800 estimated tokens, hard ceiling 1,000)
+**Continuation Capsule** (rendered to 745 estimated tokens, hard ceiling 1,000;
+the 745 is the spec's 800 less a margin for the estimator's ~6% under-read)
 that is injected back into context exactly once after compaction.
 
 Built to `prompts doc/BUILD_PROMPT_v0.1.md` (695 lines). Scope is §2 of that
@@ -99,7 +100,14 @@ crates/velra/tests/                   acceptance suite + common/mod.rs harness
 scripts/smoke.py                      full product pass against the release binary
 bench/run.sh                          §4 budgets (hyperfine optional)
 bench/run_full_benchmark.py           the empirical benchmark (≈ $2.80/replicate)
+bench/harness/claude_binary.py        resolves the active Claude Code binary
 install/ npm/ .github/workflows/      distribution
+
+crates/velra/examples/   diagnostics, never shipped in the binary
+  seed.rs         synthesises a benchmark database (reduces fully; no tail)
+  budget_probe.rs sweeps render budgets against a real trial database and
+                  reports which sections survive at each — this is what showed
+                  the `[WORKING_FILES]` ladder cliff
 ```
 
 ---
@@ -127,10 +135,12 @@ Without it: `error calling dlltool 'dlltool.exe': program not found`.
 
 CI and releases use MSVC on GitHub runners, so this is a local-only concern.
 
-Claude Code here is **2.1.268, VS Code extension only** — `claude` is not on
+Claude Code here is **2.1.270, VS Code extension only** — `claude` is not on
 PATH, so compat detection scans `~/.vscode/extensions/anthropic.claude-code-*`
-and otherwise assumes the latest known version. `VELRA_CLAUDE_VERSION=2.1.268`
-forces it.
+and otherwise assumes the latest known version. `VELRA_CLAUDE_VERSION` forces a
+specific one. The extension auto-updates, so the bench harness resolves the
+binary through `bench/harness/claude_binary.py` rather than pinning a version;
+`VELRA_BENCH_CLAUDE` overrides it.
 
 ### Commands
 
@@ -207,11 +217,20 @@ It found four real defects — the token estimator under-reading by a third, a
 `git_pre` row silently deleting `[DEAD_ENDS]` from a delivered capsule, a revert
 chained with a failing command being lost entirely, and an audit sweep evicting
 the files the task was about. All are fixed and all are covered by tests that
-run offline. **The two things it could not settle are still open:** the trials
-have not been re-run, so no verdict row has changed, and recommendation 7 stands
-— H1 needs a harder defect (several coordinated edits, or two competing dead
-ends) before any claim of advantage over vanilla compaction is honest. §16 of
-the report lists what a re-run would establish and what it would cost.
+run offline.
+
+**The benchmark has since been re-run against the fixed binary** (`e9f40151c`,
+Claude Code 2.1.270). §17 of the report carries the current verdicts —
+**H1, H2, H3 PASSED; H4 FAILED** on `PreCompact` at 18.45 ms marginal p99
+against a 15 ms allowance. H3 is settled by measurement, not inference: the
+delivered block is **703 real tokens** on Anthropic's tokenizer, control
+delta 0. Recommendation 7 still stands — H1 needs a harder defect (several
+coordinated edits, or two competing dead ends) before any claim of advantage
+over vanilla compaction is honest, because both arms still solve this one in
+two tool calls.
+
+Read §18 before trusting H1 or H2: in 1 of 3 replicates the agent rejected the
+capsule as a prompt injection and passed every criterion anyway.
 
 The finding worth remembering: **Claude Code 2.1.269's own compaction summary is
 better than expected at exactly the things Velra carries.** It named the
@@ -275,29 +294,44 @@ declined to summarise at all). Do not claim more than that without new data.
 Nothing in the v0.1 spec is unimplemented, and the defects the benchmark found
 are fixed. The open items are measurement and release logistics:
 
-1. **Re-run the benchmark.** The four trials in `BENCHMARK_REPORT.md` were run
-   against the binary *before* the fixes, so no verdict row has been rewritten.
-   §16 of that report says exactly what a re-run would settle and what it costs:
-   H3 needs only `bench/harness/measure_tokens.py` against one trial (~$3), H2
-   needs one Velra-arm replicate (~$3). Do not claim H2 or H3 pass on the
-   strength of the unit tests alone — they prove the mechanism, not the delivery.
-2. **A harder defect for H1.** Both arms solved the planted one-cent bug in two
+1. **The capsule gets rejected as a prompt injection, intermittently.** In one
+   of three Velra replicates the measured turn opened by calling the
+   `VELRA_CONTINUATION` block "fabricated tool/system content" and ignoring it.
+   The turn still passed every H1 and H2 criterion — which is the problem: the
+   harness cannot tell "the capsule helped" from "the capsule was discarded and
+   the task was easy". §18 of `BENCHMARK_REPORT.md` has the quote and the v0.2
+   plan (reframe the block as passive workspace state, drop the imperative
+   register from `[CONTEXT]` and `[RECOVERY]`, and measure rejection rate as a
+   first-class metric). **This is the single most valuable thing left to do.**
+2. **The truncation ladder has a cliff at `[WORKING_FILES]`.** `SPEC_STEPS` in
+   `render.rs` goes `working_max = 4` → `working_max = 0` with nothing between,
+   so the section vanishes entirely on one step. It was present at budget 800,
+   absent at 720 *and* at 745 — the last of those 75 tokens *under* target.
+   Planned v0.2 fix: a `working_max = 2` step between the two, keeping the two
+   top-ranked files for ~35 estimated tokens. `crates/velra/examples/budget_probe.rs`
+   sweeps the budget against a real trial database and shows the flip.
+3. **A harder defect for H1.** Both arms solved the planted one-cent bug in two
    tool calls, so the task cannot separate them. Recommendation 7 of the report
    asks for a defect needing several coordinated edits, or two competing
    plausible dead ends, before any claim of advantage over vanilla compaction.
-   This is the single most valuable thing left to do.
-3. **Placeholders to fill before publishing.** `{{VELRA_DOMAIN}}` and
+4. **H4's latency half is genuinely over budget.** `PreCompact` costs 18.45 ms
+   marginal p99 against a 15 ms allowance — Velra's own work, spawn subtracted.
+   Two false leads are recorded in §17 so they are not re-chased: the seeder
+   does *not* leave events unreduced (`reduce` drains; `batch` sizes a batch),
+   and the 15 ms allowance is if anything too generous (§4 implies ≈10 ms).
+   The work is to find the ~9 ms p50 `PreCompact` spends above process spawn.
+5. **Placeholders to fill before publishing.** `{{VELRA_DOMAIN}}` and
    `{{GITHUB_ORG}}` appear in `README.md`, `install/install.sh`,
    `install/install.ps1`, `install/homebrew/velra.rb`, `npm/velra/package.json`
    and `Cargo.toml`. They need real values at first release.
-4. **The §21 I checklist** (`docs/E2E_CHECKLIST.md`) needs one pass against a
+6. **The §21 I checklist** (`docs/E2E_CHECKLIST.md`) needs one pass against a
    live Claude Code session — specifically the auto-compaction case and the
    Ctrl+C replay case, which no script can fake. `python scripts/smoke.py`
    covers everything else.
-5. **CI has never run.** There is no remote; the workflows are untested against
+7. **CI has never run.** There is no remote; the workflows are untested against
    GitHub's runners.
-6. **No GIF recorded** — the README carries the shot list for it.
-7. **hyperfine is not installed locally**, so local budget numbers come from the
+8. **No GIF recorded** — the README carries the shot list for it.
+9. **hyperfine is not installed locally**, so local budget numbers come from the
    built-in timer (reported, not gated). CI installs it and gates.
 
 ---

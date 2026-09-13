@@ -9,7 +9,34 @@ use crate::text::{estimate_tokens, truncate_chars, truncate_chars_front};
 use crate::time::{hh_mm, rfc3339_utc};
 
 pub const RENDER_VERSION: i64 = 1;
-pub const DEFAULT_BUDGET_TOKENS: u32 = 800;
+/// Target size in *estimated* tokens.
+///
+/// The spec's budget is 800 real tokens, but the budget is enforced against
+/// `estimate_tokens`, and that estimate is not exact: the v0.1 benchmark
+/// measured a capsule Velra estimated at 778 tokens costing 825 real ones
+/// against Anthropic's own tokenizer -- an under-read of about 6%. Rendering
+/// to 800 therefore admits capsules that land over 800 in the only place the
+/// number matters, which is the bill.
+///
+/// 745 is 800 less a ~7% margin, which covers the observed error with room to
+/// spare while still leaving `[WORKING_FILES]` in the capsule: at 720 the
+/// benchmark's own state reached the ladder's last step and dropped that
+/// section entirely, costing the agent the list of files the task ran through.
+/// Re-derive this if `estimate_tokens` ever gets tighter;
+/// `bench/harness/measure_tokens.py` is what measures the gap.
+pub const DEFAULT_BUDGET_TOKENS: u32 = 745;
+
+/// The spec's budget, kept only as the figure the margin is measured against.
+const SPEC_BUDGET_TOKENS: u32 = 800;
+
+/// Lifting the default back to the spec figure has to be deliberate: this
+/// fails the build if the margin drops below the estimator's observed 6%
+/// under-read.
+const _: () = assert!(
+    SPEC_BUDGET_TOKENS - DEFAULT_BUDGET_TOKENS >= SPEC_BUDGET_TOKENS * 6 / 100,
+    "DEFAULT_BUDGET_TOKENS leaves less headroom than the estimator's measured error"
+);
+
 pub const HARD_CEILING_TOKENS: u32 = 1_000;
 pub const ABSOLUTE_MAX_CHARS: usize = 9_500;
 

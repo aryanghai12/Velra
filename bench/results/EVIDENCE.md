@@ -142,15 +142,15 @@ Per-turn context measurements:
 {
   "platform": "win32",
   "binary": "C:\\Users\\aryan\\Videos\\Velra\\target\\release\\velra.exe",
-  "database_bytes": 40067072,
+  "database_bytes": 40083456,
   "seeded_events": 100000,
   "runs_per_case": 200,
   "warmup_per_case": 25,
   "spawn_control": {
-    "p50_ms": 4.268,
-    "p95_ms": 16.486,
-    "p99_ms": 24.954,
-    "max_ms": 26.863
+    "p50_ms": 3.75,
+    "p95_ms": 4.629,
+    "p99_ms": 4.947,
+    "max_ms": 5.242
   },
   "cases": [
     {
@@ -159,13 +159,13 @@ Per-turn context measurements:
       "fixture": "post_tool_use_read.json",
       "payload_bytes": 619,
       "runs": 200,
-      "p50_ms": 8.1,
-      "p95_ms": 9.254,
-      "p99_ms": 10.043,
-      "max_ms": 11.712,
-      "mean_ms": 8.17,
-      "marginal_p50_ms": 3.832,
-      "marginal_p99_ms": -14.911
+      "p50_ms": 8.001,
+      "p95_ms": 9.443,
+      "p99_ms": 10.929,
+      "max_ms": 48.366,
+      "mean_ms": 8.364,
+      "marginal_p50_ms": 4.251,
+      "marginal_p99_ms": 5.982
     },
     {
       "label": "PostToolUse, Edit",
@@ -173,13 +173,13 @@ Per-turn context measurements:
       "fixture": "post_tool_use_edit.json",
       "payload_bytes": 1142,
       "runs": 200,
-      "p50_ms": 12.616,
-      "p95_ms": 20.464,
-      "p99_ms": 35.486,
-      "max_ms": 118.713,
-      "mean_ms": 12.642,
-      "marginal_p50_ms": 8.348,
-      "marginal_p99_ms": 10.532
+      "p50_ms": 8.388,
+      "p95_ms": 10.179,
+      "p99_ms": 15.064,
+      "max_ms": 64.92,
+      "mean_ms": 8.975,
+      "marginal_p50_ms": 4.638,
+      "marginal_p99_ms": 10.117
     },
     {
       "label": "PostToolUse, Bash",
@@ -187,13 +187,13 @@ Per-turn context measurements:
       "fixture": "post_tool_use_bash.json",
       "payload_bytes": 603,
       "runs": 200,
-      "p50_ms": 14.85,
-      "p95_ms": 18.367,
-      "p99_ms": 25.154,
-      "max_ms": 29.198,
-      "mean_ms": 15.319,
-      "marginal_p50_ms": 10.582,
-      "marginal_p99_ms": 0.2
+      "p50_ms": 9.845,
+      "p95_ms": 10.795,
+      "p99_ms": 11.195,
+      "max_ms": 11.505,
+      "mean_ms": 9.858,
+      "marginal_p50_ms": 6.095,
+      "marginal_p99_ms": 6.248
     },
     {
       "label": "PostToolUseFailure, Bash",
@@ -201,13 +201,13 @@ Per-turn context measurements:
       "fixture": "post_tool_use_failure_bash.json",
       "payload_bytes": 1209,
       "runs": 200,
-      "p50_ms": 14.118,
-      "p95_ms": 17.759,
-      "p99_ms": 26.177,
-      "max_ms": 78.936,
-      "mean_ms": 14.895,
-      "marginal_p50_ms": 9.85,
-      "marginal_p99_ms": 1.223
+      "p50_ms": 9.101,
+      "p95_ms": 10.217,
+      "p99_ms": 11.569,
+      "max_ms": 12.434,
+      "mean_ms": 9.23,
+      "marginal_p50_ms": 5.351,
+      "marginal_p99_ms": 6.622
     },
     {
       "label": "PreToolUse, Edit",
@@ -215,13 +215,13 @@ Per-turn context measurements:
       "fixture": "pre_tool_use_edit.json",
       "payload_bytes": 555,
       "runs": 200,
-      "p50_ms": 11.931,
-      "p95_ms": 20.855,
-      "p99_ms": 25.84,
-      "max_ms": 27.618,
-      "mean_ms": 11.852,
-      "marginal_p50_ms": 7.663,
-      "marginal_p99_ms": 0.886
+      "p50_ms": 7.864,
+      "p95_ms": 8.682,
+      "p99_ms": 8.942,
+      "max_ms": 96.672,
+      "mean_ms": 8.661,
+      "marginal_p50_ms": 4.114,
+      "marginal_p99_ms": 3.995
     },
     {
       "label": "UserPromptSubmit",
@@ -229,13 +229,13 @@ Per-turn context measurements:
       "fixture": "user_prompt_submit.json",
       "payload_bytes": 457,
       "runs": 200,
-      "p50_ms": 8.064,
-      "p95_ms": 8.894,
-      "p99_ms": 16.548,
-      "max_ms": 97.972,
-      "mean_ms": 9.057,
-      "marginal_p50_ms": 3.796,
-      "marginal_p99_ms": -8.406
+      "p50_ms": 8.14,
+      "p95_ms": 9.029,
+      "p99_ms": 10.281,
+      "max_ms": 11.122,
+      "mean_ms": 8.268,
+      "marginal_p50_ms": 4.39,
+      "marginal_p99_ms": 5.334
     },
     {
       "label": "SessionStart, startup",
@@ -243,13 +243,13 @@ Per-turn context measurements:
       "fixture": "session_start_startup.json",
       "payload_bytes": 288,
       "runs": 200,
-      "p50_ms": 7.633,
-      "p95_ms": 8.236,
-      "p99_ms": 8.724,
-      "max_ms": 9.184,
-      "mean_ms": 7.642,
-      "marginal_p50_ms": 3.365,
-      "marginal_p99_ms": -16.23
+      "p50_ms": 7.886,
+      "p95_ms": 8.952,
+      "p99_ms": 13.649,
+      "max_ms": 77.229,
+      "mean_ms": 8.651,
+      "marginal_p50_ms": 4.136,
+      "marginal_p99_ms": 8.702
     },
     {
       "label": "Stop",
@@ -257,13 +257,13 @@ Per-turn context measurements:
       "fixture": "stop.json",
       "payload_bytes": 407,
       "runs": 200,
-      "p50_ms": 7.937,
-      "p95_ms": 9.116,
-      "p99_ms": 12.457,
-      "max_ms": 15.791,
-      "mean_ms": 8.102,
-      "marginal_p50_ms": 3.669,
-      "marginal_p99_ms": -12.497
+      "p50_ms": 7.814,
+      "p95_ms": 8.505,
+      "p99_ms": 8.788,
+      "max_ms": 8.815,
+      "mean_ms": 7.857,
+      "marginal_p50_ms": 4.064,
+      "marginal_p99_ms": 3.841
     },
     {
       "label": "PreCompact",
@@ -271,18 +271,21 @@ Per-turn context measurements:
       "fixture": "pre_compact_auto.json",
       "payload_bytes": 255,
       "runs": 200,
-      "p50_ms": 12.513,
-      "p95_ms": 18.006,
-      "p99_ms": 18.983,
-      "max_ms": 19.35,
-      "mean_ms": 12.928,
-      "marginal_p50_ms": 8.245,
-      "marginal_p99_ms": -5.971
+      "p50_ms": 12.792,
+      "p95_ms": 19.018,
+      "p99_ms": 23.401,
+      "max_ms": 107.631,
+      "mean_ms": 14.961,
+      "marginal_p50_ms": 9.042,
+      "marginal_p99_ms": 18.454
     }
   ],
-  "worst_case_p99_ms": 35.486,
+  "worst_case_p99_ms": 23.401,
+  "worst_case_marginal_p99_ms": 18.454,
   "windows_budget_p99_ms": 15,
-  "within_windows_budget": false
+  "windows_marginal_budget_p99_ms": 15,
+  "within_windows_budget": false,
+  "within_windows_marginal_budget": false
 }
 ```
 
@@ -291,10 +294,10 @@ Per-turn context measurements:
 ```json
 {
   "binary": "C:\\Users\\aryan\\Videos\\Velra\\target\\release\\velra.exe",
-  "binary_bytes": 5366272,
+  "binary_bytes": 5384192,
   "version": {
     "exit": 0,
-    "stdout": "velra 0.1.0 (75ed4bbd3, x86_64-pc-windows-gnu)",
+    "stdout": "velra 0.1.0 (d58e6721e, x86_64-pc-windows-gnu)",
     "stderr": ""
   },
   "real_settings": {
@@ -302,12 +305,12 @@ Per-turn context measurements:
     "exists": true,
     "dry_run_exit": 0,
     "dry_run_changed_file": false,
-    "dry_run_diff_lines": 210,
-    "before_sha256": "cce7710585fa8aa8c6b31e8c3736f526ca421f287435550bee5a4fefffff1f5e",
-    "before_bytes": 146,
+    "dry_run_diff_lines": 208,
+    "before_sha256": "b2acca20330f72ad1015a01bc0d31ea74e76aaa120a9dcd5b64ad0529b9fe638",
+    "before_bytes": 147,
     "enable_exit": 0,
-    "after_enable_sha256": "52a6e2d1552f8f3ed768516a400decf9601236a383b7adc5563164e58887506c",
-    "after_enable_bytes": 146,
+    "after_enable_sha256": "0849981f00a824942ea567774bb8141f4c02185ec1b51f0f2ce1f97fabfafbc9",
+    "after_enable_bytes": 4547,
     "hook_events_registered": [
       "PostCompact",
       "PostToolBatch",
@@ -322,12 +325,12 @@ Per-turn context measurements:
     ],
     "hook_handler_count": 13,
     "status_exit_when_enabled": 0,
-    "status_stdout": "\u00e2\u0153\u201c Enabled (13 hook handlers registered)\n  Claude Code: 2.1.269 (from VS Code extension)\n  Binary:      C:\\Users\\aryan\\Videos\\Velra\\target\\release\\velra.exe\n  Database:    C:\\Users\\aryan\\.velra\\velra.db (316 KiB)\n  Tracking:    1 session(s), 76 event(s)\n  Last event:  13h ago\n  Continuations: none live\n",
+    "status_stdout": "\u2713 Enabled (13 hook handlers registered)\n  Claude Code: 2.1.270 (from VS Code extension)\n  Binary:      C:\\Users\\aryan\\Videos\\Velra\\target\\release\\velra.exe\n  Database:    C:\\Users\\aryan\\.velra\\velra.db (568 KiB)\n  Tracking:    11 session(s), 181 event(s)\n  Last event:  6h ago\n  Continuations: none live\n",
     "doctor_exit_when_enabled": 0,
-    "doctor_stdout": "\u00e2\u0153\u201c settings parse: C:\\Users\\aryan\\.claude\\settings.json\n\u00e2\u0153\u201c binary: C:\\Users\\aryan\\Videos\\Velra\\target\\release\\velra.exe\n\u00e2\u0153\u201c hooks registered for 13 events\n\u00e2\u0153\u201c database: WAL, schema v1\n\u00e2\u0153\u201c last hook event 13h ago\n\u00e2\u0153\u201c no recent errors\n",
+    "doctor_stdout": "\u2713 settings parse: C:\\Users\\aryan\\.claude\\settings.json\n\u2713 binary: C:\\Users\\aryan\\Videos\\Velra\\target\\release\\velra.exe\n\u2713 13 hook handlers registered across 10 events\n\u2713 database: WAL, schema v2\n\u2713 last hook event 6h ago\n\u2713 no recent errors\n",
     "disable_exit": 0,
-    "after_disable_sha256": "cce7710585fa8aa8c6b31e8c3736f526ca421f287435550bee5a4fefffff1f5e",
-    "after_disable_bytes": 146,
+    "after_disable_sha256": "b2acca20330f72ad1015a01bc0d31ea74e76aaa120a9dcd5b64ad0529b9fe638",
+    "after_disable_bytes": 147,
     "restored_byte_for_byte": true
   },
   "jsonc_settings": {
@@ -347,22 +350,23 @@ Per-turn context measurements:
 ## Trial `saturated-baseline-r1`
 
 - arm: **baseline**, replicate 1, protocol `saturated`, model `sonnet`
-- session id: `29fec1cc-4225-4384-8826-e05c00f5a4d9`
-- wall time: 434.242 s, turns sent: 16
+- session id: `2ae19270-9478-42e1-8b09-585d54beafa6`
+- wall time: 449.96 s, turns sent: 16
 - compaction: `{"compact_result": "success", "compact_error": null}`
-- transcript: `C:\Users\aryan\.claude\projects\C--Users-aryan-AppData-Local-Temp-claude-c--Users-aryan-Videos-Velra-edd134d0-454f-46b1-90bd-f58694106ef3-scratchpad-fixtures-s2-baseline-r1\29fec1cc-4225-4384-8826-e05c00f5a4d9.jsonl`
+- transcript: `C:\Users\aryan\.claude\projects\C--Users-aryan-AppData-Local-Temp-velra-bench-fixtures-saturated-baseline-r1\2ae19270-9478-42e1-8b09-585d54beafa6.jsonl`
 - final `pytest` exit code: **0** (['6 passed in 0.02s'])
 
 ### The compaction boundary (turn 14), verbatim from `stream.jsonl`
 
 ```json
-{"type":"system","subtype":"status","status":"compacting","session_id":"29fec1cc-4225-4384-8826-e05c00f5a4d9","uuid":"fe44d3cf-c49c-41c0-a232-f6cdd5bd2250"}
-{"type":"system","subtype":"status","status":"compacting","session_id":"29fec1cc-4225-4384-8826-e05c00f5a4d9","uuid":"5e6cb49b-badd-434d-908d-61f75c057f89"}
-{"type":"system","subtype":"status","status":"compacting","session_id":"29fec1cc-4225-4384-8826-e05c00f5a4d9","uuid":"a548984a-067f-46ac-82f6-f59970d518a1"}
-{"type":"system","subtype":"status","status":"compacting","session_id":"29fec1cc-4225-4384-8826-e05c00f5a4d9","uuid":"c2566c10-7d13-432c-80d8-f194789a6e1d"}
-{"type":"system","subtype":"status","status":"compacting","session_id":"29fec1cc-4225-4384-8826-e05c00f5a4d9","uuid":"00266fbc-b116-4556-8e5d-068ab00fde92"}
-{"type":"system","subtype":"status","status":"compacting","session_id":"29fec1cc-4225-4384-8826-e05c00f5a4d9","uuid":"79fdf9b8-296a-427e-b61a-388121e04d10"}
-{"type":"system","subtype":"status","status":null,"compact_result":"success","session_id":"29fec1cc-4225-4384-8826-e05c00f5a4d9","uuid":"7fc0043d-2475-4c1c-9c48-52caa1b5c1a2"}
+{"type":"system","subtype":"status","status":"compacting","session_id":"2ae19270-9478-42e1-8b09-585d54beafa6","uuid":"7c0bd1c7-866e-490c-aecd-430e3513dfad"}
+{"type":"system","subtype":"status","status":"compacting","session_id":"2ae19270-9478-42e1-8b09-585d54beafa6","uuid":"2478b276-4e45-48f1-8648-cd79a9b11da2"}
+{"type":"system","subtype":"status","status":"compacting","session_id":"2ae19270-9478-42e1-8b09-585d54beafa6","uuid":"18217a4c-6bb9-4b71-9242-7b5f1e1f33fa"}
+{"type":"system","subtype":"status","status":"compacting","session_id":"2ae19270-9478-42e1-8b09-585d54beafa6","uuid":"de497764-1e76-4cea-a090-8d49ab08163a"}
+{"type":"system","subtype":"status","status":"compacting","session_id":"2ae19270-9478-42e1-8b09-585d54beafa6","uuid":"4dafb0fd-a5fc-4f08-93d8-068be330418c"}
+{"type":"system","subtype":"status","status":"compacting","session_id":"2ae19270-9478-42e1-8b09-585d54beafa6","uuid":"320bf846-adb3-4c89-b6da-926a36f04199"}
+{"type":"system","subtype":"status","status":"compacting","session_id":"2ae19270-9478-42e1-8b09-585d54beafa6","uuid":"6ab46dbd-60c5-45e0-b142-5189926ad2ca"}
+{"type":"system","subtype":"status","status":null,"compact_result":"success","session_id":"2ae19270-9478-42e1-8b09-585d54beafa6","uuid":"7b0fb3f7-6d44-42bc-b873-5a0a012f1f3d"}
 ```
 
 ### Every tool call on the measured turn (15), verbatim
@@ -370,48 +374,14 @@ Per-turn context measurements:
 The user turn was exactly: ```Fix the remaining test failure.`
 
 ```json
-{"type": "tool_use", "id": "toolu_013Z4yeeEtejC9trNXGEbUfh", "name": "Edit", "input": {"replace_all": false, "file_path": "C:\\Users\\aryan\\AppData\\Local\\Temp\\claude\\c--Users-aryan-Videos-Velra\\edd134d0-454f-46b1-90bd-f58694106ef3\\scratchpad\\fixtures\\s2-baseline-r1\\src\\ledger\\engine.py", "old_string": "    subtotal = invoice.subtotal()\n\n    discount = ZERO\n    for item in invoice.items:\n        discount = discount + rules.discount_for(item.amount)\n\n    total_due = subtotal - discount + rules.fee_for(subtotal)", "new_string": "    subtotal = invoice.subtotal()\n\n    discount = rules.discount_for(subtotal)\n\n    total_due = subtotal - discount + rules.fee_for(subtotal)"}, "caller": {"type": "direct"}}
-{"type": "tool_use", "id": "toolu_017NguL6nLaz7EsVv4HhuJ4r", "name": "Bash", "input": {"command": "cd \"C:\\Users\\aryan\\AppData\\Local\\Temp\\claude\\c--Users-aryan-Videos-Velra\\edd134d0-454f-46b1-90bd-f58694106ef3\\scratchpad\\fixtures\\s2-baseline-r1\" && python -m pytest -q", "description": "Run test suite to verify fix"}, "caller": {"type": "direct"}}
+{"type": "tool_use", "id": "toolu_01Jg651nff7MKhMyGvvfUqg2", "name": "Edit", "input": {"replace_all": false, "file_path": "C:\\Users\\aryan\\AppData\\Local\\Temp\\velra-bench-fixtures\\saturated-baseline-r1\\src\\ledger\\engine.py", "old_string": "    subtotal = invoice.subtotal()\n\n    discount = ZERO\n    for item in invoice.items:\n        discount = discount + rules.discount_for(item.amount)\n\n    total_due = subtotal - discount + rules.fee_for(subtotal)", "new_string": "    subtotal = invoice.subtotal()\n\n    discount = rules.discount_for(subtotal)\n\n    total_due = subtotal - discount + rules.fee_for(subtotal)"}, "caller": {"type": "direct"}}
+{"type": "tool_use", "id": "toolu_016RXaMdtTPZxsq9GPRNGKWS", "name": "Bash", "input": {"command": "python -m pytest -q", "description": "Run test suite"}, "caller": {"type": "direct"}}
 ```
 
 Derived from those calls:
 
 - source-file re-reads before the first edit: **0**
-- first edit targeted: `c:/users/aryan/appdata/local/temp/claude/c--users-aryan-videos-velra/edd134d0-454f-46b1-90bd-f58694106ef3/scratchpad/fixtures/s2-baseline-r1/src/ledger/engine.py`
-- first edit landed inside `engine.settle`: **True**
-- re-explored the reverted rounding change: **False**
-
-
-## Trial `saturated-baseline-r2`
-
-- arm: **baseline**, replicate 2, protocol `saturated`, model `sonnet`
-- session id: `2de362de-3a63-40a3-89db-82ec4800e97b`
-- wall time: 407.715 s, turns sent: 16
-- compaction: `{"compact_result": "success", "compact_error": null}`
-- transcript: `C:\Users\aryan\.claude\projects\C--Users-aryan-AppData-Local-Temp-claude-c--Users-aryan-Videos-Velra-edd134d0-454f-46b1-90bd-f58694106ef3-scratchpad-fixtures-s2-baseline-r2\2de362de-3a63-40a3-89db-82ec4800e97b.jsonl`
-- final `pytest` exit code: **0** (['6 passed in 0.02s'])
-
-### The compaction boundary (turn 14), verbatim from `stream.jsonl`
-
-```json
-{"type":"system","subtype":"status","status":"compacting","session_id":"2de362de-3a63-40a3-89db-82ec4800e97b","uuid":"ea9dc8bd-d92b-4523-808b-7217d1b357bf"}
-{"type":"system","subtype":"status","status":"compacting","session_id":"2de362de-3a63-40a3-89db-82ec4800e97b","uuid":"72e5e542-265e-4b3a-9817-a6188567167b"}
-{"type":"system","subtype":"status","status":null,"compact_result":"success","session_id":"2de362de-3a63-40a3-89db-82ec4800e97b","uuid":"8cf086e6-1e5a-4a61-ac83-064012694e6e"}
-```
-
-### Every tool call on the measured turn (15), verbatim
-
-The user turn was exactly: ```Fix the remaining test failure.`
-
-```json
-{"type": "tool_use", "id": "toolu_01YXHfF9EnM4TWqt2LP8Ucvc", "name": "Edit", "input": {"replace_all": false, "file_path": "C:\\Users\\aryan\\AppData\\Local\\Temp\\claude\\c--Users-aryan-Videos-Velra\\edd134d0-454f-46b1-90bd-f58694106ef3\\scratchpad\\fixtures\\s2-baseline-r2\\src\\ledger\\engine.py", "old_string": "    subtotal = invoice.subtotal()\n\n    discount = ZERO\n    for item in invoice.items:\n        discount = discount + rules.discount_for(item.amount)\n\n    total_due = subtotal - discount + rules.fee_for(subtotal)", "new_string": "    subtotal = invoice.subtotal()\n\n    discount = rules.discount_for(subtotal)\n\n    total_due = subtotal - discount + rules.fee_for(subtotal)"}, "caller": {"type": "direct"}}
-{"type": "tool_use", "id": "toolu_018i4BDo52fNPcDjb5QYoPWf", "name": "Bash", "input": {"command": "cd \"C:\\Users\\aryan\\AppData\\Local\\Temp\\claude\\c--Users-aryan-Videos-Velra\\edd134d0-454f-46b1-90bd-f58694106ef3\\scratchpad\\fixtures\\s2-baseline-r2\" && python -m pytest tests/test_engine.py -q", "description": "Run engine tests"}, "caller": {"type": "direct"}}
-```
-
-Derived from those calls:
-
-- source-file re-reads before the first edit: **0**
-- first edit targeted: `c:/users/aryan/appdata/local/temp/claude/c--users-aryan-videos-velra/edd134d0-454f-46b1-90bd-f58694106ef3/scratchpad/fixtures/s2-baseline-r2/src/ledger/engine.py`
+- first edit targeted: `c:/users/aryan/appdata/local/temp/velra-bench-fixtures/saturated-baseline-r1/src/ledger/engine.py`
 - first edit landed inside `engine.settle`: **True**
 - re-explored the reverted rounding change: **False**
 
@@ -419,24 +389,18 @@ Derived from those calls:
 ## Trial `saturated-velra-r1`
 
 - arm: **velra**, replicate 1, protocol `saturated`, model `sonnet`
-- session id: `65bcd198-09d7-4422-a8e2-f5e80f4d9656`
-- wall time: 435.183 s, turns sent: 16
+- session id: `538a5448-9d00-411a-a356-0f11aa1850e8`
+- wall time: 246.788 s, turns sent: 16
 - compaction: `{"compact_result": "success", "compact_error": null}`
-- transcript: `C:\Users\aryan\.claude\projects\C--Users-aryan-AppData-Local-Temp-claude-c--Users-aryan-Videos-Velra-edd134d0-454f-46b1-90bd-f58694106ef3-scratchpad-fixtures-s2-velra-r1\65bcd198-09d7-4422-a8e2-f5e80f4d9656.jsonl`
+- transcript: `C:\Users\aryan\.claude\projects\C--Users-aryan-AppData-Local-Temp-velra-bench-fixtures-saturated-velra-r1\538a5448-9d00-411a-a356-0f11aa1850e8.jsonl`
 - final `pytest` exit code: **0** (['6 passed in 0.02s'])
 
 ### The compaction boundary (turn 14), verbatim from `stream.jsonl`
 
 ```json
-{"type":"system","subtype":"status","status":"compacting","session_id":"65bcd198-09d7-4422-a8e2-f5e80f4d9656","uuid":"68667319-dc25-4df0-ac87-dd4fdc868506"}
-{"type":"system","subtype":"status","status":"compacting","session_id":"65bcd198-09d7-4422-a8e2-f5e80f4d9656","uuid":"7a592369-d372-4656-8364-d18bae5f6cca"}
-{"type":"system","subtype":"status","status":"compacting","session_id":"65bcd198-09d7-4422-a8e2-f5e80f4d9656","uuid":"8771aabc-85e6-44fe-a786-add48e6632d4"}
-{"type":"system","subtype":"status","status":"compacting","session_id":"65bcd198-09d7-4422-a8e2-f5e80f4d9656","uuid":"3d49d239-a1d8-4dda-b465-b0297609e32d"}
-{"type":"system","subtype":"status","status":"compacting","session_id":"65bcd198-09d7-4422-a8e2-f5e80f4d9656","uuid":"8192a689-7e05-46a4-baa1-ee2119527bdc"}
-{"type":"system","subtype":"status","status":"compacting","session_id":"65bcd198-09d7-4422-a8e2-f5e80f4d9656","uuid":"e1ca8b8d-9972-469c-9a07-77907e8b7679"}
-{"type":"system","subtype":"status","status":"compacting","session_id":"65bcd198-09d7-4422-a8e2-f5e80f4d9656","uuid":"83b65623-a773-4401-aa02-a6f014fe8d69"}
-{"type":"system","subtype":"status","status":"compacting","session_id":"65bcd198-09d7-4422-a8e2-f5e80f4d9656","uuid":"23385907-e1ee-4872-ad82-aa5e06b2e8bc"}
-{"type":"system","subtype":"status","status":null,"compact_result":"success","session_id":"65bcd198-09d7-4422-a8e2-f5e80f4d9656","uuid":"0482aaed-b237-4ea9-8b05-0a7aeae7f8a1"}
+{"type":"system","subtype":"status","status":"compacting","session_id":"538a5448-9d00-411a-a356-0f11aa1850e8","uuid":"af23a581-b580-4c71-8bb8-116edc5c0186"}
+{"type":"system","subtype":"status","status":"compacting","session_id":"538a5448-9d00-411a-a356-0f11aa1850e8","uuid":"07d9e4ce-ed21-4f9a-8adf-2849f976dfb1"}
+{"type":"system","subtype":"status","status":null,"compact_result":"success","session_id":"538a5448-9d00-411a-a356-0f11aa1850e8","uuid":"4de73169-2a2a-42d3-8dc4-ea7b16f88e89"}
 ```
 
 ### Every tool call on the measured turn (15), verbatim
@@ -444,14 +408,14 @@ Derived from those calls:
 The user turn was exactly: ```Fix the remaining test failure.`
 
 ```json
-{"type": "tool_use", "id": "toolu_01Kim37mMdgseH2VHvCHJHQW", "name": "Edit", "input": {"replace_all": false, "file_path": "C:\\Users\\aryan\\AppData\\Local\\Temp\\claude\\c--Users-aryan-Videos-Velra\\edd134d0-454f-46b1-90bd-f58694106ef3\\scratchpad\\fixtures\\s2-velra-r1\\src\\ledger\\engine.py", "old_string": "    subtotal = invoice.subtotal()\n\n    discount = ZERO\n    for item in invoice.items:\n        discount = discount + rules.discount_for(item.amount)\n\n    total_due = subtotal - discount + rules.fee_for(subtotal)", "new_string": "    subtotal = invoice.subtotal()\n\n    discount = rules.discount_for(subtotal)\n\n    total_due = subtotal - discount + rules.fee_for(subtotal)"}, "caller": {"type": "direct"}}
-{"type": "tool_use", "id": "toolu_01M1CVokZEPQuAnWrf3TRYPp", "name": "Bash", "input": {"command": "cd \"C:\\Users\\aryan\\AppData\\Local\\Temp\\claude\\c--Users-aryan-Videos-Velra\\edd134d0-454f-46b1-90bd-f58694106ef3\\scratchpad\\fixtures\\s2-velra-r1\" && python -m pytest -q", "description": "Run pytest suite to check fix"}, "caller": {"type": "direct"}}
+{"type": "tool_use", "id": "toolu_017qfpKUFKPBT9cntYeRJxky", "name": "Edit", "input": {"replace_all": false, "file_path": "C:\\Users\\aryan\\AppData\\Local\\Temp\\velra-bench-fixtures\\saturated-velra-r1\\src\\ledger\\engine.py", "old_string": "    subtotal = invoice.subtotal()\n\n    discount = ZERO\n    for item in invoice.items:\n        discount = discount + rules.discount_for(item.amount)\n\n    total_due = subtotal - discount + rules.fee_for(subtotal)", "new_string": "    subtotal = invoice.subtotal()\n\n    discount = rules.discount_for(subtotal)\n\n    total_due = subtotal - discount + rules.fee_for(subtotal)"}, "caller": {"type": "direct"}}
+{"type": "tool_use", "id": "toolu_01EVbvLcyYSSfLDWwz7zQ3mS", "name": "Bash", "input": {"command": "cd \"C:\\Users\\aryan\\AppData\\Local\\Temp\\velra-bench-fixtures\\saturated-velra-r1\" && python -m pytest -q", "description": "Run full test suite"}, "caller": {"type": "direct"}}
 ```
 
 Derived from those calls:
 
 - source-file re-reads before the first edit: **0**
-- first edit targeted: `c:/users/aryan/appdata/local/temp/claude/c--users-aryan-videos-velra/edd134d0-454f-46b1-90bd-f58694106ef3/scratchpad/fixtures/s2-velra-r1/src/ledger/engine.py`
+- first edit targeted: `c:/users/aryan/appdata/local/temp/velra-bench-fixtures/saturated-velra-r1/src/ledger/engine.py`
 - first edit landed inside `engine.settle`: **True**
 - re-explored the reverted rounding change: **False**
 
@@ -460,44 +424,34 @@ Derived from those calls:
 This is the hook's entire stdout, as it appeared on the event stream -- one JSON object, nothing else:
 
 ```json
-{"type":"system","subtype":"hook_response","hook_id":"3807a99b-783c-43ab-97d6-f503ff27484e","hook_name":"SessionStart:compact","hook_event":"SessionStart","output":"{\"hookSpecificOutput\":{\"hookEventName\":\"SessionStart\",\"additionalContext\":\"<VELRA_CONTINUATION v=\\\"1\\\" checkpoint=\\\"ckpt_01M2CTC9YJB1B9Y581TDKJ9AHP\\\" captured=\\\"2026-09-13T07:23:18Z\\\" trigger=\\\"manual\\\">\\n[CONTEXT]\\nVelra is a local tool that recorded this task state from Claude Code tool events before the conversation was compacted. Entries are observations of tool activity. Links between an edit and a later test result are unconfirmed unless stated. Files on disk are the current source of truth for code.\\n[ROOT_TASK_OBJECTIVE] (OBSERVED | user prompt | 12:50)\\nThis repository has a failing test. Run the test suite with `python -m pytest -q` and tell me exactly which test fails, at which line, and what the assertion says. Do not change any code yet.\\n[LATEST_REQUEST] (OBSERVED | user prompt | 12:52)\\nSummarise the audit findings so far in a short table.\\n[STATUS]\\nmain @ 5219de3 | 2 edits this task | last test run: FAIL\\n[ACTIVE_FAILURE] (OBSERVED | test run | 12:50)\\nCommand: python -m pytest -q\\nResult: FAIL (exit 1)\\n  ================================== FAILURES ===================================\\n  >       assert result.status == \\\"SETTLED\\\"\\n  E       AssertionError: assert 'UNDERPAID' == 'SETTLED'\\n  E         - SETTLED\\n  E         + UNDERPAID\\n  tests\\\\test_engine.py:54: AssertionError\\n  FAILED tests/test_engine.py::test_exact_payment_settles_invoice - AssertionEr...\\n[WORKING_FILES] (OBSERVED)\\n- src/ledger/money.py | edited 2x, read 1x\\n- tests/test_engine.py | edited 0x, read 1x, in failure output\\n- src/ledger/validation/invoice_number_gb.py | edited 0x, read 1x\\n- src/ledger/importers/ledger_ofx_v3.py | edited 0x, read 1x\\n- src/ledger/validation/invoice_number_fr.py | edited 0x, read 1x\\n- src/ledger/validation/invoice_number_de.py | edited 0x, read 1x\\n- src/ledger/importers/ledger_ofx_v2.py | edited 0x, read 1x\\n- src/ledger/validation/currency_code_gb.py | edited 0x, read 1x\\n[NEXT_KNOWN_TARGET] (INFERRED | failure-location)\\ntests/test_engine.py:54\\n[RECOVERY]\\nFull detail for any section: `velra inspect --checkpoint ckpt_01M2CTC9YJB1B9Y581TDKJ9AHP --section <dead-ends|failure|files|attempts>`\\n</VELRA_CONTINUATION>\"},\"systemMessage\":\"⚡ Velra restored: objective, 1 failing test, 8 files (643 tokens)\"}\n","stdout":"{\"hookSpecificOutput\":{\"hookEventName\":\"SessionStart\",\"additionalContext\":\"<VELRA_CONTINUATION v=\\\"1\\\" checkpoint=\\\"ckpt_01M2CTC9YJB1B9Y581TDKJ9AHP\\\" captured=\\\"2026-09-13T07:23:18Z\\\" trigger=\\\"manual\\\">\\n[CONTEXT]\\nVelra is a local tool that recorded this task state from Claude Code tool events before the conversation was compacted. Entries are observations of tool activity. Links between an edit and a later test result are unconfirmed unless stated. Files on   ... [1985 more bytes]
+{"type":"system","subtype":"hook_response","hook_id":"8f59aa6d-cd8b-4acc-a080-2369937e016a","hook_name":"SessionStart:compact","hook_event":"SessionStart","output":"{\"hookSpecificOutput\":{\"hookEventName\":\"SessionStart\",\"additionalContext\":\"<VELRA_CONTINUATION v=\\\"1\\\" checkpoint=\\\"ckpt_01M2E75SWVXPHW5E0E7RAYFECX\\\" captured=\\\"2026-09-13T20:26:11Z\\\" trigger=\\\"manual\\\">\\n[CONTEXT]\\nVelra is a local tool that recorded this task state from Claude Code tool events before the conversation was compacted. Entries are observations of tool activity. Links between an edit and a later test result are unconfirmed unless stated. Files on disk are the current source of truth for code.\\n[ROOT_TASK_OBJECTIVE] (OBSERVED | user prompt | 01:53)\\nThis repository has a failing test. Run the test suite with `python -m pytest -q` and tell me exactly which test fails, at which line, and what the assertion...\\n[LATEST_REQUEST] (OBSERVED | user prompt | 01:56)\\nSummarise the audit findings so far in a short table.\\n[STATUS]\\nmain @ 733815c | 2 edits this task | last test run: FAIL\\n[ACTIVE_FAILURE] (OBSERVED | test run | 01:53)\\nCommand: python -m pytest -q\\nResult: FAIL (exit 1)\\n  E         + UNDERPAID\\n  tests\\\\test_engine.py:54: AssertionError\\n  FAILED tests/test_engine.py::test_exact_payment_settles_invoice - AssertionEr...\\n[DEAD_ENDS] (OBSERVED)\\n- src/ledger/money.py | 2 edit(s) | reverted via `git restore src/ledger/money.py` at 01:53\\n  Observed afterward: `python -m pytest -q` FAIL. Causal link: UNCONFIRMED.\\n[NEXT_KNOWN_TARGET] (INFERRED | failure-location)\\ntests/test_engine.py:54\\n[RECOVERY]\\nFull detail for any section: `velra inspect --checkpoint ckpt_01M2E75SWVXPHW5E0E7RAYFECX --section <dead-ends|failure|files|attempts>`\\n</VELRA_CONTINUATION>\"},\"systemMessage\":\"⚡ Velra restored: objective, 1 failing test, 1 dead end, 8 files (670 tokens)\"}\n","stdout":"{\"hookSpecificOutput\":{\"hookEventName\":\"SessionStart\",\"additionalContext\":\"<VELRA_CONTINUATION v=\\\"1\\\" checkpoint=\\\"ckpt_01M2E75SWVXPHW5E0E7RAYFECX\\\" captured=\\\"2026-09-13T20:26:11Z\\\" trigger=\\\"manual\\\">\\n[CONTEXT]\\nVelra is a local tool that recorded this task state from Claude Code tool events before the conversation was compacted. Entries are observations of tool activity. Links between an edit and a later test result are unconfirmed unless stated. Files on disk are the current source of truth for code.\\n[ROOT_TASK_OBJECTIVE] (OBSERVED | user prompt | 01:53)\\nThis repository has a failing test. Run the test suite with `python -m pytest -q` and tell me exactly which test fails, at which line, and what the assertion...\\n[LATEST_REQUEST] (OBSERVED | user prompt | 01:56)\\nSummarise the audit findings so far in a short table.\\n[STATUS]\\nmain @ 733815c | 2 edits this task | last test run: FAIL\\n[ACTIVE_FAILURE] (OBSERVED | test run | 01:53)\\nCommand: python -m pytest -q\\nResult: FAIL (exit 1)\\n  E         + UNDERPAID\\n   ... [829 more bytes]
 ```
 
 Decoded, that `additionalContext` is:
 
 ```text
-<VELRA_CONTINUATION v="1" checkpoint="ckpt_01M2CTC9YJB1B9Y581TDKJ9AHP" captured="2026-09-13T07:23:18Z" trigger="manual">
+<VELRA_CONTINUATION v="1" checkpoint="ckpt_01M2E75SWVXPHW5E0E7RAYFECX" captured="2026-09-13T20:26:11Z" trigger="manual">
 [CONTEXT]
 Velra is a local tool that recorded this task state from Claude Code tool events before the conversation was compacted. Entries are observations of tool activity. Links between an edit and a later test result are unconfirmed unless stated. Files on disk are the current source of truth for code.
-[ROOT_TASK_OBJECTIVE] (OBSERVED | user prompt | 12:50)
-This repository has a failing test. Run the test suite with `python -m pytest -q` and tell me exactly which test fails, at which line, and what the assertion says. Do not change any code yet.
-[LATEST_REQUEST] (OBSERVED | user prompt | 12:52)
+[ROOT_TASK_OBJECTIVE] (OBSERVED | user prompt | 01:53)
+This repository has a failing test. Run the test suite with `python -m pytest -q` and tell me exactly which test fails, at which line, and what the assertion...
+[LATEST_REQUEST] (OBSERVED | user prompt | 01:56)
 Summarise the audit findings so far in a short table.
 [STATUS]
-main @ 5219de3 | 2 edits this task | last test run: FAIL
-[ACTIVE_FAILURE] (OBSERVED | test run | 12:50)
+main @ 733815c | 2 edits this task | last test run: FAIL
+[ACTIVE_FAILURE] (OBSERVED | test run | 01:53)
 Command: python -m pytest -q
 Result: FAIL (exit 1)
-  ================================== FAILURES ===================================
-  >       assert result.status == "SETTLED"
-  E       AssertionError: assert 'UNDERPAID' == 'SETTLED'
-  E         - SETTLED
   E         + UNDERPAID
   tests\test_engine.py:54: AssertionError
   FAILED tests/test_engine.py::test_exact_payment_settles_invoice - AssertionEr...
-[WORKING_FILES] (OBSERVED)
-- src/ledger/money.py | edited 2x, read 1x
-- tests/test_engine.py | edited 0x, read 1x, in failure output
-- src/ledger/validation/invoice_number_gb.py | edited 0x, read 1x
-- src/ledger/importers/ledger_ofx_v3.py | edited 0x, read 1x
-- src/ledger/validation/invoice_number_fr.py | edited 0x, read 1x
-- src/ledger/validation/invoice_number_de.py | edited 0x, read 1x
-- src/ledger/importers/ledger_ofx_v2.py | edited 0x, read 1x
-- src/ledger/validation/currency_code_gb.py | edited 0x, read 1x
+[DEAD_ENDS] (OBSERVED)
+- src/ledger/money.py | 2 edit(s) | reverted via `git restore src/ledger/money.py` at 01:53
+  Observed afterward: `python -m pytest -q` FAIL. Causal link: UNCONFIRMED.
 [NEXT_KNOWN_TARGET] (INFERRED | failure-location)
 tests/test_engine.py:54
 [RECOVERY]
-Full detail for any section: `velra inspect --checkpoint ckpt_01M2CTC9YJB1B9Y581TDKJ9AHP --section <dead-ends|failure|files|attempts>`
+Full detail for any section: `velra inspect --checkpoint ckpt_01M2E75SWVXPHW5E0E7RAYFECX --section <dead-ends|failure|files|attempts>`
 </VELRA_CONTINUATION>
 ```
 
@@ -508,14 +462,14 @@ Full detail for any section: `velra inspect --checkpoint ckpt_01M2CTC9YJB1B9Y581
 ```json
 [
   {
-    "checkpoint_id": "ckpt_01M2CTC9YJB1B9Y581TDKJ9AHP",
+    "checkpoint_id": "ckpt_01M2E75SWVXPHW5E0E7RAYFECX",
     "trigger": "manual",
     "branch": "main",
-    "head_commit": "5219de3d387dc073610b16fb0017b725355a8670",
-    "event_watermark": 122,
+    "head_commit": "733815c8b1b9ccbfe6cdf95bf9747dd407d909a0",
+    "event_watermark": 71,
     "partial": 0,
-    "capsule_tokens_est": 643,
-    "capsule_chars": 2056
+    "capsule_tokens_est": 670,
+    "capsule_chars": 1492
   }
 ]
 ```
@@ -525,13 +479,13 @@ Full detail for any section: `velra inspect --checkpoint ckpt_01M2CTC9YJB1B9Y581
 ```json
 [
   {
-    "checkpoint_id": "ckpt_01M2CTC9YJB1B9Y581TDKJ9AHP",
+    "checkpoint_id": "ckpt_01M2E75SWVXPHW5E0E7RAYFECX",
     "state": "CONFIRMED",
     "attach_count": 1,
     "attached_channel": "session_start",
-    "attached_ms": 1789284423375,
-    "confirmed_ms": 1789284435877,
-    "confirm_event_id": 127
+    "attached_ms": 1789331214786,
+    "confirmed_ms": 1789331224542,
+    "confirm_event_id": 76
   }
 ]
 ```
@@ -541,9 +495,9 @@ Full detail for any section: `velra inspect --checkpoint ckpt_01M2CTC9YJB1B9Y581
 ```json
 [
   {
-    "injection_id": "ckpt_01M2CTC9YJB1B9Y581TDKJ9AHP:inj:1",
+    "injection_id": "ckpt_01M2E75SWVXPHW5E0E7RAYFECX:inj:1",
     "channel": "session_start",
-    "ts_ms": 1789284423375
+    "ts_ms": 1789331214786
   }
 ]
 ```
@@ -554,9 +508,9 @@ Full detail for any section: `velra inspect --checkpoint ckpt_01M2CTC9YJB1B9Y581
 [
   {
     "path": "src/ledger/money.py",
-    "mechanism": "external",
-    "command_text": null,
-    "reapplied": 1
+    "mechanism": "git_command",
+    "command_text": "git restore src/ledger/money.py",
+    "reapplied": 0
   }
 ]
 ```
@@ -568,16 +522,16 @@ Full detail for any section: `velra inspect --checkpoint ckpt_01M2CTC9YJB1B9Y581
   {
     "path": "src/ledger/money.py",
     "tool_name": "Edit",
-    "status": "REAPPLIED",
-    "mechanism": "external",
+    "status": "DISCARDED",
+    "mechanism": "git_command",
     "lines_added": 1,
     "lines_removed": 1
   },
   {
     "path": "src/ledger/money.py",
     "tool_name": "Edit",
-    "status": "REAPPLIED",
-    "mechanism": "external",
+    "status": "DISCARDED",
+    "mechanism": "git_command",
     "lines_added": 4,
     "lines_removed": 4
   },
@@ -624,25 +578,37 @@ Full detail for any section: `velra inspect --checkpoint ckpt_01M2CTC9YJB1B9Y581
     "kind": "git",
     "outcome": "UNKNOWN",
     "exit_code": null,
-    "command": "git log --oneline"
+    "command": "git log --oneline --all"
   },
   {
     "kind": "git",
     "outcome": "UNKNOWN",
     "exit_code": null,
-    "command": "git show ecca9ce --stat && echo --- && git show ecca9ce"
+    "command": "git show 184df2f --stat && echo \"---DIFF---\" && git show 184df2f"
+  },
+  {
+    "kind": "git",
+    "outcome": "UNKNOWN",
+    "exit_code": null,
+    "command": "git show 733815c --stat && echo \"---\" && git log -1 --format=\"%B\" d2c6"
   },
   {
     "kind": "other",
     "outcome": "UNKNOWN",
     "exit_code": null,
-    "command": "cd \"C:\\Users\\aryan\\AppData\\Local\\Temp\\claude\\c--Users-aryan-Videos-Vel"
+    "command": "ls src/ledger/adapters 2>&1; echo \"---\"; ls src/ledger 2>&1"
+  },
+  {
+    "kind": "other",
+    "outcome": "UNKNOWN",
+    "exit_code": null,
+    "command": "wc -l src/ledger/adapters/*.py"
   },
   {
     "kind": "test",
     "outcome": "PASS",
     "exit_code": null,
-    "command": "cd \"C:\\Users\\aryan\\AppData\\Local\\Temp\\claude\\c--Users-aryan-Videos-Vel"
+    "command": "cd \"C:\\Users\\aryan\\AppData\\Local\\Temp\\velra-bench-fixtures\\saturated-v"
   }
 ]
 ```
@@ -652,21 +618,21 @@ Full detail for any section: `velra inspect --checkpoint ckpt_01M2CTC9YJB1B9Y581
 ```json
 [
   {
-    "checkpoint_id": "ckpt_01M2CTC9YJB1B9Y581TDKJ9AHP",
+    "checkpoint_id": "ckpt_01M2E75SWVXPHW5E0E7RAYFECX",
     "trigger": "manual",
-    "pre_ms": 1789284198349,
-    "post_ms": 1789284423421
+    "pre_ms": 1789331171224,
+    "post_ms": 1789331214832
   }
 ]
 ```
 
 ### Hook behaviour observed inside the live session
 
-- hook invocations seen on the event stream: **177**
+- hook invocations seen on the event stream: **129**
 - invocations exiting non-zero: **0**
 - invocations writing to stderr: **0**
 - invocations writing to stdout: **1** (the continuation injection, which is the documented contract)
-- synchronous handlers, round trip including Claude Code's own dispatch: p50 42.877 ms, p95 85.992 ms, p99 101.021 ms, max 105.253 ms (n=114)
+- synchronous handlers, round trip including Claude Code's own dispatch: p50 30.07 ms, p95 48.781 ms, p99 52.501 ms, max 93.523 ms (n=70)
 
 ### Token measurement
 
@@ -676,8 +642,8 @@ Full detail for any section: `velra inspect --checkpoint ckpt_01M2CTC9YJB1B9Y581
   "model": "sonnet",
   "budget_tokens": 800,
   "control": {
-    "a": 9507,
-    "b": 9507,
+    "a": 10438,
+    "b": 10438,
     "delta": 0
   },
   "control_valid": true,
@@ -686,308 +652,15 @@ Full detail for any section: `velra inspect --checkpoint ckpt_01M2CTC9YJB1B9Y581
       "index": 0,
       "hook_name": "SessionStart:compact",
       "exit_code": 0,
-      "hook_stdout_bytes": 2264,
-      "context_chars": 2056,
-      "context_bytes": 2056,
-      "measured_tokens": 951,
+      "hook_stdout_bytes": 1700,
+      "context_chars": 1492,
+      "context_bytes": 1492,
+      "measured_tokens": 703,
       "budget_tokens": 800,
-      "within_budget": false,
-      "with_sentinel_total": 10458,
-      "baseline_total": 9507,
-      "first_line": "<VELRA_CONTINUATION v=\"1\" checkpoint=\"ckpt_01M2CTC9YJB1B9Y581TDKJ9AHP\" captured=\"2026-09-13T07:23:18Z\" trigger=\"manual\">"
-    }
-  ]
-}
-```
-
-
-## Trial `saturated-velra-r2`
-
-- arm: **velra**, replicate 2, protocol `saturated`, model `sonnet`
-- session id: `d7179229-1e02-41d7-b590-4468663055f7`
-- wall time: 261.812 s, turns sent: 16
-- compaction: `{"compact_result": "success", "compact_error": null}`
-- transcript: `C:\Users\aryan\.claude\projects\C--Users-aryan-AppData-Local-Temp-claude-c--Users-aryan-Videos-Velra-edd134d0-454f-46b1-90bd-f58694106ef3-scratchpad-fixtures-s2-velra-r2\d7179229-1e02-41d7-b590-4468663055f7.jsonl`
-- final `pytest` exit code: **0** (['6 passed in 0.02s'])
-
-### The compaction boundary (turn 14), verbatim from `stream.jsonl`
-
-```json
-{"type":"system","subtype":"status","status":"compacting","session_id":"d7179229-1e02-41d7-b590-4468663055f7","uuid":"0c19af9e-dfb2-48f8-ab5e-143e93faf3a2"}
-{"type":"system","subtype":"status","status":null,"compact_result":"success","session_id":"d7179229-1e02-41d7-b590-4468663055f7","uuid":"088e7f3f-32a3-4ec0-9bca-06e5a4e32841"}
-```
-
-### Every tool call on the measured turn (15), verbatim
-
-The user turn was exactly: ```Fix the remaining test failure.`
-
-```json
-{"type": "tool_use", "id": "toolu_01HSZVUEdR1Kz6dqZPx8bmGR", "name": "Edit", "input": {"replace_all": false, "file_path": "C:\\Users\\aryan\\AppData\\Local\\Temp\\claude\\c--Users-aryan-Videos-Velra\\edd134d0-454f-46b1-90bd-f58694106ef3\\scratchpad\\fixtures\\s2-velra-r2\\src\\ledger\\engine.py", "old_string": "    subtotal = invoice.subtotal()\n\n    discount = ZERO\n    for item in invoice.items:\n        discount = discount + rules.discount_for(item.amount)\n\n    total_due = subtotal - discount + rules.fee_for(subtotal)", "new_string": "    subtotal = invoice.subtotal()\n\n    discount = rules.discount_for(subtotal)\n\n    total_due = subtotal - discount + rules.fee_for(subtotal)"}, "caller": {"type": "direct"}}
-{"type": "tool_use", "id": "toolu_019ks6pLgAhzmQaSDPb6gmff", "name": "Bash", "input": {"command": "cd \"C:\\Users\\aryan\\AppData\\Local\\Temp\\claude\\c--Users-aryan-Videos-Velra\\edd134d0-454f-46b1-90bd-f58694106ef3\\scratchpad\\fixtures\\s2-velra-r2\" && python -m pytest -q", "description": "Run test suite"}, "caller": {"type": "direct"}}
-```
-
-Derived from those calls:
-
-- source-file re-reads before the first edit: **0**
-- first edit targeted: `c:/users/aryan/appdata/local/temp/claude/c--users-aryan-videos-velra/edd134d0-454f-46b1-90bd-f58694106ef3/scratchpad/fixtures/s2-velra-r2/src/ledger/engine.py`
-- first edit landed inside `engine.settle`: **True**
-- re-explored the reverted rounding change: **False**
-
-### The continuation block Claude Code actually received
-
-This is the hook's entire stdout, as it appeared on the event stream -- one JSON object, nothing else:
-
-```json
-{"type":"system","subtype":"hook_response","hook_id":"e46146c2-9816-47ec-8d8f-55692ceb3063","hook_name":"SessionStart:compact","hook_event":"SessionStart","output":"{\"hookSpecificOutput\":{\"hookEventName\":\"SessionStart\",\"additionalContext\":\"<VELRA_CONTINUATION v=\\\"1\\\" checkpoint=\\\"ckpt_01M2CV7AMZ4FQD55KM68VN2DBX\\\" captured=\\\"2026-09-13T07:38:03Z\\\" trigger=\\\"manual\\\">\\n[CONTEXT]\\nVelra is a local tool that recorded this task state from Claude Code tool events before the conversation was compacted. Entries are observations of tool activity. Links between an edit and a later test result are unconfirmed unless stated. Files on disk are the current source of truth for code.\\n[ROOT_TASK_OBJECTIVE] (OBSERVED | user prompt | 13:04)\\nThis repository has a failing test. Run the test suite with `python -m pytest -q` and tell me exactly which test fails, at which line, and what the assertion says. Do not change any code yet.\\n[LATEST_REQUEST] (OBSERVED | user prompt | 13:07)\\nSummarise the audit findings so far in a short table.\\n[STATUS]\\nmain @ 7e6a68f | 2 edits this task | last test run: FAIL\\n[ACTIVE_FAILURE] (OBSERVED | test run | 13:05)\\nCommand: cd \\\"C:\\\\Users\\\\aryan\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-aryan-Videos-Velra\\\\edd134d0-454f-46b1-90bd-f58694106ef3\\\\scratchpad\\\\fixtures\\\\s2-velra-r2\\\" && git restore...\\nResult: FAIL (exit 1)\\n  ================================== FAILURES ===================================\\n  >       assert result.status == \\\"SETTLED\\\"\\n  E       AssertionError: assert 'UNDERPAID' == 'SETTLED'\\n  E         - SETTLED\\n  E         + UNDERPAID\\n  tests\\\\test_engine.py:54: AssertionError\\n  FAILED tests/test_engine.py::test_exact_payment_settles_invoice - AssertionEr...\\n[DEAD_ENDS] (OBSERVED)\\n- src/ledger/money.py | 2 edit(s) | changed outside the agent at 13:05\\n    - from decimal import Decimal, ROUND_HALF_UP\\n    + from decimal import Decimal, ROUND_HALF_EVEN, ROUND_HALF_UP\\n  Observed afterward: `cd \\\"C:\\\\Users\\\\aryan\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-aryan-Videos-Velra\\\\edd1...` FAIL. Causal link: UNCONFIRMED.\\n[WORKING_FILES] (OBSERVED)\\n- src/ledger/money.py | edited 2x, read 2x\\n- tests/test_engine.py | edited 0x, read 1x, in failure output\\n- src/ledger/validation/vat_number_gb.py | edited 0x, read 1x\\n- src/ledger/reporting/aged_receivables_daily.py | edited 0x, read 1x\\n- src/ledger/engine.py | edited 0x, read 1x\\n- src/ledger/rules.py | edited 0x, read 1x\\n[NEXT_KNOWN_TARGET] (INFERRED | failure-location)\\ntests/test_engine.py:54\\n[RECOVERY]\\nFull detail for any section: `velra inspect --checkpoint ckpt_01M2CV7AMZ4FQD55KM68VN2DBX --section <dead-ends|failure|files|attempts>`\\n</VELRA_CONTINUATION>\"},\"systemMessage\":\"⚡ Velra restored: objective, 1 failing test, 1 dead end, 6 files (743 tokens)\"}\n","stdout":"{\"hookSpecificOutput\":{\"hookEventName\":\"SessionStart\",\"additionalContext\":\"<VE  ... [2795 more bytes]
-```
-
-Decoded, that `additionalContext` is:
-
-```text
-<VELRA_CONTINUATION v="1" checkpoint="ckpt_01M2CV7AMZ4FQD55KM68VN2DBX" captured="2026-09-13T07:38:03Z" trigger="manual">
-[CONTEXT]
-Velra is a local tool that recorded this task state from Claude Code tool events before the conversation was compacted. Entries are observations of tool activity. Links between an edit and a later test result are unconfirmed unless stated. Files on disk are the current source of truth for code.
-[ROOT_TASK_OBJECTIVE] (OBSERVED | user prompt | 13:04)
-This repository has a failing test. Run the test suite with `python -m pytest -q` and tell me exactly which test fails, at which line, and what the assertion says. Do not change any code yet.
-[LATEST_REQUEST] (OBSERVED | user prompt | 13:07)
-Summarise the audit findings so far in a short table.
-[STATUS]
-main @ 7e6a68f | 2 edits this task | last test run: FAIL
-[ACTIVE_FAILURE] (OBSERVED | test run | 13:05)
-Command: cd "C:\Users\aryan\AppData\Local\Temp\claude\c--Users-aryan-Videos-Velra\edd134d0-454f-46b1-90bd-f58694106ef3\scratchpad\fixtures\s2-velra-r2" && git restore...
-Result: FAIL (exit 1)
-  ================================== FAILURES ===================================
-  >       assert result.status == "SETTLED"
-  E       AssertionError: assert 'UNDERPAID' == 'SETTLED'
-  E         - SETTLED
-  E         + UNDERPAID
-  tests\test_engine.py:54: AssertionError
-  FAILED tests/test_engine.py::test_exact_payment_settles_invoice - AssertionEr...
-[DEAD_ENDS] (OBSERVED)
-- src/ledger/money.py | 2 edit(s) | changed outside the agent at 13:05
-    - from decimal import Decimal, ROUND_HALF_UP
-    + from decimal import Decimal, ROUND_HALF_EVEN, ROUND_HALF_UP
-  Observed afterward: `cd "C:\Users\aryan\AppData\Local\Temp\claude\c--Users-aryan-Videos-Velra\edd1...` FAIL. Causal link: UNCONFIRMED.
-[WORKING_FILES] (OBSERVED)
-- src/ledger/money.py | edited 2x, read 2x
-- tests/test_engine.py | edited 0x, read 1x, in failure output
-- src/ledger/validation/vat_number_gb.py | edited 0x, read 1x
-- src/ledger/reporting/aged_receivables_daily.py | edited 0x, read 1x
-- src/ledger/engine.py | edited 0x, read 1x
-- src/ledger/rules.py | edited 0x, read 1x
-[NEXT_KNOWN_TARGET] (INFERRED | failure-location)
-tests/test_engine.py:54
-[RECOVERY]
-Full detail for any section: `velra inspect --checkpoint ckpt_01M2CV7AMZ4FQD55KM68VN2DBX --section <dead-ends|failure|files|attempts>`
-</VELRA_CONTINUATION>
-```
-
-### Velra's own state, read back out of the database
-
-`checkpoints`:
-
-```json
-[
-  {
-    "checkpoint_id": "ckpt_01M2CV7AMZ4FQD55KM68VN2DBX",
-    "trigger": "manual",
-    "branch": "main",
-    "head_commit": "7e6a68ff704e938bfad87aeeaf893e79020904d6",
-    "event_watermark": 62,
-    "partial": 0,
-    "capsule_tokens_est": 743,
-    "capsule_chars": 2377
-  }
-]
-```
-
-`continuations (the delivery state machine)`:
-
-```json
-[
-  {
-    "checkpoint_id": "ckpt_01M2CV7AMZ4FQD55KM68VN2DBX",
-    "state": "CONFIRMED",
-    "attach_count": 1,
-    "attached_channel": "session_start",
-    "attached_ms": 1789285105498,
-    "confirmed_ms": 1789285113865,
-    "confirm_event_id": 67
-  }
-]
-```
-
-`injections`:
-
-```json
-[
-  {
-    "injection_id": "ckpt_01M2CV7AMZ4FQD55KM68VN2DBX:inj:1",
-    "channel": "session_start",
-    "ts_ms": 1789285105498
-  }
-]
-```
-
-`dead_ends (revert detection)`:
-
-```json
-[
-  {
-    "path": "src/ledger/money.py",
-    "mechanism": "external",
-    "command_text": null,
-    "reapplied": 0
-  }
-]
-```
-
-`edits`:
-
-```json
-[
-  {
-    "path": "src/ledger/money.py",
-    "tool_name": "Edit",
-    "status": "REVERTED",
-    "mechanism": "external",
-    "lines_added": 1,
-    "lines_removed": 1
-  },
-  {
-    "path": "src/ledger/money.py",
-    "tool_name": "Edit",
-    "status": "REVERTED",
-    "mechanism": "external",
-    "lines_added": 4,
-    "lines_removed": 4
-  },
-  {
-    "path": "src/ledger/engine.py",
-    "tool_name": "Edit",
-    "status": "ACTIVE",
-    "mechanism": null,
-    "lines_added": 5,
-    "lines_removed": 7
-  }
-]
-```
-
-`commands`:
-
-```json
-[
-  {
-    "kind": "test",
-    "outcome": "FAIL",
-    "exit_code": 1,
-    "command": "cd \"C:\\Users\\aryan\\AppData\\Local\\Temp\\claude\\c--Users-aryan-Videos-Vel"
-  },
-  {
-    "kind": "test",
-    "outcome": "FAIL",
-    "exit_code": 1,
-    "command": "cd \"C:\\Users\\aryan\\AppData\\Local\\Temp\\claude\\c--Users-aryan-Videos-Vel"
-  },
-  {
-    "kind": "test",
-    "outcome": "FAIL",
-    "exit_code": 1,
-    "command": "cd \"C:\\Users\\aryan\\AppData\\Local\\Temp\\claude\\c--Users-aryan-Videos-Vel"
-  },
-  {
-    "kind": "git",
-    "outcome": "UNKNOWN",
-    "exit_code": null,
-    "command": "cd \"C:\\Users\\aryan\\AppData\\Local\\Temp\\claude\\c--Users-aryan-Videos-Vel"
-  },
-  {
-    "kind": "other",
-    "outcome": "UNKNOWN",
-    "exit_code": null,
-    "command": "cd \"C:\\Users\\aryan\\AppData\\Local\\Temp\\claude\\c--Users-aryan-Videos-Vel"
-  },
-  {
-    "kind": "git",
-    "outcome": "UNKNOWN",
-    "exit_code": null,
-    "command": "cd \"C:\\Users\\aryan\\AppData\\Local\\Temp\\claude\\c--Users-aryan-Videos-Vel"
-  },
-  {
-    "kind": "other",
-    "outcome": "UNKNOWN",
-    "exit_code": null,
-    "command": "cd \"C:\\Users\\aryan\\AppData\\Local\\Temp\\claude\\c--Users-aryan-Videos-Vel"
-  },
-  {
-    "kind": "other",
-    "outcome": "UNKNOWN",
-    "exit_code": null,
-    "command": "cd \"C:\\Users\\aryan\\AppData\\Local\\Temp\\claude\\c--Users-aryan-Videos-Vel"
-  },
-  {
-    "kind": "other",
-    "outcome": "UNKNOWN",
-    "exit_code": null,
-    "command": "cd \"C:\\Users\\aryan\\AppData\\Local\\Temp\\claude\\c--Users-aryan-Videos-Vel"
-  },
-  {
-    "kind": "test",
-    "outcome": "PASS",
-    "exit_code": null,
-    "command": "cd \"C:\\Users\\aryan\\AppData\\Local\\Temp\\claude\\c--Users-aryan-Videos-Vel"
-  }
-]
-```
-
-`compactions`:
-
-```json
-[
-  {
-    "checkpoint_id": "ckpt_01M2CV7AMZ4FQD55KM68VN2DBX",
-    "trigger": "manual",
-    "pre_ms": 1789285083804,
-    "post_ms": 1789285105574
-  }
-]
-```
-
-### Hook behaviour observed inside the live session
-
-- hook invocations seen on the event stream: **111**
-- invocations exiting non-zero: **0**
-- invocations writing to stderr: **0**
-- invocations writing to stdout: **1** (the continuation injection, which is the documented contract)
-- synchronous handlers, round trip including Claude Code's own dispatch: p50 28.045 ms, p95 52.242 ms, p99 62.077 ms, max 70.649 ms (n=54)
-
-### Token measurement
-
-```json
-{
-  "trial": "C:\\Users\\aryan\\Videos\\Velra\\bench\\results\\trials\\saturated-velra-r2",
-  "model": "sonnet",
-  "budget_tokens": 800,
-  "control": {
-    "a": 9507,
-    "b": 9507,
-    "delta": 0
-  },
-  "control_valid": true,
-  "injections": [
-    {
-      "index": 0,
-      "hook_name": "SessionStart:compact",
-      "exit_code": 0,
-      "hook_stdout_bytes": 2622,
-      "context_chars": 2377,
-      "context_bytes": 2377,
-      "measured_tokens": 1147,
-      "budget_tokens": 800,
-      "within_budget": false,
-      "with_sentinel_total": 10654,
-      "baseline_total": 9507,
-      "first_line": "<VELRA_CONTINUATION v=\"1\" checkpoint=\"ckpt_01M2CV7AMZ4FQD55KM68VN2DBX\" captured=\"2026-09-13T07:38:03Z\" trigger=\"manual\">"
+      "within_budget": true,
+      "with_sentinel_total": 11141,
+      "baseline_total": 10438,
+      "first_line": "<VELRA_CONTINUATION v=\"1\" checkpoint=\"ckpt_01M2E75SWVXPHW5E0E7RAYFECX\" captured=\"2026-09-13T20:26:11Z\" trigger=\"manual\">"
     }
   ]
 }

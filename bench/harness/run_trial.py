@@ -28,13 +28,14 @@ import subprocess
 import sys
 import time
 
+import claude_binary
+
 HERE = pathlib.Path(__file__).resolve().parent
 REPO_ROOT = HERE.parent.parent
 
-CLAUDE = pathlib.Path(os.path.expanduser(
-    "~/.vscode/extensions/anthropic.claude-code-2.1.269-win32-x64"
-    "/resources/native-binary/claude.exe"
-))
+# Resolved, never pinned: the VS Code extension auto-updates, so a literal
+# version in this path goes stale without warning. See claude_binary.py.
+CLAUDE = claude_binary.resolve()
 
 # --------------------------------------------------------------------------
 # The turn script. Identical for both arms, byte for byte.

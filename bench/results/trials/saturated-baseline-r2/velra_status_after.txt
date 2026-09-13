@@ -1,9 +1,0 @@
-exit=1
-âœ— Not enabled. Run `velra enable`.
-  Claude Code: 2.1.269 (from VS Code extension)
-  Binary:      (not recorded; run `velra enable`)
-  Database:    C:\Users\aryan\Videos\Velra\bench\results\trials\saturated-baseline-r2\velra_home\velra.db (0 KiB)
-  Tracking:    0 session(s), 0 event(s)
-  Last event:  none yet
-  Continuations: none live
-

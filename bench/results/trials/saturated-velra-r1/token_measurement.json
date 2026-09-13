@@ -7,20 +7,20 @@
       "index": 0,
       "hook_name": "SessionStart:compact",
       "exit_code": 0,
-      "hook_stdout_bytes": 2264,
-      "context_chars": 2056,
-      "context_bytes": 2056,
-      "measured_tokens": 951,
+      "hook_stdout_bytes": 1700,
+      "context_chars": 1492,
+      "context_bytes": 1492,
+      "measured_tokens": 703,
       "budget_tokens": 800,
-      "within_budget": false,
-      "with_sentinel_total": 10458,
-      "baseline_total": 9507,
-      "first_line": "<VELRA_CONTINUATION v=\"1\" checkpoint=\"ckpt_01M2CTC9YJB1B9Y581TDKJ9AHP\" captured=\"2026-09-13T07:23:18Z\" trigger=\"manual\">"
+      "within_budget": true,
+      "with_sentinel_total": 11141,
+      "baseline_total": 10438,
+      "first_line": "<VELRA_CONTINUATION v=\"1\" checkpoint=\"ckpt_01M2E75SWVXPHW5E0E7RAYFECX\" captured=\"2026-09-13T20:26:11Z\" trigger=\"manual\">"
     }
   ],
   "control": {
-    "a": 9507,
-    "b": 9507,
+    "a": 10438,
+    "b": 10438,
     "delta": 0
   },
   "control_valid": true

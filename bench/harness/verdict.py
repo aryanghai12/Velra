@@ -159,9 +159,7 @@ def main() -> int:
         print(f"  Baseline : re-explored {base['dead_end_reexplored']}/{base['n']}")
         if in_db > in_capsule:
             print(f"  note     : {in_db - in_capsule} trial(s) recorded the dead end "
-                  f"but did not deliver it -- snapshot.rs filters dead ends on "
-                  f"`reapplied = 0`, and\n             an out-of-order git_pre "
-                  f"observation set that flag falsely.")
+                  f"in the database but did not deliver it in the capsule.")
         if lossy is False:
             v, why = INCONCLUSIVE, ("compaction was not lossy, so nothing was "
                                     "forgotten for either arm to re-explore")

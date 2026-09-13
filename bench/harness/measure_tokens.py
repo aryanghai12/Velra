@@ -36,9 +36,11 @@ import pathlib
 import subprocess
 import sys
 
-CLAUDE = pathlib.Path(os.path.expanduser(
-    "~/.vscode/extensions/anthropic.claude-code-2.1.269-win32-x64"
-    "/resources/native-binary/claude.exe"))
+import claude_binary
+
+# Resolved, never pinned: the VS Code extension auto-updates, so a literal
+# version in this path goes stale without warning. See claude_binary.py.
+CLAUDE = claude_binary.resolve()
 
 SENTINEL = "Reply with the single word: ACK"
 

@@ -173,7 +173,10 @@ mod tests {
     #[test]
     fn config_defaults_without_file() {
         let dir = tempfile::tempdir().unwrap();
-        assert_eq!(Config::load(dir.path()).render().budget_tokens, 800);
+        assert_eq!(
+            Config::load(dir.path()).render().budget_tokens,
+            velra_core::render::DEFAULT_BUDGET_TOKENS
+        );
         std::fs::write(config_path(dir.path()), "budget_tokens = 500\n").unwrap();
         assert_eq!(Config::load(dir.path()).render().budget_tokens, 500);
     }

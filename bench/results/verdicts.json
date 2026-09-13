@@ -6,29 +6,29 @@
     "beat_baseline": false
   },
   "H2": {
-    "verdict": "FAILED",
-    "why": "the reverted approach reached the capsule in only 1/2 trials; neither arm re-explored it, but Velra did not deliver what the hypothesis claims it delivers",
-    "dead_end_in_db": 2,
+    "verdict": "PASSED",
+    "why": "target met in absolute terms; the baseline also re-explored nothing, so no improvement over vanilla was demonstrated",
+    "dead_end_in_db": 1,
     "dead_end_in_capsule": 1,
-    "replicates": 2
+    "replicates": 1
   },
   "H3": {
-    "verdict": "FAILED",
-    "worst_tokens": 1147,
+    "verdict": "PASSED",
+    "worst_tokens": 703,
     "control_valid": true
   },
   "H4": {
-    "verdict": "PASSED",
+    "verdict": "FAILED",
     "fail_open": "PASSED",
-    "latency_budget": "PASSED",
+    "latency_budget": "FAILED",
     "nonzero_exits": 0,
     "stderr_writes": 0,
-    "within_budget": true,
+    "within_budget": false,
     "within_wall_time_budget": false,
-    "worst_case_p99_ms": 20.317,
-    "worst_case_marginal_p99_ms": 9.606,
-    "spawn_control_p99_ms": 10.711,
+    "worst_case_p99_ms": 23.401,
+    "worst_case_marginal_p99_ms": 18.454,
+    "spawn_control_p99_ms": 4.947,
     "budget_basis": "marginal cost over the spawn control (DECISIONS.md D54)",
-    "why": "the fail-open half holds without exception; Velra's marginal cost is within budget, but total wall time is not -- on this machine starting any process at all costs more than the spec's wall-time budget at the tail"
+    "why": "the fail-open half holds without exception; Velra's own marginal cost exceeds the budget"
   }
 }

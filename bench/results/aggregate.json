@@ -6,16 +6,7 @@
       "arm": "baseline",
       "replicate": 1,
       "model": "sonnet",
-      "session_id": "29fec1cc-4225-4384-8826-e05c00f5a4d9",
-      "final_pytest_exit": 0
-    },
-    {
-      "dir": "saturated-baseline-r2",
-      "protocol": "saturated",
-      "arm": "baseline",
-      "replicate": 2,
-      "model": "sonnet",
-      "session_id": "2de362de-3a63-40a3-89db-82ec4800e97b",
+      "session_id": "2ae19270-9478-42e1-8b09-585d54beafa6",
       "final_pytest_exit": 0
     },
     {
@@ -24,83 +15,66 @@
       "arm": "velra",
       "replicate": 1,
       "model": "sonnet",
-      "session_id": "65bcd198-09d7-4422-a8e2-f5e80f4d9656",
-      "final_pytest_exit": 0
-    },
-    {
-      "dir": "saturated-velra-r2",
-      "protocol": "saturated",
-      "arm": "velra",
-      "replicate": 2,
-      "model": "sonnet",
-      "session_id": "d7179229-1e02-41d7-b590-4468663055f7",
+      "session_id": "538a5448-9d00-411a-a356-0f11aa1850e8",
       "final_pytest_exit": 0
     }
   ],
   "groups": {
     "saturated/baseline": {
-      "n": 2,
+      "n": 1,
       "sessions": [
-        "29fec1cc-4225-4384-8826-e05c00f5a4d9",
-        "2de362de-3a63-40a3-89db-82ec4800e97b"
+        "2ae19270-9478-42e1-8b09-585d54beafa6"
       ],
-      "compaction_succeeded": 2,
+      "compaction_succeeded": 1,
       "source_rereads_mean": 0.0,
       "source_rereads_each": [
-        0,
         0
       ],
       "tool_calls_mean": 2.0,
       "tool_calls_each": [
-        2,
         2
       ],
-      "hit_true_file": 2,
-      "hit_true_symbol": 2,
+      "hit_true_file": 1,
+      "hit_true_symbol": 1,
       "dead_end_reexplored": 0,
       "dead_end_mentioned_in_prose": 0,
-      "fixed_the_test": 2,
+      "fixed_the_test": 1,
       "read_bucket_mean": 0.0,
       "edit_bucket_mean": 1.0,
       "bash_bucket_mean": 1.0,
       "search_bucket_mean": 0.0,
       "cost_usd_each": [
-        1.2825154000000003,
-        1.4247006999999998
+        1.2349826
       ],
-      "wall_seconds_mean": 420.98
+      "wall_seconds_mean": 449.96
     },
     "saturated/velra": {
-      "n": 2,
+      "n": 1,
       "sessions": [
-        "65bcd198-09d7-4422-a8e2-f5e80f4d9656",
-        "d7179229-1e02-41d7-b590-4468663055f7"
+        "538a5448-9d00-411a-a356-0f11aa1850e8"
       ],
-      "compaction_succeeded": 2,
+      "compaction_succeeded": 1,
       "source_rereads_mean": 0.0,
       "source_rereads_each": [
-        0,
         0
       ],
       "tool_calls_mean": 2.0,
       "tool_calls_each": [
-        2,
         2
       ],
-      "hit_true_file": 2,
-      "hit_true_symbol": 2,
+      "hit_true_file": 1,
+      "hit_true_symbol": 1,
       "dead_end_reexplored": 0,
       "dead_end_mentioned_in_prose": 0,
-      "fixed_the_test": 2,
+      "fixed_the_test": 1,
       "read_bucket_mean": 0.0,
       "edit_bucket_mean": 1.0,
       "bash_bucket_mean": 1.0,
       "search_bucket_mean": 0.0,
       "cost_usd_each": [
-        1.5298271,
-        0.9582246000000001
+        1.0186424
       ],
-      "wall_seconds_mean": 348.5
+      "wall_seconds_mean": 246.79
     }
   }
 }
