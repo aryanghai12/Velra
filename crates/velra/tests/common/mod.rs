@@ -93,6 +93,27 @@ impl Env {
         self.hook_raw(event, payload.to_string().as_bytes())
     }
 
+    /// Runs one hook with extra environment variables, for a test that needs to
+    /// take the watchdog out of play (`VELRA_TEST_WATCHDOG_MS`, which the binary
+    /// honours only under the `fault-injection` feature).
+    pub fn hook_with_env(&self, event: &str, payload: &Value, vars: &[(&str, &str)]) -> HookOutput {
+        let mut cmd = self.cmd();
+        for (key, value) in vars {
+            cmd.env(key, value);
+        }
+        let out = cmd
+            .arg("hook")
+            .arg(event)
+            .write_stdin(payload.to_string().into_bytes())
+            .output()
+            .expect("run hook");
+        HookOutput {
+            code: out.status.code().unwrap_or(-1),
+            stdout: String::from_utf8_lossy(&out.stdout).into_owned(),
+            stderr: String::from_utf8_lossy(&out.stderr).into_owned(),
+        }
+    }
+
     pub fn hook_raw(&self, event: &str, stdin: &[u8]) -> HookOutput {
         let out = self
             .cmd()

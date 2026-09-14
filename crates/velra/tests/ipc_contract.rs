@@ -302,8 +302,22 @@ fn b4_huge_tool_response_is_retained_within_budget() {
         "tool_response": { "stdout": huge, "stderr": "", "interrupted": false }
     });
     let started = std::time::Instant::now();
-    env.hook("post-tool-use", &payload).assert_contract();
+    // The 250 ms sync watchdog is not what this test is about. Normalizing an
+    // 8 MB response is enough to reach that deadline on a slow runner, and
+    // because the event is only armed for the spool *after* normalizing, a
+    // deadline that fires first drops it entirely — by design (§4). Take the
+    // watchdog out of play so what is measured is the payload budget.
+    env.hook_with_env(
+        "post-tool-use",
+        &payload,
+        &[("VELRA_TEST_WATCHDOG_MS", "60000")],
+    )
+    .assert_contract();
     let elapsed = started.elapsed();
+
+    // Whatever fell back to the spool is ingested by one reduce pass, so the
+    // query below sees the event whichever route it took (§10.3).
+    env.reduce().assert_contract();
 
     let db = env.open_db();
     let stored: String = db
