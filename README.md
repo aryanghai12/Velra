@@ -42,9 +42,9 @@ your PATH at hook time, no runtime dependencies at all.
 
 ### Tier 1 — install a prebuilt binary (one command, no compiler)
 
-Pick whichever line matches how you already install things. All four download
-the same statically linked binary from
-[GitHub Releases](https://github.com/aryanghai12/velra/releases) and verify its
+Pick whichever line matches how you already install things. Every one of them
+downloads the same statically linked binary from
+[GitHub Releases](https://github.com/aryanghai12/velra/releases) and verifies its
 published SHA-256 before installing it. **None of them need a C or C++
 compiler, Visual Studio Build Tools, Xcode, or a Rust toolchain.**
 
@@ -54,21 +54,35 @@ compiler, Visual Studio Build Tools, Xcode, or a Rust toolchain.**
 curl -LsSf https://raw.githubusercontent.com/aryanghai12/velra/main/install/install.sh | sh
 ```
 
-**Windows (PowerShell)**
+Add `-s -- --enable` to register the hooks in the same command.
+
+**Windows — PowerShell**
 
 ```powershell
-powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/aryanghai12/velra/main/install/install.ps1 | iex"
+irm https://raw.githubusercontent.com/aryanghai12/velra/main/install/install.ps1 | iex
+```
+
+Paste that straight into the PowerShell prompt you already have open. If you are
+in **CMD / Command Prompt** instead, spawn PowerShell for it:
+
+```bat
+powershell -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/aryanghai12/velra/main/install/install.ps1 | iex"
+```
+
+To install *and* register the hooks in one step from PowerShell:
+
+```powershell
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/aryanghai12/velra/main/install/install.ps1))) -Enable
 ```
 
 **npm — any platform**
 
 ```bash
+# Global install
 npm install -g velra
-```
+velra enable
 
-Or with no permanent install at all:
-
-```bash
+# Or zero-install: fetches the binary, registers the hooks, installs nothing globally
 npx velra enable
 ```
 
@@ -78,18 +92,43 @@ npx velra enable
 cargo binstall velra
 ```
 
-`cargo binstall` fetches the same release archive rather than compiling it, so
-it is instant and needs no linker. If you do not have it:
-`cargo install cargo-binstall` (or grab its own prebuilt binary).
+`cargo binstall` downloads the same release archive rather than compiling it, so
+it is instant and needs no linker.
 
-Then register the hooks:
+If you do not have `cargo-binstall` yet, get **it** from a prebuilt binary too.
+Do not reach for `cargo install cargo-binstall`: that compiles 370+ crates and
+needs exactly the C++ linker this tier exists to avoid.
+
+```powershell
+# Windows (PowerShell)
+irm https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.ps1 | iex
+cargo binstall velra
+```
+
+```bash
+# macOS / Linux
+curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
+cargo binstall velra
+```
+
+### Register the hooks
+
+Velra does nothing until its hooks are registered, and nothing is registered
+unless you ask for it.
+
+| How you installed | What registers the hooks |
+|---|---|
+| `npx velra enable` | Nothing — that command *is* the registration step. |
+| Installer script with `--enable` (sh) or `-Enable` (PowerShell) | Nothing — done in the same command. |
+| Anything else: `npm install -g`, `cargo binstall`, plain installer script | Run `velra enable` once. |
 
 ```bash
 velra enable
 ```
 
-The installer scripts accept `--enable` / `-Enable` to do that in the same
-step. Nothing is registered unless you ask for it.
+Once is enough, ever. It writes into your user-level `~/.claude/settings.json`,
+so it applies to every directory and every project on the machine from that
+moment on.
 
 <details>
 <summary>Supported platforms</summary>
@@ -160,9 +199,7 @@ velra doctor
 
 There isn't one. That is the point.
 
-1. Run `velra enable` **once**. It writes hook registrations into your
-   user-level `~/.claude/settings.json`, so Velra applies to every directory
-   and every project on the machine from that moment on.
+1. Register the hooks once, as above. That is the entire setup.
 2. Keep using Claude Code exactly as you did before. Velra is invoked by Claude
    Code when an event fires, does its work in a few milliseconds, and exits.
    There is nothing running between invocations.

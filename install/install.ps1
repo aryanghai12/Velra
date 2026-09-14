@@ -3,7 +3,11 @@
 Velra installer for Windows.
 
 .DESCRIPTION
-    powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/aryanghai12/velra/main/install/install.ps1 | iex"
+From a PowerShell prompt:
+    irm https://raw.githubusercontent.com/aryanghai12/velra/main/install/install.ps1 | iex
+
+From CMD / Command Prompt, where PowerShell has to be spawned first:
+    powershell -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/aryanghai12/velra/main/install/install.ps1 | iex"
 
 To also register the hooks:
     & ([scriptblock]::Create((irm https://raw.githubusercontent.com/aryanghai12/velra/main/install/install.ps1))) -Enable

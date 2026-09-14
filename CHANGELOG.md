@@ -8,6 +8,16 @@ All notable changes to Velra are documented here. The format follows
 
 ### Changed
 
+- **Quickstart commands no longer carry shell traps.** The primary Windows line
+  is now the native `irm ... | iex`, with the `powershell -ExecutionPolicy
+  Bypass -Command "..."` wrapper given separately for people pasting from CMD —
+  wrapping it by default spawns a second PowerShell and fails with
+  `ResourceUnavailable` inside an existing session. The `cargo-binstall` section
+  now bootstraps that tool from its own prebuilt release instead of suggesting
+  `cargo install cargo-binstall`, which compiles 370+ crates and needs the C++
+  linker the whole tier exists to avoid. npm's global and zero-install paths are
+  spelled out separately, and a table says which install methods register the
+  Claude Code hooks for you and which need `velra enable` once.
 - **The npm package installs itself.** `npm install -g velra` and `npx velra`
   no longer depend on the unpublished `@velra/cli-*` platform packages. The
   launcher resolves the host target, downloads the matching release archive
