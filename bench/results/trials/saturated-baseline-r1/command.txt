@@ -1,1 +1,0 @@
-C:\Users\aryan\.vscode\extensions\anthropic.claude-code-2.1.269-win32-x64\resources\native-binary\claude.exe -p --input-format stream-json --output-format stream-json --verbose --include-hook-events --model sonnet --permission-mode bypassPermissions --permission-prompts none --strict-mcp-config --max-budget-usd 25.0 --autocompact auto

@@ -4,7 +4,7 @@
 > Adaptive context-lifecycle infrastructure for AI coding agents.
 > Product name: **Velra** · binary `velra` · data directory `~/.velra/`.
 
-**Pre-launch check (not yet verified):** confirm availability of `velra` on crates.io, npm, Homebrew core/tap naming, GitHub org, and a domain (e.g. `velra.dev`) before the first public release. Every build prompt treats the domain as a placeholder `{{VELRA_DOMAIN}}`.
+**Pre-launch check (not yet verified):** confirm availability of `velra` on crates.io, npm, Homebrew core/tap naming, GitHub org, and a domain (e.g. `velra.dev`) before the first public release. Every build prompt treated the domain as a substitutable placeholder, now resolved to `https://github.com/aryanghai12/Velra`.
 
 ---
 
@@ -42,7 +42,7 @@ Why this order and not another:
 - **Trauma:** You spend 40 minutes debugging, compaction fires (often automatically, mid-task), and the next message is a confident suggestion you already rejected. You feel robbed of your time and lose trust in the agent.
 - **Why the wedge is sharp:** It is felt by every heavy Claude Code user, it recurs daily, and it is binary: either Claude remembers the dead end or it does not. Binary outcomes make great demos.
 - **Aha choreography (the 6-second moment):**
-  1. `curl -LsSf https://{{VELRA_DOMAIN}}/install.sh | sh && velra enable` → `✓ Velra enabled for Claude Code. Nothing else required.`
+  1. `curl -LsSf https://github.com/aryanghai12/Velra/install.sh | sh && velra enable` → `✓ Velra enabled for Claude Code. Nothing else required.`
   2. Work normally for 5–10 minutes (edit, run tests, revert something).
   3. `velra inspect` → see exactly what would survive, rendered locally. (This builds trust *before* the magic.)
   4. `/compact` → `⚡ Velra checkpoint saved` → `⚡ Velra restored: objective · 1 failing test · 2 dead ends · 5 files (612 tokens)`.

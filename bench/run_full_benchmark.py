@@ -168,14 +168,17 @@ def main() -> int:
     sh([py, HARNESS / "make_evidence.py", "--out", RESULTS / "EVIDENCE.md"],
        cwd=str(REPO_ROOT))
 
+    # ---- verdicts --------------------------------------------------------
+    # Must run before the proof asset: make_proof.py renders its verdict
+    # strip from verdicts.json, so evaluating afterwards would stamp the
+    # asset with the *previous* run's verdicts.
+    step("Final evaluation")
+    r = sh([py, HARNESS / "verdict.py"], cwd=str(REPO_ROOT))
+
     # ---- Phase 5 ---------------------------------------------------------
     step("Phase 5 - proof asset")
     sh([py, HARNESS / "make_proof.py", "--out", REPO_ROOT / "assets" / "proof.svg"],
        cwd=str(REPO_ROOT))
-
-    # ---- verdicts --------------------------------------------------------
-    step("Final evaluation")
-    r = sh([py, HARNESS / "verdict.py"], cwd=str(REPO_ROOT))
     print(f"\ntotal wall time: {time.time() - started:.0f}s")
     return r.returncode
 

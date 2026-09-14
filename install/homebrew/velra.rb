@@ -1,33 +1,33 @@
 # Homebrew formula for Velra.
 #
-# Published to {{GITHUB_ORG}}/homebrew-tap by the release workflow; the
+# Published to aryanghai12/homebrew-tap by the release workflow; the
 # version and sha256 values below are rewritten per release.
 #
-#   brew install {{GITHUB_ORG}}/tap/velra
+#   brew install aryanghai12/tap/velra
 class Velra < Formula
   desc "Lossless compaction for Claude Code: your task survives /compact"
-  homepage "https://{{VELRA_DOMAIN}}"
+  homepage "https://github.com/aryanghai12/Velra"
   version "0.1.0"
   license "MIT"
 
   on_macos do
     on_arm do
-      url "https://github.com/{{GITHUB_ORG}}/velra/releases/download/v#{version}/velra-aarch64-apple-darwin.tar.gz"
+      url "https://github.com/aryanghai12/velra/releases/download/v#{version}/velra-aarch64-apple-darwin.tar.gz"
       sha256 "{{SHA256_DARWIN_ARM64}}"
     end
     on_intel do
-      url "https://github.com/{{GITHUB_ORG}}/velra/releases/download/v#{version}/velra-x86_64-apple-darwin.tar.gz"
+      url "https://github.com/aryanghai12/velra/releases/download/v#{version}/velra-x86_64-apple-darwin.tar.gz"
       sha256 "{{SHA256_DARWIN_X64}}"
     end
   end
 
   on_linux do
     on_arm do
-      url "https://github.com/{{GITHUB_ORG}}/velra/releases/download/v#{version}/velra-aarch64-unknown-linux-musl.tar.gz"
+      url "https://github.com/aryanghai12/velra/releases/download/v#{version}/velra-aarch64-unknown-linux-musl.tar.gz"
       sha256 "{{SHA256_LINUX_ARM64}}"
     end
     on_intel do
-      url "https://github.com/{{GITHUB_ORG}}/velra/releases/download/v#{version}/velra-x86_64-unknown-linux-musl.tar.gz"
+      url "https://github.com/aryanghai12/velra/releases/download/v#{version}/velra-x86_64-unknown-linux-musl.tar.gz"
       sha256 "{{SHA256_LINUX_X64}}"
     end
   end

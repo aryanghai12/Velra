@@ -98,9 +98,9 @@ Internal watchdog: every sync hook MUST abandon work and exit 0 with empty stdou
 ## 5. Installation & distribution
 
 ### 5.1 Channels
-1. **Primary (macOS/Linux):** `curl -LsSf https://{{VELRA_DOMAIN}}/install.sh | sh`
-2. **Primary (Windows):** `powershell -ExecutionPolicy Bypass -c "irm https://{{VELRA_DOMAIN}}/install.ps1 | iex"`
-3. **Homebrew:** `brew install {{GITHUB_ORG}}/tap/velra`
+1. **Primary (macOS/Linux):** `curl -LsSf https://github.com/aryanghai12/Velra/install.sh | sh`
+2. **Primary (Windows):** `powershell -ExecutionPolicy Bypass -c "irm https://github.com/aryanghai12/Velra/install.ps1 | iex"`
+3. **Homebrew:** `brew install aryanghai12/tap/velra`
 4. **Rust users:** `cargo binstall velra` (prebuilt) and `cargo install velra` (source)
 5. **npm (convenience only):** `npm i -g velra` — platform binaries via `optionalDependencies`; MUST NOT use `postinstall` scripts; runtime never needs Node.
 

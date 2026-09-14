@@ -288,6 +288,17 @@ fn b3_post_tool_and_user_prompt_channels_report_their_own_event_name() {
     );
 }
 
+/// B4: an 8 MiB tool response is normalized down to the payload budget.
+///
+/// Gated behind `fault-injection` because the test drives the watchdog
+/// override knob (`VELRA_TEST_WATCHDOG_MS`), which the binary honours only
+/// under that feature. Without it the 250 ms sync watchdog stays live, and
+/// normalizing 8 MiB can reach that deadline on a slow or loaded runner —
+/// the event is armed for the spool only *after* normalizing, so a deadline
+/// that fires first drops it by design (§4) and the assertion below races.
+/// An unthrottled `cargo test` therefore skips this case rather than
+/// flaking; `--features fault-injection` runs it deterministically.
+#[cfg(feature = "fault-injection")]
 #[test]
 fn b4_huge_tool_response_is_retained_within_budget() {
     let env = Env::new();

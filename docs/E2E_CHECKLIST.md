@@ -22,7 +22,7 @@ for what only a live session can show.
 1. Fresh install from the published artifact (not a local build):
 
    ```sh
-   curl -LsSf https://{{VELRA_DOMAIN}}/install.sh | sh
+   curl -LsSf https://github.com/aryanghai12/Velra/install.sh | sh
    velra enable
    velra doctor          # every line ✓ or an explained !
    ```

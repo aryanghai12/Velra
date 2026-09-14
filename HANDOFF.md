@@ -320,10 +320,14 @@ are fixed. The open items are measurement and release logistics:
    does *not* leave events unreduced (`reduce` drains; `batch` sizes a batch),
    and the 15 ms allowance is if anything too generous (§4 implies ≈10 ms).
    The work is to find the ~9 ms p50 `PreCompact` spends above process spawn.
-5. **Placeholders to fill before publishing.** `{{VELRA_DOMAIN}}` and
-   `{{GITHUB_ORG}}` appear in `README.md`, `install/install.sh`,
-   `install/install.ps1`, `install/homebrew/velra.rb`, `npm/velra/package.json`
-   and `Cargo.toml`. They need real values at first release.
+5. **Placeholders — resolved at v0.1.** The distribution org and domain
+   placeholders that used to sit in `install/install.sh`, `install/install.ps1`,
+   `install/homebrew/velra.rb`, `npm/velra/package.json`, `CHANGELOG.md` and
+   `Cargo.toml` are now substituted to `aryanghai12` and
+   `https://github.com/aryanghai12/Velra`. The curl/irm one-liners still point
+   at repo-root paths that GitHub does not serve as raw scripts; they need a
+   raw.githubusercontent.com or release-asset URL before the install docs are
+   accurate.
 6. **The §21 I checklist** (`docs/E2E_CHECKLIST.md`) needs one pass against a
    live Claude Code session — specifically the auto-compaction case and the
    Ctrl+C replay case, which no script can fake. `python scripts/smoke.py`

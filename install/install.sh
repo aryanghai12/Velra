@@ -1,8 +1,8 @@
 #!/bin/sh
 # Velra installer for macOS and Linux.
 #
-#   curl -LsSf https://{{VELRA_DOMAIN}}/install.sh | sh
-#   curl -LsSf https://{{VELRA_DOMAIN}}/install.sh | sh -s -- --enable
+#   curl -LsSf https://github.com/aryanghai12/Velra/install.sh | sh
+#   curl -LsSf https://github.com/aryanghai12/Velra/install.sh | sh -s -- --enable
 #
 # Environment:
 #   VELRA_VERSION          version to install (default: latest release)
@@ -15,7 +15,7 @@
 
 set -eu
 
-REPO="${VELRA_REPO:-{{GITHUB_ORG}}/velra}"
+REPO="${VELRA_REPO:-aryanghai12/velra}"
 RELEASES="${VELRA_DOWNLOAD_BASE:-https://github.com/${REPO}/releases}"
 INSTALL_ROOT="${VELRA_HOME:-$HOME/.velra}"
 BIN_DIR="$INSTALL_ROOT/bin"

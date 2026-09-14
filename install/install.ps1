@@ -3,10 +3,10 @@
 Velra installer for Windows.
 
 .DESCRIPTION
-    powershell -ExecutionPolicy Bypass -c "irm https://{{VELRA_DOMAIN}}/install.ps1 | iex"
+    powershell -ExecutionPolicy Bypass -c "irm https://github.com/aryanghai12/Velra/install.ps1 | iex"
 
 To also register the hooks:
-    & ([scriptblock]::Create((irm https://{{VELRA_DOMAIN}}/install.ps1))) -Enable
+    & ([scriptblock]::Create((irm https://github.com/aryanghai12/Velra/install.ps1))) -Enable
 
 Environment:
     VELRA_VERSION          version to install (default: latest release)
@@ -31,7 +31,7 @@ function Fail($message) {
     exit 1
 }
 
-$repo = if ($env:VELRA_REPO) { $env:VELRA_REPO } else { '{{GITHUB_ORG}}/velra' }
+$repo = if ($env:VELRA_REPO) { $env:VELRA_REPO } else { 'aryanghai12/velra' }
 $releases = if ($env:VELRA_DOWNLOAD_BASE) { $env:VELRA_DOWNLOAD_BASE } else { "https://github.com/$repo/releases" }
 $installRoot = if ($env:VELRA_HOME) { $env:VELRA_HOME } else { Join-Path $env:USERPROFILE '.velra' }
 $binDir = Join-Path $installRoot 'bin'

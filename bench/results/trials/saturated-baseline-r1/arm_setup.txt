@@ -1,5 +1,0 @@
-$ velra disable
-exit=0
-✓ Velra was not enabled; nothing to remove.
-
-

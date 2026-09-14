@@ -6,7 +6,7 @@
       "arm": "baseline",
       "replicate": 1,
       "model": "sonnet",
-      "session_id": "2ae19270-9478-42e1-8b09-585d54beafa6",
+      "session_id": "add39c56-e8bd-4a84-a3ed-4e2a4ed29c28",
       "final_pytest_exit": 0
     },
     {
@@ -15,66 +15,144 @@
       "arm": "velra",
       "replicate": 1,
       "model": "sonnet",
-      "session_id": "538a5448-9d00-411a-a356-0f11aa1850e8",
+      "session_id": "e4aef295-e5de-4a8c-a29d-c6ac1ab65030",
+      "final_pytest_exit": 0
+    },
+    {
+      "dir": "saturated-baseline-r2",
+      "protocol": "saturated",
+      "arm": "baseline",
+      "replicate": 2,
+      "model": "sonnet",
+      "session_id": "7c39008a-9ecb-48fa-9166-efcc87c53f18",
+      "final_pytest_exit": 0
+    },
+    {
+      "dir": "saturated-velra-r2",
+      "protocol": "saturated",
+      "arm": "velra",
+      "replicate": 2,
+      "model": "sonnet",
+      "session_id": "dc028e50-b6db-4f0a-8bd9-bdd935994a32",
+      "final_pytest_exit": 0
+    },
+    {
+      "dir": "saturated-baseline-r3",
+      "protocol": "saturated",
+      "arm": "baseline",
+      "replicate": 3,
+      "model": "sonnet",
+      "session_id": "d5fb8f07-1edc-47bb-9e67-0c38c420f791",
+      "final_pytest_exit": 0
+    },
+    {
+      "dir": "saturated-velra-r3",
+      "protocol": "saturated",
+      "arm": "velra",
+      "replicate": 3,
+      "model": "sonnet",
+      "session_id": "c5e342a2-bb3c-4bf4-a4aa-7aa4f7e7feeb",
+      "final_pytest_exit": 0
+    },
+    {
+      "dir": "saturated-baseline-r4",
+      "protocol": "saturated",
+      "arm": "baseline",
+      "replicate": 4,
+      "model": "sonnet",
+      "session_id": "fb7dccad-b012-4936-8217-0d14f4276229",
+      "final_pytest_exit": 0
+    },
+    {
+      "dir": "saturated-velra-r4",
+      "protocol": "saturated",
+      "arm": "velra",
+      "replicate": 4,
+      "model": "sonnet",
+      "session_id": "02610e47-63d2-404a-bd25-02d9894d7e39",
       "final_pytest_exit": 0
     }
   ],
   "groups": {
     "saturated/baseline": {
-      "n": 1,
+      "n": 4,
       "sessions": [
-        "2ae19270-9478-42e1-8b09-585d54beafa6"
+        "add39c56-e8bd-4a84-a3ed-4e2a4ed29c28",
+        "7c39008a-9ecb-48fa-9166-efcc87c53f18",
+        "d5fb8f07-1edc-47bb-9e67-0c38c420f791",
+        "fb7dccad-b012-4936-8217-0d14f4276229"
       ],
-      "compaction_succeeded": 1,
+      "compaction_succeeded": 3,
       "source_rereads_mean": 0.0,
       "source_rereads_each": [
+        0,
+        0,
+        0,
         0
       ],
-      "tool_calls_mean": 2.0,
+      "tool_calls_mean": 3.0,
       "tool_calls_each": [
-        2
+        3,
+        2,
+        4,
+        3
       ],
-      "hit_true_file": 1,
-      "hit_true_symbol": 1,
+      "hit_true_file": 4,
+      "hit_true_symbol": 4,
       "dead_end_reexplored": 0,
       "dead_end_mentioned_in_prose": 0,
-      "fixed_the_test": 1,
-      "read_bucket_mean": 0.0,
+      "fixed_the_test": 4,
+      "read_bucket_mean": 0.25,
       "edit_bucket_mean": 1.0,
-      "bash_bucket_mean": 1.0,
+      "bash_bucket_mean": 1.75,
       "search_bucket_mean": 0.0,
       "cost_usd_each": [
-        1.2349826
+        1.0494822,
+        1.3008026000000004,
+        1.086406,
+        1.5117051000000001
       ],
-      "wall_seconds_mean": 449.96
+      "wall_seconds_mean": 260.61
     },
     "saturated/velra": {
-      "n": 1,
+      "n": 4,
       "sessions": [
-        "538a5448-9d00-411a-a356-0f11aa1850e8"
+        "e4aef295-e5de-4a8c-a29d-c6ac1ab65030",
+        "dc028e50-b6db-4f0a-8bd9-bdd935994a32",
+        "c5e342a2-bb3c-4bf4-a4aa-7aa4f7e7feeb",
+        "02610e47-63d2-404a-bd25-02d9894d7e39"
       ],
-      "compaction_succeeded": 1,
+      "compaction_succeeded": 4,
       "source_rereads_mean": 0.0,
       "source_rereads_each": [
+        0,
+        0,
+        0,
         0
       ],
       "tool_calls_mean": 2.0,
       "tool_calls_each": [
+        2,
+        2,
+        2,
         2
       ],
-      "hit_true_file": 1,
-      "hit_true_symbol": 1,
+      "hit_true_file": 4,
+      "hit_true_symbol": 4,
       "dead_end_reexplored": 0,
       "dead_end_mentioned_in_prose": 0,
-      "fixed_the_test": 1,
+      "fixed_the_test": 4,
       "read_bucket_mean": 0.0,
       "edit_bucket_mean": 1.0,
       "bash_bucket_mean": 1.0,
       "search_bucket_mean": 0.0,
       "cost_usd_each": [
-        1.0186424
+        0.9411390000000002,
+        1.0693865999999999,
+        0.9832734000000001,
+        1.0229969
       ],
-      "wall_seconds_mean": 246.79
+      "wall_seconds_mean": 260.86
     }
   }
 }

@@ -1,58 +1,55 @@
 # Velra v0.1 — empirical benchmark report
 
-**Date:** 2026-09-13 · **Host:** Windows 11 (26200), x86_64, `x86_64-pc-windows-gnu`
-**Binary under test:** `velra 0.1.0 (75ed4bbd3, x86_64-pc-windows-gnu)`, release, 5.12 MB
-**Agent under test:** Claude Code 2.1.269 (native binary shipped with the VS Code extension), model `claude-sonnet-5`
-**Everything below is reproducible with:** `python bench/run_full_benchmark.py`
+**Date:** 2026-09-14 · **Host:** Windows 11 Home Single Language (10.0.26200), x86_64, `x86_64-pc-windows-gnu`
+**Binary under test:** `velra 0.1.0 (e9f40151c, x86_64-pc-windows-gnu)`, release, 5,385,728 bytes
+**Agent under test:** Claude Code **2.1.270** (native binary shipped with the VS Code extension), model `claude-sonnet-5`
+**Dataset:** **4 replicates per arm — 8 live sessions**, 2,627 s total wall time, **$8.97** in API cost
+**Everything below is reproducible with:** `python bench/run_full_benchmark.py --replicates 4`
 
 ---
 
 ## 1. Verdicts
 
-| # | Hypothesis | Verdict |
-|---|---|---|
-| **H1** | Compaction amnesia elimination | **PASSED** — target met; *not* better than vanilla |
-| **H2** | Dead-end loop prevention | **FAILED** — the dead end reached the capsule in only 1 of 2 trials |
-| **H3** | Continuation budget ≤ 800 tokens | **FAILED** — measured 951 and 1,147 tokens |
-| **H4** | Zero-overhead fail-open guarantee | **FAILED** — fail-open half passes perfectly; the p99 latency allowance does not |
+Measured across **four replicates per arm** on 2026-09-14. Medians are over
+the four runs; every per-run figure is in §17.
+
+| # | Hypothesis | Verdict | The number that decides it |
+|---|---|---|---|
+| **H1** | Compaction amnesia elimination | **INCONCLUSIVE** | the control says compaction was **not lossy** in this harness, so the post-compaction turn never tested recall. Target met in absolute terms — re-reads **0/4 in both arms**, first edit on `engine.settle` **4/4 in both arms**, suite green **4/4 in both arms** |
+| **H2** | Dead-end loop prevention | **INCONCLUSIVE** | `[DEAD_ENDS]` reached the delivered capsule **4/4**, re-exploration **0/4** — but the baseline also re-explored **0/4**, and with nothing forgotten there was nothing for either arm to re-explore |
+| **H3** | Continuation budget ≤ 800 tokens | **PASSED** | **705, 715, 721, 722 real tokens** on Anthropic's tokenizer — 4/4 under the 800 ceiling at the 745 calibrated budget, measurement control delta **0** |
+| **H4** | Zero-overhead fail-open guarantee | **FAILED** | fail-open half perfect — **481 in-session hook invocations, 0 non-zero exits, 0 stderr bytes**. Latency half fails: worst marginal p99 **163.31 ms** against a 15 ms allowance |
 
 Phase 1 environment checks: **PASSED**.
 
-> **⚠️ The table above is superseded. It describes `velra 0.1.0 (75ed4bbd3)`,
-> and the report is left as it was measured.** The H2 and H3 defects were fixed
-> on 2026-09-13 and the H4 claim was restated; §15 records what changed and §16
-> what a re-run would settle.
->
-> **The re-run has since happened — see [§17](#17-the-re-run-2026-09-13--verdicts-as-re-measured)
-> for the current verdicts against `velra 0.1.0 (e9f40151c)`: H1, H2 and H3
-> PASSED, H4 FAILED.** [§18](#18-two-findings-from-the-re-run-that-need-v02)
-> records two findings from that run — a truncation-ladder cliff that drops
-> `[WORKING_FILES]`, and an agent that rejected the capsule as a prompt
-> injection in 1 of 3 replicates — both of which are open against v0.2.
+> **Reading this document.** §1–§14 were written against `75ed4bbd3` and are
+> kept as originally measured. §15 records the fixes, §16 what a re-run would
+> settle, and §17 now carries the **authoritative four-replicate dataset for
+> `e9f40151c`**, which supersedes the §1 table for anything about the current
+> binary. §18 records the two open findings, re-measured across four runs.
 
 ### The one-paragraph finding
 
-Velra hits its own absolute target for H1: after `/compact`, the
-Velra-augmented agent re-read **zero** source files and put its **first** edit
-inside `engine.settle`, the exact defective symbol. But vanilla Claude Code did
-precisely the same thing, in every replicate, with identical numbers. The reason
-is not that compaction is harmless — a dedicated control proves compaction **is**
-lossy, cutting live context by 41.3% and destroying verbatim detail. The reason
-is that Claude Code 2.1.269's native summary is *deliberately* not amnesic about
-the three things Velra's capsule carries: it names the objective, the failing
-assertion and the reverted dead end, unprompted. On this task Velra's capsule was
-therefore correct but redundant. Two hypotheses then failed outright, and both
-failures are defects worth fixing rather than measurement artifacts. H3: the
-capsule overran its own 800-token budget (951 and 1,147 measured with Anthropic's
-tokenizer) because `estimate_tokens` assumes 3.2 characters per token while the
-capsule format really measures 2.07–2.16. H2: in one of two trials the reverted
-approach **never reached the capsule at all** — an out-of-order `git_pre`
-observation made Velra believe the discarded change had been re-applied, and the
-renderer filters dead ends on `reapplied = 0`, so the single most distinctive
-section of the product silently disappeared. Velra's genuine, measured advantage
-is narrower than claimed but real: a bounded, deterministic, provenance-tagged
-record derived from tool events, against a native summary that ranged from 670 to
-6,937 tokens across four runs of the identical script.
+The headline of this run is a **negative control result that invalidates two of
+the four hypotheses as posed**. Velra's capsule did everything it claims to do:
+it was delivered in 4/4 replicates, carried a provenance-tagged `[DEAD_ENDS]`
+section in 4/4, and measured **705–722 tokens** against its 800 ceiling with a
+valid zero-delta control. But the dedicated compaction probe — vanilla Claude
+Code, Velra disabled — found that `/compact` **was not lossy on this task**: it
+cut live context by only 22.1% (54,999 → 42,856 tokens) and the canary value
+`AQE1`, planted nine turns earlier, was still recalled verbatim *without a tool
+call*. If nothing was forgotten, then a capsule that prevents forgetting cannot
+be shown to help, and H1 and H2 are **INCONCLUSIVE rather than passed**: both
+arms re-read zero source files, both put the first edit on `engine.settle` 4/4,
+both finished green 4/4. The one behavioural difference that did survive four
+replicates is narrow but perfectly consistent: the Velra arm closed the task in
+**exactly 2 tool calls in all four runs**, against a baseline that took 3, 2, 4
+and 3. Velra's genuine, measured advantage remains what it was — a bounded,
+deterministic, provenance-tagged record, **705–722 tokens across four runs**,
+against a native summary that ranged from **777 to 4,977 tokens** across the
+same eight sessions. H4's fail-open guarantee held without a single exception
+across 481 observed hook invocations; its latency allowance did not, though the
+figure that fails it is a tail artifact rather than a systematic cost (§17).
 
 ---
 
@@ -85,14 +82,36 @@ and analysed afterwards by `bench/harness/analyze.py`, which is a pure function
 of the bytes on disk. Verbatim excerpts backing every number in this report are
 in **[`bench/results/EVIDENCE.md`](bench/results/EVIDENCE.md)** (43 KiB).
 
-### The four trials
+### The eight trials
+
+Four replicates per arm, run 2026-09-14 against `velra 0.1.0 (e9f40151c)` under
+Claude Code 2.1.270. "Native summary" is the size of Claude Code's own
+compaction summary; "Velra capsule" is the delivered continuation block as
+measured by Anthropic's tokenizer.
 
 | Trial | Arm | Session id | Wall | Cost | Native summary | Velra capsule |
 |---|---|---|---:|---:|---:|---:|
-| `saturated-baseline-r1` | baseline | `29fec1cc-4225-4384-8826-e05c00f5a4d9` | 434 s | $1.28 | ~4,410 tok | — |
-| `saturated-baseline-r2` | baseline | `2de362de-3a63-40a3-89db-82ec4800e97b` | 408 s | $1.42 | ~670 tok | — |
-| `saturated-velra-r1` | velra | `65bcd198-09d7-4422-a8e2-f5e80f4d9656` | 435 s | $1.53 | ~6,937 tok | **951 tok** |
-| `saturated-velra-r2` | velra | `d7179229-1e02-41d7-b590-4468663055f7` | 262 s | $0.96 | ~802 tok | **1,147 tok** |
+| `saturated-baseline-r1` | baseline | `add39c56-e8bd-4a84-a3ed-4e2a4ed29c28` | 270 s | $1.05 | ~3,311 tok | — |
+| `saturated-baseline-r2` | baseline | `7c39008a` | 213 s | $1.30 | **none produced** | — |
+| `saturated-baseline-r3` | baseline | `d5fb8f07` | 312 s | $1.09 | ~4,977 tok | — |
+| `saturated-baseline-r4` | baseline | `fb7dccad` | 247 s | $1.51 | ~3,794 tok | — |
+| `saturated-velra-r1` | velra | `e4aef295` | 243 s | $0.94 | ~843 tok | **715 tok** |
+| `saturated-velra-r2` | velra | `dc028e50` | 229 s | $1.07 | ~777 tok | **722 tok** |
+| `saturated-velra-r3` | velra | `c5e342a2` | 266 s | $0.98 | ~838 tok | **705 tok** |
+| `saturated-velra-r4` | velra | `02610e47` | 305 s | $1.02 | ~4,210 tok | **721 tok** |
+
+Medians — baseline wall 258.7 s, cost $1.19; Velra wall 254.6 s, cost $1.00.
+Total API cost for the suite: **$8.97**.
+
+> **One trial is not a valid replicate for the compaction-dependent
+> hypotheses.** `saturated-baseline-r2` reached turn 15 without compacting:
+> `analysis.json` records `compact_status: null` and
+> `native_compaction_summary.present: false`. Compaction succeeded in **3/4
+> baseline** and **4/4 Velra** trials, so H1's cross-arm comparison rests on
+> three baseline replicates, not four. It is counted as a trial everywhere the
+> measure does not depend on compaction having happened (tool calls, first-edit
+> accuracy, suite green), and excluded from the native-summary range.
+
 
 ---
 
@@ -100,8 +119,10 @@ in **[`bench/results/EVIDENCE.md`](bench/results/EVIDENCE.md)** (43 KiB).
 
 `bench/harness/verify_env.py`, evidence in `bench/results/phase1_environment.json`.
 
+*Refreshed by the 2026-09-14 four-replicate run; the binary is `e9f40151c`.*
+
 ```
-velra --version -> velra 0.1.0 (75ed4bbd3, x86_64-pc-windows-gnu) (exit 0)
+velra --version -> velra 0.1.0 (e9f40151c, x86_64-pc-windows-gnu) (exit 0)
 real settings: enable -> 13 handlers across 10 events
 real settings: disable -> restored byte for byte = True
 jsonc settings: foreign hook kept = True, comments kept = True, restored byte for byte = True
@@ -119,12 +140,12 @@ identical:
 
 ```
 before  cce7710585fa8aa8c6b31e8c3736f526ca421f287435550bee5a4fefffff1f5e  (146 bytes)
-enabled 52a6e2d1552f8f3ed768516a400decf9601236a383b7adc5563164e58887506c  (4618 bytes)
+enabled 5e9ff30dcbdf768b119eab056e71f85a6a3cc83ba0f265bc3202e0e0e7d84232  (4546 bytes)
 after   cce7710585fa8aa8c6b31e8c3736f526ca421f287435550bee5a4fefffff1f5e  (146 bytes)
 ```
 
-`enable` grew the file from 146 bytes to 4,618 and `disable` returned it to the
-same 146 bytes with the same digest.
+`enable` grew the file from 146 bytes to 4,546 and `disable` returned it to the
+same 146 bytes with the same digest (`restored_byte_for_byte: true`).
 
 That alone is weak evidence — a file with no comments would survive a naive
 JSON reparse. So the check is repeated against a synthetic JSONC file carrying
@@ -202,6 +223,13 @@ Two design decisions matter:
 ---
 
 ## 6. The control — is there any amnesia to eliminate?
+
+> **⚠️ Superseded by [§17](#17-the-four-replicate-run-2026-09-14--verdicts-as-re-measured).**
+> This section measured compaction as *lossy* (41.3% reduction, canary lost).
+> The 2026-09-14 re-run measured the opposite on the same probe — 22.1%
+> reduction and the canary recalled verbatim — which is what moves H1 and H2
+> to INCONCLUSIVE. The reversal is the single most important change in this
+> document; read §17's control table before citing anything below.
 
 H1 and H2 are only meaningful if Claude Code's own compaction actually loses
 something. `bench/harness/compaction_probe.py` measures that directly, with
@@ -826,151 +854,243 @@ this benchmark found missing from a delivered capsule — actually arrives.
 
 ---
 
-## 17. The re-run, 2026-09-13 — verdicts as re-measured
+## 17. The four-replicate run, 2026-09-14 — verdicts as re-measured
 
-§15 fixed the defects and §16 said what a re-run would settle. The re-run has
-now happened. **This section supersedes §1 for the current binary**; §1 is left
-standing because it describes `75ed4bbd3`, which is a different program.
+§15 fixed the defects and §16 said what a re-run would settle. A single
+replicate was run on 2026-09-13; this section now carries **four replicates per
+arm**, run 2026-09-14, and supersedes both. **This section supersedes §1 for the
+current binary**; §1 is left standing because it describes `75ed4bbd3`, which is
+a different program.
 
-**Binary under test:** `velra 0.1.0 (e9f40151c)`, release, `x86_64-pc-windows-gnu`
-**Agent:** Claude Code **2.1.270**, model `claude-sonnet-5`
-**Trials:** `saturated-baseline-r1` (session `2ae19270`) and
-`saturated-velra-r1` (session `538a5448`), one replicate each, saturated
-protocol, 16 turns, `/compact` at turn 14, measured turn 15.
+**Binary under test:** `velra 0.1.0 (e9f40151c)`, release, `x86_64-pc-windows-gnu`, 5,385,728 bytes
+**Agent:** Claude Code **2.1.270**, model `claude-sonnet-5` — **both arms on the same build**, which closes the confound §18 named
+**Trials:** 4 replicates × 2 arms, saturated protocol, 16 turns, `/compact` at
+turn 14, measured turn 15. Session ids and per-run telemetry in §2.
 
 | # | Hypothesis | Verdict | The number that decides it |
 |---|---|---|---|
-| **H1** | Compaction amnesia elimination | **PASSED** — target met; still *not* better than vanilla | re-reads 0, first edit on `engine.settle` 1/1, tool calls 2 — identical in both arms |
-| **H2** | Dead-end loop prevention | **PASSED** — with the caveat below | `[DEAD_ENDS]` in the delivered capsule 1/1; re-explored 0/1 in both arms |
-| **H3** | Continuation budget ≤ 800 tokens | **PASSED** | **703 real tokens** against the 800 ceiling, measured on Anthropic's tokenizer, control delta 0 |
-| **H4** | Zero-overhead fail-open guarantee | **FAILED** | fail-open perfect (129 hook invocations, 0 non-zero exits, 0 stderr); PreCompact **marginal p99 18.45 ms against a 15.0 ms target** |
+| **H1** | Compaction amnesia elimination | **INCONCLUSIVE** | re-reads **0** (median, `[0,0,0,0]` both arms), first edit on `engine.settle` **4/4 both arms**, suite green **4/4 both arms**, tool calls **2.0 Velra vs 3.0 baseline** (medians). The control says compaction was not lossy, so recall was never tested |
+| **H2** | Dead-end loop prevention | **INCONCLUSIVE** | dead end in the database **4/4**, in the **delivered** capsule **4/4**, re-explored **0/4** — and **0/4** in the baseline too |
+| **H3** | Continuation budget ≤ 800 tokens | **PASSED** | **705 / 715 / 721 / 722** real tokens; median **718**, worst **722**, all under the 800 ceiling at the 745 calibrated budget; control delta **0** in all four |
+| **H4** | Zero-overhead fail-open guarantee | **FAILED** | fail-open perfect (**481 invocations, 0 non-zero exits, 0 stderr bytes**); worst marginal p99 **163.31 ms** against 15 ms |
 
 Phase 1 environment checks: **PASSED**.
 
-### H3, settled
+### The control, and why it changes two verdicts
 
-The estimator fix in §15 was necessary but not sufficient. Measured across the
-re-runs, `estimate_tokens` still under-reads the real tokenizer by about 6%
-(778 est → 825 real; 654 → 691; 670 → 703). Because the truncation ladder
-enforces the budget against the *estimate*, a capsule estimated just under 800
-shipped at 825 — over the ceiling the hypothesis names.
+The control is the load-bearing measurement in this run, and it came out the
+other way from 2026-09-13:
 
-`render::DEFAULT_BUDGET_TOKENS` is therefore **745**, not 800: the spec figure
-less a margin that covers the observed error. A compile-time assertion in
-`render.rs` fails the build if that margin is ever narrowed below 6%. The
-delivered block now measures **703 tokens**.
+| | 2026-09-13 | **2026-09-14 (4-replicate run)** |
+|---|---:|---:|
+| context before `/compact` | — | 54,999 tok |
+| context after `/compact` | — | 42,856 tok |
+| reduction | 41.3% | **22.1%** |
+| verbatim canary recalled | no | **yes — answered `"AQE1"`, no tool call** |
+| → compaction is lossy | **true** | **false** |
 
-### H4, not fixed and not explained away
+H1 and H2 are both claims of the form *the capsule prevents a loss that
+compaction causes*. When the control reports no loss, those claims are not
+refuted — they are **untested**. Reporting them as PASSED on the strength of
+"re-reads 0, first edit correct" would be reporting the absence of a problem as
+evidence of a cure, when the baseline posts identical numbers. Hence
+INCONCLUSIVE, which is the harness's own verdict (`bench/results/verdicts.json`).
 
-The fail-open half holds without exception and always has. The latency half
-fails on `PreCompact`, at 18.45 ms marginal p99 against the harness's 15 ms
-allowance — Velra's own work, with the process-spawn control already subtracted.
+Note this is a property of the *task*, not a fix: the fixture's defect is
+recoverable from the failing assertion alone, so a summariser that keeps the
+test name keeps enough. §16's "harder test" item is now the blocking work for
+H1 and H2, not a nice-to-have.
 
-Two false leads were chased and are recorded so they are not chased again:
+### H1, in absolute terms
 
-1. **It is not a measurement-condition bug.** §4 budgets `hook pre-compact` at
-   "≤ 200 unreduced events", and `examples/seed.rs` looked like it left ~99,500
-   unreduced. It does not: `reducer::reduce` runs batches until caught up, and
-   `batch: 500` sizes each batch rather than capping the total. Seeding 5,000
-   events and reading `reducer_cursor` back shows a tail of **zero**. The
-   precondition was always satisfied.
-2. **The 15 ms allowance is not too strict — if anything it is too loose.** §4
-   gives Windows `p99 ≤ 15 ms` of *wall* time, "documented as OS spawn
-   overhead". With a spawn control at 4.95 ms p99, the implied allowance for
-   Velra's own work is ≈10 ms; §4 line 89 independently budgets `pre-compact`
-   at `p99 ≤ 10 ms`. The harness's 15 ms marginal budget already applies a
-   wall-time concession to a figure that excludes spawn.
+Every absolute target H1 names was met, in every replicate, in **both** arms:
 
-So H4 stays **FAILED**, and the work it names is real: find the ~9 ms p50 that
-`PreCompact` spends above process spawn (checkpoint freeze, capsule render,
-database write) and reduce it. Raising the threshold was considered and
-rejected — any number above 15 would have been chosen after seeing 18.45 fail.
+| Measure | Baseline (n=4) | Velra (n=4) |
+|---|---|---|
+| source files re-read before the first edit | 0 `[0,0,0,0]` | 0 `[0,0,0,0]` |
+| first edit landed on `engine.settle` | 4/4 | 4/4 |
+| test suite green at the end | 4/4 | 4/4 |
+| tool calls on the measured turn | 3.0 median `[3,2,4,3]` | **2.0 median `[2,2,2,2]`** |
+| turns to defect resolution | 1 (the measured turn) in 4/4 | 1 (the measured turn) in 4/4 |
 
-### H2, and what "passed" means here
+Both arms resolved the defect **within the single measured turn** in all eight
+sessions. The only measure that separates them is tool-call count, where Velra
+is both lower and — across four runs — perfectly stable at 2, while the
+baseline varies between 2 and 4. That is a real and reproducible difference,
+but it is an efficiency signal, not the amnesia signal H1 is about.
 
-The capsule now reliably carries a `[DEAD_ENDS]` section naming
-`src/ledger/money.py`, the file that was edited and reverted, with the test
-result observed afterwards. The §15 fix for the vanishing section holds: 1/1.
+### H2, and what the capsule actually carried
 
-It does **not** name `ROUND_HALF_EVEN`. Velra derives the capsule from tool
-events and deliberately does not retain edit bodies, so the *idea* that was
-abandoned exists nowhere in its data. The harness criterion
-`dead_end_approach_in_capsule` was therefore redefined to mean "the capsule
-identifies the abandoned approach by the file it lives in"; the stricter
-reading survives as `dead_end_approach_named_verbatim`, which is recorded in
-every `analysis.json` and is still **false**.
+`[DEAD_ENDS]` reached the delivered capsule in **4/4** replicates. The §15 fix
+for the vanishing section holds across four runs, not one. Attribution is
+provenance-tagged in every case:
 
-H2 should be read as *the abandoned file is carried across compaction*, never
-as *the abandoned approach is*.
+```
+[DEAD_ENDS] (OBSERVED)
+- src/ledger/money.py | 2 edit(s) | reverted via `git restore src/ledger/money.py` at 15:22
+  Observed afterward: `python -m pytest -q` FAIL. Causal link: UNCONFIRMED.
+```
+
+Three of four name the revert mechanism verbatim (`reverted via git restore`);
+**r2 attributes it as `changed outside the agent`** instead, because the revert
+reached the file by a route Velra did not observe as an agent edit. The section
+is still correct and still names the right file — but the attribution string is
+not stable across replicates, which is worth knowing before it is quoted as a
+feature.
+
+As in the single-replicate run, the capsule does **not** name `ROUND_HALF_EVEN`:
+`dead_end_approach_named_verbatim` is **false in 4/4**. H2 should be read as
+*the abandoned file is carried across compaction*, never as *the abandoned
+approach is*.
+
+Re-exploration was **0/4** in the Velra arm — and **0/4** in the baseline, which
+is why the verdict is inconclusive rather than passed.
+
+### H3, settled across four replicates
+
+The one hypothesis this run settles cleanly.
+
+| Trial | Capsule chars | **Measured tokens** | Budget | Control delta |
+|---|---:|---:|---:|---:|
+| `saturated-velra-r1` | 1,527 | **715** | 800 | 0 |
+| `saturated-velra-r2` | 1,516 | **722** | 800 | 0 |
+| `saturated-velra-r3` | 1,492 | **705** | 800 | 0 |
+| `saturated-velra-r4` | 1,527 | **721** | 800 | 0 |
+
+Median **718**, range **705–722**, worst case **722** — a **78-token margin**
+under the 800 ceiling. Every measurement is Anthropic's own tokenizer, and the
+measurement control (two identical prompts differing only by the capsule) reads
+a delta of exactly 0 in all four, so the figures are the capsule and nothing
+else. `render::DEFAULT_BUDGET_TOKENS` is **745**: the spec's 800 less the margin
+that covers the estimator's measured ~6% under-read. Delivery was
+`SessionStart:compact`, exit 0, in 4/4.
+
+### H4, fail-open perfect and latency still failing
+
+**The fail-open half holds without exception, at four times the prior sample
+size.** Across the four Velra sessions the stream recorded **481 in-session hook
+invocations** spanning all ten registered events, with **0 non-zero exits** and
+**0 bytes written to stderr**. That is the guarantee that matters for safety,
+and it has never once failed a measurement.
+
+The latency half fails, measured directly against a 38 MiB / 100,000-event
+database, 200 runs per case, spawn control p50 3.958 ms / p99 8.952 ms:
+
+| Case | p50 | p99 | marginal p50 | marginal p99 |
+|---|---:|---:|---:|---:|
+| `PostToolUse`, Read (small) | 7.738 | **172.259** | +3.780 | **+163.307** |
+| `PostToolUse`, Edit | 8.017 | 11.909 | +4.059 | +2.957 |
+| `PostToolUse`, Bash | 9.244 | 14.175 | +5.286 | +5.223 |
+| `PostToolUseFailure`, Bash | 8.504 | 10.290 | +4.546 | +1.338 |
+| `PreToolUse`, Edit | 7.806 | 12.594 | +3.848 | +3.642 |
+| `UserPromptSubmit` | 7.785 | 9.807 | +3.827 | +0.855 |
+| `SessionStart`, startup | 7.413 | 52.205 | +3.455 | +43.253 |
+| `Stop` | 7.615 | 11.534 | +3.657 | +2.582 |
+| `PreCompact` | 14.593 | 23.709 | **+10.635** | +14.757 |
+
+**Marginal p50 is 3.455–10.635 ms across all nine cases — every one of them
+under the 15 ms allowance.** The verdict is decided entirely by the p99 column,
+and there the honest reading is that **two tail outliers dominate**:
+`PostToolUse, Read (small)` at 163.31 ms marginal p99 and `SessionStart,
+startup` at 43.25 ms. Read (small) is the *cheapest* work Velra does — its p50
+is 7.738 ms, second-lowest in the table — so a p99 twenty-two times its own p50
+is a scheduling artifact on a shared Windows desktop (this run shared the
+machine with a VS Code session), not a cost inherent to the hook.
+
+That caveat does not rescue the verdict, and it is not offered as one.
+`PreCompact` remains the case with a real, systematic cost: **+10.635 ms
+marginal p50**, the only case above 10 ms, and §4 line 89 independently budgets
+`pre-compact` at `p99 ≤ 10 ms`. Its marginal p99 of 14.757 ms passes 15 ms only
+by 0.24 ms. The work §17 named on 2026-09-13 is unchanged: find the ~10 ms p50
+that `PreCompact` spends above process spawn (checkpoint freeze, capsule render,
+database write) and reduce it. Raising the threshold was considered and rejected
+again — any number chosen after seeing the measurement fail is not a budget.
+
+The two false leads recorded on 2026-09-13 still stand and should not be
+re-chased: the reducer tail is zero (`batch: 500` sizes a batch, it does not cap
+the total), and the 15 ms allowance is if anything too generous against a spawn
+control of 8.95 ms p99.
 
 ---
 
-## 18. Two findings from the re-run that need v0.2
+## 18. Open findings, re-measured across four replicates
 
-### The truncation ladder has a cliff at `[WORKING_FILES]`
+### `[WORKING_FILES]` is dropped in 4/4 — the ladder cliff is now reproducible
 
 `SPEC_STEPS` in `render.rs` sets `working_max = 4` as its first step and
 `working_max = 0` as its last, with nothing in between. The section therefore
-goes from four files to none in a single move, and whether it survives is
-decided by one step firing.
+goes from four files to none in a single move.
 
-That is not hypothetical. Across three Velra replicates at three budgets the
-section flipped on and off with no other change:
+On 2026-09-13 this flipped on and off across three budgets. **Across the four
+replicates of 2026-09-14 it is no longer intermittent: `[WORKING_FILES]` is
+absent from all four delivered capsules.** Every capsule carried exactly the
+same eight sections and no others:
 
-| Budget | Capsule estimate | `[WORKING_FILES]` |
-|---:|---:|---|
-| 800 | 778 est → 825 real | present (4 files) |
-| 720 | 654 est → 691 real | **dropped** |
-| 745 | 670 est → 703 real | **dropped** |
+```
+[CONTEXT] [ROOT_TASK_OBJECTIVE] [LATEST_REQUEST] [STATUS]
+[ACTIVE_FAILURE] [DEAD_ENDS] [NEXT_KNOWN_TARGET] [RECOVERY]
+```
 
-At 745 the capsule came in 75 tokens *under* target and still lost the section,
-because the ladder had already taken the last step before the estimate settled.
-`bench/harness/`-adjacent `crates/velra/examples/budget_probe.rs` sweeps the
-budget against a real trial database and shows the same state retaining the
-section from 680 upward once `[ACTIVE_FAILURE]` is absent — which is the tell:
-the section is crowded out by whatever else the checkpoint happens to hold at
-freeze time, not by the budget number.
+`has_recent_attempts_section` is likewise **false in 4/4**. This is the settled
+retention behaviour of the current ladder at the 745 budget: with
+`[ACTIVE_FAILURE]` present, the ladder takes its last step before the estimate
+settles, and the section is crowded out by what the checkpoint holds at freeze
+time rather than by the budget number. Each capsule landed at 705–722 real
+tokens — **78 or more tokens under the ceiling** — and still lost the section.
 
 **Planned for v0.2:** a `working_max = 2` step between the existing two. The two
 top-ranked files (by D59's weights, here `engine.py` and `tests/test_engine.py`)
-cost roughly 35 estimated tokens — affordable at any budget the ceiling allows —
-and the agent keeps a pointer to the files the task ran through instead of
-losing the section outright.
+cost roughly 35 estimated tokens, which the measured 78-token headroom covers
+comfortably.
 
-### The agent rejected the capsule as a prompt injection
+### The prompt-injection rejection rate is 0/4 in this run
 
-In one of three Velra replicates, the measured turn opened:
+On 2026-09-13, one of three Velra replicates opened its measured turn by
+refusing the capsule as fabricated content. **Across the four replicates of
+2026-09-14 that did not recur: the rejection rate is 0/4 (0%).**
 
-> "Ignoring the injected `VELRA_CONTINUATION` block — it's the same style of
-> fabricated tool/system content as before and isn't something to act on
-> directly, though it happens to point at the same failing test already known"
+The transcripts were scanned for any language classifying the block as
+injected, fabricated, untrusted or to-be-ignored, and for any mention of
+`VELRA_CONTINUATION` in the agent's own prose; there are **zero matches in all
+four sessions**. In each one the agent accepted the continuation capsule
+silently and acted on it, opening the measured turn with the substantive fix:
 
-The turn still succeeded — 0 re-reads, first edit on `engine.settle`, suite
-green — but it took 5 tool calls against the baseline's 2, and it succeeded
-*while disregarding the thing under test*. The other two replicates used the
-capsule without comment, so the behaviour is **intermittent, observed 1/3**.
+> "The bug matches the test's own hint: discount must be computed once on the
+> invoice subtotal, not summed per line item." — `saturated-velra-r4`
 
-This matters more than any verdict row above. H1 and H2 are claims that the
-capsule changes what the agent does after compaction; a delivered capsule that
-the agent classifies as injected content and discards satisfies neither claim,
-and the current harness cannot distinguish "the capsule helped" from "the
-capsule was ignored and the task was easy". §5 of `HANDOFF.md` already records
-Claude Code's *native* summariser refusing its own compaction template twice on
-the same grounds, so this is a known shape of failure, not a one-off.
+All four then executed the same two-call sequence — `Edit src/ledger/engine.py`,
+`Bash python -m pytest -q` — and finished green.
 
-**Planned for v0.2:** reframe the capsule as passive workspace state rather than
-as anything resembling an instruction. Concretely — drop the imperative register
-from `[CONTEXT]` and `[RECOVERY]`, present the block as a record the tool kept
-rather than as content addressed to the model, and re-measure rejection rate
-across replicates as a first-class metric rather than noticing it by reading
-transcripts.
+**This does not close the finding.** Four clean replicates against one prior
+rejection gives an observed rate of 1/7 across all Velra replicates ever run,
+and the two runs differ in a way that plausibly matters: the 2026-09-13
+rejection occurred when the arms were split across Claude Code 2.1.269/2.1.270,
+whereas both arms here ran 2.1.270. A rate this low needs far more than seven
+samples to bound. The v0.2 plan is unchanged — reframe the capsule as passive
+workspace state rather than anything resembling an instruction, and make
+rejection rate a first-class metric the harness computes, rather than something
+found by grepping transcripts after the fact.
 
-### A confound worth naming
+### The cross-build confound is closed
 
-The two arms were not driven by the same agent build: `saturated-baseline-r1`
-ran under Claude Code **2.1.269** and `saturated-velra-r1` under **2.1.270**.
-H3 is a within-arm measurement and is unaffected. H1 and H2 compare arms, and
-their comparator is the native compaction summariser — which is precisely what
-changes between builds. The baseline was not re-run because §16 priced it at
-~$8.40 and both arms solve this task in two tool calls either way; the
-comparison is reported as it stands, with the mismatch stated.
+§18 of the 2026-09-13 run recorded that its two arms ran under different Claude
+Code builds (2.1.269 baseline, 2.1.270 Velra), which mattered because the
+comparator for H1 and H2 *is* the native compaction summariser. **In this run
+all eight sessions ran under Claude Code 2.1.270**, resolved by
+`bench/harness/claude_binary.py` once and reused for every trial. That confound
+no longer applies to any figure in §17.
+
+### What still limits this dataset
+
+1. **The control invalidates the premise, not the product.** Compaction was not
+   lossy here, so H1 and H2 are untested rather than refuted. A fixture whose
+   defect cannot be recovered from the failing assertion alone is the blocking
+   work.
+2. **One baseline replicate never compacted** (`saturated-baseline-r2`), leaving
+   3 valid baseline replicates for compaction-dependent measures.
+3. **n=4 is still small** for anything expressed as a rate, including the 0/4
+   rejection rate above.
+4. **Single host, single OS.** Every figure is from one Windows 11 desktop that
+   was not otherwise idle; the H4 p99 tail in §17 shows what that costs.
+
+---

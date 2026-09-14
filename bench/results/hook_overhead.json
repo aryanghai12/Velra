@@ -1,15 +1,15 @@
 {
   "platform": "win32",
   "binary": "C:\\Users\\aryan\\Videos\\Velra\\target\\release\\velra.exe",
-  "database_bytes": 40083456,
+  "database_bytes": 40046592,
   "seeded_events": 100000,
   "runs_per_case": 200,
   "warmup_per_case": 25,
   "spawn_control": {
-    "p50_ms": 3.75,
-    "p95_ms": 4.629,
-    "p99_ms": 4.947,
-    "max_ms": 5.242
+    "p50_ms": 3.958,
+    "p95_ms": 5.175,
+    "p99_ms": 8.952,
+    "max_ms": 10.827
   },
   "cases": [
     {
@@ -18,13 +18,13 @@
       "fixture": "post_tool_use_read.json",
       "payload_bytes": 619,
       "runs": 200,
-      "p50_ms": 8.001,
-      "p95_ms": 9.443,
-      "p99_ms": 10.929,
-      "max_ms": 48.366,
-      "mean_ms": 8.364,
-      "marginal_p50_ms": 4.251,
-      "marginal_p99_ms": 5.982
+      "p50_ms": 7.738,
+      "p95_ms": 9.367,
+      "p99_ms": 172.259,
+      "max_ms": 250.43,
+      "mean_ms": 11.979,
+      "marginal_p50_ms": 3.78,
+      "marginal_p99_ms": 163.307
     },
     {
       "label": "PostToolUse, Edit",
@@ -32,13 +32,13 @@
       "fixture": "post_tool_use_edit.json",
       "payload_bytes": 1142,
       "runs": 200,
-      "p50_ms": 8.388,
-      "p95_ms": 10.179,
-      "p99_ms": 15.064,
-      "max_ms": 64.92,
-      "mean_ms": 8.975,
-      "marginal_p50_ms": 4.638,
-      "marginal_p99_ms": 10.117
+      "p50_ms": 8.017,
+      "p95_ms": 10.468,
+      "p99_ms": 11.909,
+      "max_ms": 12.77,
+      "mean_ms": 8.349,
+      "marginal_p50_ms": 4.059,
+      "marginal_p99_ms": 2.957
     },
     {
       "label": "PostToolUse, Bash",
@@ -46,13 +46,13 @@
       "fixture": "post_tool_use_bash.json",
       "payload_bytes": 603,
       "runs": 200,
-      "p50_ms": 9.845,
-      "p95_ms": 10.795,
-      "p99_ms": 11.195,
-      "max_ms": 11.505,
-      "mean_ms": 9.858,
-      "marginal_p50_ms": 6.095,
-      "marginal_p99_ms": 6.248
+      "p50_ms": 9.244,
+      "p95_ms": 10.399,
+      "p99_ms": 14.175,
+      "max_ms": 17.466,
+      "mean_ms": 9.46,
+      "marginal_p50_ms": 5.286,
+      "marginal_p99_ms": 5.223
     },
     {
       "label": "PostToolUseFailure, Bash",
@@ -60,13 +60,13 @@
       "fixture": "post_tool_use_failure_bash.json",
       "payload_bytes": 1209,
       "runs": 200,
-      "p50_ms": 9.101,
-      "p95_ms": 10.217,
-      "p99_ms": 11.569,
-      "max_ms": 12.434,
-      "mean_ms": 9.23,
-      "marginal_p50_ms": 5.351,
-      "marginal_p99_ms": 6.622
+      "p50_ms": 8.504,
+      "p95_ms": 9.463,
+      "p99_ms": 10.29,
+      "max_ms": 111.902,
+      "mean_ms": 9.613,
+      "marginal_p50_ms": 4.546,
+      "marginal_p99_ms": 1.338
     },
     {
       "label": "PreToolUse, Edit",
@@ -74,13 +74,13 @@
       "fixture": "pre_tool_use_edit.json",
       "payload_bytes": 555,
       "runs": 200,
-      "p50_ms": 7.864,
-      "p95_ms": 8.682,
-      "p99_ms": 8.942,
-      "max_ms": 96.672,
-      "mean_ms": 8.661,
-      "marginal_p50_ms": 4.114,
-      "marginal_p99_ms": 3.995
+      "p50_ms": 7.806,
+      "p95_ms": 9.8,
+      "p99_ms": 12.594,
+      "max_ms": 16.936,
+      "mean_ms": 8.161,
+      "marginal_p50_ms": 3.848,
+      "marginal_p99_ms": 3.642
     },
     {
       "label": "UserPromptSubmit",
@@ -88,13 +88,13 @@
       "fixture": "user_prompt_submit.json",
       "payload_bytes": 457,
       "runs": 200,
-      "p50_ms": 8.14,
-      "p95_ms": 9.029,
-      "p99_ms": 10.281,
-      "max_ms": 11.122,
-      "mean_ms": 8.268,
-      "marginal_p50_ms": 4.39,
-      "marginal_p99_ms": 5.334
+      "p50_ms": 7.785,
+      "p95_ms": 8.862,
+      "p99_ms": 9.807,
+      "max_ms": 20.564,
+      "mean_ms": 7.992,
+      "marginal_p50_ms": 3.827,
+      "marginal_p99_ms": 0.855
     },
     {
       "label": "SessionStart, startup",
@@ -102,13 +102,13 @@
       "fixture": "session_start_startup.json",
       "payload_bytes": 288,
       "runs": 200,
-      "p50_ms": 7.886,
-      "p95_ms": 8.952,
-      "p99_ms": 13.649,
-      "max_ms": 77.229,
-      "mean_ms": 8.651,
-      "marginal_p50_ms": 4.136,
-      "marginal_p99_ms": 8.702
+      "p50_ms": 7.413,
+      "p95_ms": 8.318,
+      "p99_ms": 52.205,
+      "max_ms": 108.671,
+      "mean_ms": 8.704,
+      "marginal_p50_ms": 3.455,
+      "marginal_p99_ms": 43.253
     },
     {
       "label": "Stop",
@@ -116,13 +116,13 @@
       "fixture": "stop.json",
       "payload_bytes": 407,
       "runs": 200,
-      "p50_ms": 7.814,
-      "p95_ms": 8.505,
-      "p99_ms": 8.788,
-      "max_ms": 8.815,
-      "mean_ms": 7.857,
-      "marginal_p50_ms": 4.064,
-      "marginal_p99_ms": 3.841
+      "p50_ms": 7.615,
+      "p95_ms": 10.064,
+      "p99_ms": 11.534,
+      "max_ms": 12.244,
+      "mean_ms": 8.027,
+      "marginal_p50_ms": 3.657,
+      "marginal_p99_ms": 2.582
     },
     {
       "label": "PreCompact",
@@ -130,17 +130,17 @@
       "fixture": "pre_compact_auto.json",
       "payload_bytes": 255,
       "runs": 200,
-      "p50_ms": 12.792,
-      "p95_ms": 19.018,
-      "p99_ms": 23.401,
-      "max_ms": 107.631,
-      "mean_ms": 14.961,
-      "marginal_p50_ms": 9.042,
-      "marginal_p99_ms": 18.454
+      "p50_ms": 14.593,
+      "p95_ms": 19.898,
+      "p99_ms": 23.709,
+      "max_ms": 156.079,
+      "mean_ms": 15.843,
+      "marginal_p50_ms": 10.635,
+      "marginal_p99_ms": 14.757
     }
   ],
-  "worst_case_p99_ms": 23.401,
-  "worst_case_marginal_p99_ms": 18.454,
+  "worst_case_p99_ms": 172.259,
+  "worst_case_marginal_p99_ms": 163.307,
   "windows_budget_p99_ms": 15,
   "windows_marginal_budget_p99_ms": 15,
   "within_windows_budget": false,

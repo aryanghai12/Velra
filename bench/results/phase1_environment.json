@@ -1,9 +1,9 @@
 {
   "binary": "C:\\Users\\aryan\\Videos\\Velra\\target\\release\\velra.exe",
-  "binary_bytes": 5384192,
+  "binary_bytes": 5385728,
   "version": {
     "exit": 0,
-    "stdout": "velra 0.1.0 (d58e6721e, x86_64-pc-windows-gnu)",
+    "stdout": "velra 0.1.0 (e9f40151c, x86_64-pc-windows-gnu)",
     "stderr": ""
   },
   "real_settings": {
@@ -12,11 +12,11 @@
     "dry_run_exit": 0,
     "dry_run_changed_file": false,
     "dry_run_diff_lines": 208,
-    "before_sha256": "b2acca20330f72ad1015a01bc0d31ea74e76aaa120a9dcd5b64ad0529b9fe638",
-    "before_bytes": 147,
+    "before_sha256": "cce7710585fa8aa8c6b31e8c3736f526ca421f287435550bee5a4fefffff1f5e",
+    "before_bytes": 146,
     "enable_exit": 0,
-    "after_enable_sha256": "0849981f00a824942ea567774bb8141f4c02185ec1b51f0f2ce1f97fabfafbc9",
-    "after_enable_bytes": 4547,
+    "after_enable_sha256": "5e9ff30dcbdf768b119eab056e71f85a6a3cc83ba0f265bc3202e0e0e7d84232",
+    "after_enable_bytes": 4546,
     "hook_events_registered": [
       "PostCompact",
       "PostToolBatch",
@@ -31,12 +31,12 @@
     ],
     "hook_handler_count": 13,
     "status_exit_when_enabled": 0,
-    "status_stdout": "\u2713 Enabled (13 hook handlers registered)\n  Claude Code: 2.1.270 (from VS Code extension)\n  Binary:      C:\\Users\\aryan\\Videos\\Velra\\target\\release\\velra.exe\n  Database:    C:\\Users\\aryan\\.velra\\velra.db (568 KiB)\n  Tracking:    11 session(s), 181 event(s)\n  Last event:  6h ago\n  Continuations: none live\n",
+    "status_stdout": "\u2713 Enabled (13 hook handlers registered)\n  Claude Code: 2.1.270 (from VS Code extension)\n  Binary:      C:\\Users\\aryan\\Videos\\Velra\\target\\release\\velra.exe\n  Database:    C:\\Users\\aryan\\.velra\\velra.db (752 KiB)\n  Tracking:    21 session(s), 300 event(s)\n  Last event:  13h ago\n  Continuations: none live\n",
     "doctor_exit_when_enabled": 0,
-    "doctor_stdout": "\u2713 settings parse: C:\\Users\\aryan\\.claude\\settings.json\n\u2713 binary: C:\\Users\\aryan\\Videos\\Velra\\target\\release\\velra.exe\n\u2713 13 hook handlers registered across 10 events\n\u2713 database: WAL, schema v2\n\u2713 last hook event 6h ago\n\u2713 no recent errors\n",
+    "doctor_stdout": "\u2713 settings parse: C:\\Users\\aryan\\.claude\\settings.json\n\u2713 binary: C:\\Users\\aryan\\Videos\\Velra\\target\\release\\velra.exe\n\u2713 13 hook handlers registered across 10 events\n\u2713 database: WAL, schema v2\n\u2713 last hook event 13h ago\n\u2713 no recent errors\n",
     "disable_exit": 0,
-    "after_disable_sha256": "b2acca20330f72ad1015a01bc0d31ea74e76aaa120a9dcd5b64ad0529b9fe638",
-    "after_disable_bytes": 147,
+    "after_disable_sha256": "cce7710585fa8aa8c6b31e8c3736f526ca421f287435550bee5a4fefffff1f5e",
+    "after_disable_bytes": 146,
     "restored_byte_for_byte": true
   },
   "jsonc_settings": {

@@ -94,5 +94,5 @@ their character allowance on a leading `cd` into an absolute path.
 - No network access at runtime, no telemetry, no LLM calls, and nothing is ever
   written inside your repository.
 
-[Unreleased]: https://github.com/{{GITHUB_ORG}}/velra/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/{{GITHUB_ORG}}/velra/releases/tag/v0.1.0
+[Unreleased]: https://github.com/aryanghai12/velra/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/aryanghai12/velra/releases/tag/v0.1.0

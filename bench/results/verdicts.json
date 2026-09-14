@@ -1,20 +1,20 @@
 {
   "H1": {
-    "verdict": "PASSED",
-    "why": "target met in absolute terms; the baseline met it too, so no improvement over vanilla was demonstrated on this task",
+    "verdict": "INCONCLUSIVE",
+    "why": "compaction was not lossy in this harness, so the post-compaction turn did not test recall",
     "target_met": true,
     "beat_baseline": false
   },
   "H2": {
-    "verdict": "PASSED",
-    "why": "target met in absolute terms; the baseline also re-explored nothing, so no improvement over vanilla was demonstrated",
-    "dead_end_in_db": 1,
-    "dead_end_in_capsule": 1,
-    "replicates": 1
+    "verdict": "INCONCLUSIVE",
+    "why": "compaction was not lossy, so nothing was forgotten for either arm to re-explore",
+    "dead_end_in_db": 4,
+    "dead_end_in_capsule": 4,
+    "replicates": 4
   },
   "H3": {
     "verdict": "PASSED",
-    "worst_tokens": 703,
+    "worst_tokens": 722,
     "control_valid": true
   },
   "H4": {
@@ -25,9 +25,9 @@
     "stderr_writes": 0,
     "within_budget": false,
     "within_wall_time_budget": false,
-    "worst_case_p99_ms": 23.401,
-    "worst_case_marginal_p99_ms": 18.454,
-    "spawn_control_p99_ms": 4.947,
+    "worst_case_p99_ms": 172.259,
+    "worst_case_marginal_p99_ms": 163.307,
+    "spawn_control_p99_ms": 8.952,
     "budget_basis": "marginal cost over the spawn control (DECISIONS.md D54)",
     "why": "the fail-open half holds without exception; Velra's own marginal cost exceeds the budget"
   }
