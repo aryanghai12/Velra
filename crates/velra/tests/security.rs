@@ -175,16 +175,12 @@ fn j1_secrets_never_reach_the_database_or_the_capsule() {
     })
     .assert_contract();
 
-    let db = env.open_db();
-    let payloads: Vec<String> = db
-        .conn
-        .prepare("SELECT payload FROM events")
-        .expect("prepare")
-        .query_map([], |r| r.get(0))
-        .expect("query")
-        .flatten()
-        .collect();
-    let all = payloads.join("\n");
+    let all = env
+        .drain_and_load_events(2)
+        .iter()
+        .map(|e| e.payload.clone())
+        .collect::<Vec<_>>()
+        .join("\n");
     assert!(
         !all.contains(secret),
         "the api key must not be stored: {all}"
@@ -239,16 +235,13 @@ fn j2_sensitive_paths_store_only_the_path_and_hash() {
     })
     .assert_contract();
 
-    let db = env.open_db();
-    let payload: String = db
-        .conn
-        .query_row(
-            "SELECT payload FROM events WHERE tool_name = 'Edit'",
-            [],
-            |r| r.get(0),
-        )
-        .expect("payload");
-    let value: serde_json::Value = serde_json::from_str(&payload).expect("json");
+    let events = env.drain_and_load_events(1);
+    let event = events
+        .iter()
+        .find(|e| e.tool_name.as_deref() == Some("Edit"))
+        .unwrap_or_else(|| panic!("no Edit event: {events:#?}"));
+    let payload = &event.payload;
+    let value = event.json();
     assert_eq!(value["path"], json!(".env"));
     assert!(value["post_hash"].is_string(), "the hash is recorded");
     assert!(

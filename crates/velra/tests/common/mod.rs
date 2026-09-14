@@ -4,6 +4,7 @@
 use assert_cmd::Command;
 use serde_json::{json, Value};
 use std::path::PathBuf;
+use std::time::{Duration, Instant};
 use velra_core::checkpoint::{self, CheckpointRequest};
 use velra_core::db::{Db, Role};
 use velra_core::event::{dedupe_key, NewEvent, Payload, ProjectInfo};
@@ -11,6 +12,30 @@ use velra_core::model::Trigger;
 use velra_core::render::{RenderConfig, Snapshot};
 use velra_core::snapshot::SnapshotMeta;
 use velra_core::{eventlog, hash, paths, reducer};
+
+/// The watchdog every test subprocess runs with. The production deadline is
+/// 250 ms (§4); a loaded CI runner can spend that long on process start and
+/// first-run schema creation alone, and a deadline that fires mid-write
+/// diverts the event to the spool (§10.3) — correct behaviour that is
+/// nonetheless invisible to a test that queries the table directly. Tests
+/// that measure the deadline itself use `cmd_with_real_watchdog`.
+///
+/// The binary honours the knob only under the `fault-injection` feature,
+/// which is how CI builds (`--all-features`); a default `cargo test` build
+/// ignores it and relies on the drain helpers below instead.
+pub const TEST_WATCHDOG_MS: &str = "60000";
+
+/// How long a drained query waits for a row to become visible. Long enough
+/// to absorb NTFS write buffering and a SQLite lock handoff on a contended
+/// runner, short enough that a genuine failure still fails quickly.
+pub const DRAIN_TIMEOUT: Duration = Duration::from_secs(3);
+
+/// Gap between drain attempts.
+const DRAIN_POLL: Duration = Duration::from_millis(50);
+
+/// How long a test connection waits for a lock rather than returning
+/// `DbError::Busy`, which on a contended runner is a flake, not a result.
+const TEST_BUSY_TIMEOUT: Duration = Duration::from_secs(5);
 
 /// 2026-09-12T10:04:05Z — every test clock starts here so output is stable.
 pub const BASE_MS: i64 = 1_789_207_445_000;
@@ -54,8 +79,15 @@ impl Env {
         self.home.join("spool")
     }
 
+    /// A connection for assertions. The busy timeout is set explicitly rather
+    /// than inherited from the role so that a test never reports `Busy` while
+    /// a reduce or a hook still holds the write lock.
     pub fn open_db(&self) -> Db {
-        Db::open(&self.db_path(), Role::Cli).expect("open db")
+        let db = Db::open(&self.db_path(), Role::Cli).expect("open db");
+        db.conn
+            .busy_timeout(TEST_BUSY_TIMEOUT)
+            .expect("busy timeout");
+        db
     }
 
     pub fn project_id(&self) -> String {
@@ -84,7 +116,17 @@ impl Env {
             .env_remove("VELRA_LOG")
             .env_remove("VELRA_TEST_PANIC")
             .env_remove("VELRA_TEST_STALL_MS")
+            // Never race the production deadline on a shared runner.
+            .env("VELRA_TEST_WATCHDOG_MS", TEST_WATCHDOG_MS)
             .current_dir(&self.project);
+        cmd
+    }
+
+    /// `cmd` with the production watchdog restored, for the tests that measure
+    /// the deadline itself rather than what the hook records.
+    pub fn cmd_with_real_watchdog(&self) -> Command {
+        let mut cmd = self.cmd();
+        cmd.env_remove("VELRA_TEST_WATCHDOG_MS");
         cmd
     }
 
@@ -142,6 +184,63 @@ impl Env {
         }
     }
 
+    /// Ingests whatever the hooks left in the spool (§10.3). The engine's
+    /// guarantee is that an event reaches the database *or* the spool, so a
+    /// query that has not drained is asking only half the question.
+    pub fn drain(&self) {
+        self.reduce().assert_contract();
+    }
+
+    /// `drain` followed by `query`, retried until `settled` accepts the result
+    /// or `DRAIN_TIMEOUT` expires. The last result is returned either way, so
+    /// the caller's own assertion is what reports the failure.
+    ///
+    /// The retry is what absorbs runner latency: a spool file written as the
+    /// hook exits, an NTFS page not yet visible to the next reader, a lock
+    /// handed over between processes.
+    pub fn drain_and_query<T>(&self, settled: impl Fn(&T) -> bool, query: impl Fn(&Db) -> T) -> T {
+        let deadline = Instant::now() + DRAIN_TIMEOUT;
+        loop {
+            self.drain();
+            let value = query(&self.open_db());
+            if settled(&value) || Instant::now() >= deadline {
+                return value;
+            }
+            std::thread::sleep(DRAIN_POLL);
+        }
+    }
+
+    /// Every row of `events` in id order, once at least `at_least` of them are
+    /// visible. Waiting for a count rather than for any row at all keeps a test
+    /// that expects several events from reading a partially ingested log.
+    pub fn drain_and_load_events(&self, at_least: usize) -> Vec<TestEvent> {
+        self.drain_and_query(
+            |rows: &Vec<TestEvent>| rows.len() >= at_least,
+            |db| {
+                db.conn
+                    .prepare("SELECT hook_event, tool_name, payload FROM events ORDER BY id")
+                    .expect("prepare")
+                    .query_map([], |r| {
+                        Ok(TestEvent {
+                            hook_event: r.get(0)?,
+                            tool_name: r.get(1)?,
+                            payload: r.get(2)?,
+                        })
+                    })
+                    .expect("query")
+                    .collect::<Result<_, _>>()
+                    .expect("rows")
+            },
+        )
+    }
+
+    /// Asserts the exact contents of `events`, once the spool is drained.
+    pub fn assert_event_count(&self, expected: usize) -> Vec<TestEvent> {
+        let rows = self.drain_and_load_events(expected);
+        assert_eq!(rows.len(), expected, "events: {rows:#?}");
+        rows
+    }
+
     /// Common hook input fields.
     pub fn base_payload(&self, event: &str) -> Value {
         json!({
@@ -173,6 +272,27 @@ impl Env {
             std::fs::create_dir_all(parent).expect("ref dirs");
         }
         std::fs::write(&ref_path, format!("{sha}\n")).expect("ref");
+    }
+}
+
+/// One row of `events`, in the shape the assertions in this suite read.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TestEvent {
+    pub hook_event: String,
+    pub tool_name: Option<String>,
+    pub payload: String,
+}
+
+impl TestEvent {
+    /// The payload parsed as JSON.
+    pub fn json(&self) -> Value {
+        serde_json::from_str(&self.payload).expect("payload json")
+    }
+
+    /// What the event is filed under: its tool name, or its hook event when it
+    /// has none.
+    pub fn label(&self) -> &str {
+        self.tool_name.as_deref().unwrap_or(&self.hook_event)
     }
 }
 

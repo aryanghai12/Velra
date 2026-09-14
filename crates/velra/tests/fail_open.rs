@@ -69,6 +69,13 @@ fn g1_read_only_home_never_blocks_a_hook() {
     assert!(out.stdout.is_empty());
 }
 
+/// G2: an injected panic exits zero and is logged.
+///
+/// Gated behind `fault-injection` for the same reason as B4: `VELRA_TEST_PANIC`
+/// is a no-op without it, so no panic is raised, no `errors.log` is written and
+/// the assertion below fails on any default-feature build. CI runs the suite
+/// with `--all-features`.
+#[cfg(feature = "fault-injection")]
 #[test]
 fn g2_an_injected_panic_exits_zero_and_is_logged() {
     let env = Env::new();
@@ -119,7 +126,7 @@ fn g3_the_watchdog_abandons_work_at_the_deadline() {
     warm_binary(&env);
     let started = std::time::Instant::now();
     let out = env
-        .cmd()
+        .cmd_with_real_watchdog()
         .env("VELRA_TEST_STALL_MS", "5000")
         .arg("hook")
         .arg("post-tool-use")
@@ -144,7 +151,7 @@ fn g3_the_reduce_watchdog_uses_the_async_budget() {
     warm_binary(&env);
     let started = std::time::Instant::now();
     let out = env
-        .cmd()
+        .cmd_with_real_watchdog()
         .env("VELRA_TEST_STALL_MS", "8000")
         .arg("reduce")
         .write_stdin("{}")

@@ -81,19 +81,9 @@ fn b1_unknown_events_and_tools_are_recorded_minimally() {
     env.hook("post-tool-use", &payload).assert_contract();
     env.hook("not-a-real-event", &payload).assert_contract();
 
-    let db = env.open_db();
-    let tools: Vec<String> = db
-        .conn
-        .prepare("SELECT COALESCE(tool_name, hook_event) FROM events ORDER BY id")
-        .expect("prepare")
-        .query_map([], |r| r.get(0))
-        .expect("query")
-        .flatten()
-        .collect();
-    assert!(
-        tools.contains(&"mcp__memory__write".to_string()),
-        "{tools:?}"
-    );
+    let events = env.assert_event_count(2);
+    let tools: Vec<&str> = events.iter().map(|e| e.label()).collect();
+    assert!(tools.contains(&"mcp__memory__write"), "{tools:?}");
 }
 
 #[test]
@@ -115,44 +105,11 @@ fn b1_missing_session_id_is_a_no_op() {
 fn b1_malformed_stdin_still_records_an_event_when_a_session_id_is_recoverable() {
     let env = Env::new();
     let broken = format!("{{\"session_id\": \"{}\", \"tool_name\": ", env.session);
-    // What is under test is the salvage path, not the 250 ms sync watchdog. On
-    // a loaded runner that deadline can land while the first-run database is
-    // still being created, which by design (§10.3) sends the recovered event
-    // to the spool instead of the table. Take the watchdog out of play where
-    // the build honours the knob, and drain the spool below either way.
-    env.hook_raw_with_env(
-        "post-tool-use",
-        broken.as_bytes(),
-        &[("VELRA_TEST_WATCHDOG_MS", "60000")],
-    )
-    .assert_contract();
+    env.hook_raw("post-tool-use", broken.as_bytes())
+        .assert_contract();
 
-    assert_eq!(recorded_events(&env), vec!["malformed".to_string()]);
-}
-
-/// Every event, whichever route it took. One reduce pass ingests anything that
-/// fell back to the spool (§10.3); the retry absorbs the write-buffering delay
-/// a contended Windows runner can add between the hook exiting and the row
-/// being visible.
-fn recorded_events(env: &Env) -> Vec<String> {
-    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(2);
-    loop {
-        env.reduce().assert_contract();
-        let db = env.open_db();
-        let events: Vec<String> = db
-            .conn
-            .prepare("SELECT hook_event FROM events ORDER BY id")
-            .expect("prepare")
-            .query_map([], |r| r.get(0))
-            .expect("query")
-            .flatten()
-            .collect();
-        if !events.is_empty() || std::time::Instant::now() >= deadline {
-            return events;
-        }
-        drop(db);
-        std::thread::sleep(std::time::Duration::from_millis(25));
-    }
+    let events = env.assert_event_count(1);
+    assert_eq!(events[0].hook_event, "malformed");
 }
 
 #[test]
@@ -315,9 +272,9 @@ fn b3_post_tool_and_user_prompt_channels_report_their_own_event_name() {
 
 /// B4: an 8 MiB tool response is normalized down to the payload budget.
 ///
-/// Gated behind `fault-injection` because the test drives the watchdog
-/// override knob (`VELRA_TEST_WATCHDOG_MS`), which the binary honours only
-/// under that feature. Without it the 250 ms sync watchdog stays live, and
+/// Gated behind `fault-injection` because it depends on the harness watchdog
+/// override (`VELRA_TEST_WATCHDOG_MS`), which the binary honours only under
+/// that feature. Without it the 250 ms sync watchdog stays live, and
 /// normalizing 8 MiB can reach that deadline on a slow or loaded runner —
 /// the event is armed for the spool only *after* normalizing, so a deadline
 /// that fires first drops it by design (§4) and the assertion below races.
@@ -338,32 +295,15 @@ fn b4_huge_tool_response_is_retained_within_budget() {
         "tool_response": { "stdout": huge, "stderr": "", "interrupted": false }
     });
     let started = std::time::Instant::now();
-    // The 250 ms sync watchdog is not what this test is about. Normalizing an
-    // 8 MB response is enough to reach that deadline on a slow runner, and
-    // because the event is only armed for the spool *after* normalizing, a
-    // deadline that fires first drops it entirely — by design (§4). Take the
-    // watchdog out of play so what is measured is the payload budget.
-    env.hook_with_env(
-        "post-tool-use",
-        &payload,
-        &[("VELRA_TEST_WATCHDOG_MS", "60000")],
-    )
-    .assert_contract();
+    // The harness runs every subprocess with `common::TEST_WATCHDOG_MS`, which
+    // keeps the 250 ms sync deadline from landing mid-normalize and sending
+    // the event to the spool. What is measured here is the payload budget.
+    env.hook("post-tool-use", &payload).assert_contract();
     let elapsed = started.elapsed();
 
-    // Whatever fell back to the spool is ingested by one reduce pass, so the
-    // query below sees the event whichever route it took (§10.3).
-    env.reduce().assert_contract();
-
-    let db = env.open_db();
-    let stored: String = db
-        .conn
-        .query_row(
-            "SELECT payload FROM events WHERE tool_name = 'Bash'",
-            [],
-            |r| r.get(0),
-        )
-        .expect("stored payload");
+    let events = env.assert_event_count(1);
+    let stored = &events[0].payload;
+    assert_eq!(events[0].tool_name.as_deref(), Some("Bash"));
     assert!(
         stored.len() <= 16 * 1024,
         "retained payload is {} bytes",
@@ -500,22 +440,14 @@ fn b1_a_chained_git_restore_is_observed_on_both_sides_and_on_failure() {
     });
     env.hook("post-tool-use-failure", &post).assert_contract();
 
-    let db = env.open_db();
-    let payloads: Vec<(String, String)> = db
-        .conn
-        .prepare("SELECT hook_event, payload FROM events ORDER BY id")
-        .expect("prepare")
-        .query_map([], |r| Ok((r.get(0)?, r.get(1)?)))
-        .expect("query")
-        .collect::<Result<_, _>>()
-        .expect("rows");
-    for (event, payload) in &payloads {
-        let v: serde_json::Value = serde_json::from_str(payload).expect("payload json");
+    let events = env.assert_event_count(2);
+    for event in &events {
         assert_eq!(
-            v["git"]["restore"].as_str(),
+            event.json()["git"]["restore"].as_str(),
             Some("git restore src/money.py"),
-            "{event} records the restore subcommand, not the whole line: {payload}"
+            "{} records the restore subcommand, not the whole line: {}",
+            event.hook_event,
+            event.payload
         );
     }
-    assert_eq!(payloads.len(), 2, "both sides were recorded: {payloads:?}");
 }

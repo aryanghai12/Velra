@@ -76,27 +76,22 @@ fn c1_parallel_processes_lose_no_events_and_create_no_duplicates() {
         h.join().expect("thread");
     }
 
-    // Everything that fell back to the spool is ingested by one reduce pass.
-    env.reduce().assert_contract();
-    let db = env.open_db();
-    let events: i64 = db
-        .conn
-        .query_row(
-            "SELECT COUNT(*) FROM events WHERE tool_name = 'Read'",
-            [],
-            |r| r.get(0),
-        )
-        .expect("count");
+    // Everything that fell back to the spool is ingested by the reduce pass
+    // the helper runs; the retry covers a spool file still landing.
     let expected = (processes * per_process) as i64;
+    let (events, distinct) = env.drain_and_query(
+        |(events, _): &(i64, i64)| *events >= expected,
+        |db| {
+            (
+                read_count(db, "SELECT COUNT(*) FROM events WHERE tool_name = 'Read'"),
+                read_count(
+                    db,
+                    "SELECT COUNT(DISTINCT dedupe_key) FROM events WHERE tool_name = 'Read'",
+                ),
+            )
+        },
+    );
     assert_eq!(events, expected, "no events lost");
-    let distinct: i64 = db
-        .conn
-        .query_row(
-            "SELECT COUNT(DISTINCT dedupe_key) FROM events WHERE tool_name = 'Read'",
-            [],
-            |r| r.get(0),
-        )
-        .expect("count");
     assert_eq!(distinct, expected, "no duplicates");
     assert_eq!(spool::backlog(&env.spool_dir()), 0, "spool drained");
 }
@@ -129,16 +124,10 @@ fn c2_a_held_write_lock_sends_events_to_the_spool() {
     blocker.conn.execute_batch("COMMIT").expect("unlock");
     drop(blocker);
 
-    env.reduce().assert_contract();
-    let db = env.open_db();
-    let events: i64 = db
-        .conn
-        .query_row(
-            "SELECT COUNT(*) FROM events WHERE tool_name = 'Read'",
-            [],
-            |r| r.get(0),
-        )
-        .expect("count");
+    let events = env.drain_and_query(
+        |n: &i64| *n >= 5,
+        |db| read_count(db, "SELECT COUNT(*) FROM events WHERE tool_name = 'Read'"),
+    );
     assert_eq!(events, 5, "spooled events are ingested later");
     assert_eq!(spool::backlog(&env.spool_dir()), 0);
 }
@@ -179,9 +168,8 @@ fn c3_interrupted_reduce_replays_identically() {
         let _ = child.kill();
         let _ = child.wait();
     }
-    env.reduce().assert_contract();
-
-    let interrupted = derived_state(&env.open_db());
+    // The helper reduces first, so the kills above cannot leave the log short.
+    let interrupted = env.drain_and_query(|rows: &Vec<String>| !rows[0].is_empty(), derived_state);
 
     // Clean replay into a fresh database.
     let replay = Env::new();
@@ -237,6 +225,10 @@ fn c3_interrupted_reduce_replays_identically() {
     );
 }
 
+fn read_count(db: &Db, sql: &str) -> i64 {
+    db.conn.query_row(sql, [], |r| r.get(0)).expect("count")
+}
+
 fn derived_state(db: &Db) -> Vec<String> {
     let mut out = Vec::new();
     for sql in [
@@ -285,11 +277,8 @@ fn c4_a_corrupt_database_is_rotated_aside_and_recreated() {
         db::user_version(&db.conn).expect("version"),
         db::SCHEMA_VERSION
     );
-    let events: i64 = db
-        .conn
-        .query_row("SELECT COUNT(*) FROM events", [], |r| r.get(0))
-        .expect("count");
-    assert_eq!(events, 1, "the event that triggered recovery is recorded");
+    drop(db);
+    env.assert_event_count(1);
 
     let out = env.cmd().arg("doctor").output().expect("doctor");
     let report = String::from_utf8_lossy(&out.stdout);
