@@ -115,19 +115,44 @@ fn b1_missing_session_id_is_a_no_op() {
 fn b1_malformed_stdin_still_records_an_event_when_a_session_id_is_recoverable() {
     let env = Env::new();
     let broken = format!("{{\"session_id\": \"{}\", \"tool_name\": ", env.session);
-    env.hook_raw("post-tool-use", broken.as_bytes())
-        .assert_contract();
+    // What is under test is the salvage path, not the 250 ms sync watchdog. On
+    // a loaded runner that deadline can land while the first-run database is
+    // still being created, which by design (§10.3) sends the recovered event
+    // to the spool instead of the table. Take the watchdog out of play where
+    // the build honours the knob, and drain the spool below either way.
+    env.hook_raw_with_env(
+        "post-tool-use",
+        broken.as_bytes(),
+        &[("VELRA_TEST_WATCHDOG_MS", "60000")],
+    )
+    .assert_contract();
 
-    let db = env.open_db();
-    let events: Vec<String> = db
-        .conn
-        .prepare("SELECT hook_event FROM events")
-        .expect("prepare")
-        .query_map([], |r| r.get(0))
-        .expect("query")
-        .flatten()
-        .collect();
-    assert_eq!(events, vec!["malformed".to_string()]);
+    assert_eq!(recorded_events(&env), vec!["malformed".to_string()]);
+}
+
+/// Every event, whichever route it took. One reduce pass ingests anything that
+/// fell back to the spool (§10.3); the retry absorbs the write-buffering delay
+/// a contended Windows runner can add between the hook exiting and the row
+/// being visible.
+fn recorded_events(env: &Env) -> Vec<String> {
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(2);
+    loop {
+        env.reduce().assert_contract();
+        let db = env.open_db();
+        let events: Vec<String> = db
+            .conn
+            .prepare("SELECT hook_event FROM events ORDER BY id")
+            .expect("prepare")
+            .query_map([], |r| r.get(0))
+            .expect("query")
+            .flatten()
+            .collect();
+        if !events.is_empty() || std::time::Instant::now() >= deadline {
+            return events;
+        }
+        drop(db);
+        std::thread::sleep(std::time::Duration::from_millis(25));
+    }
 }
 
 #[test]
