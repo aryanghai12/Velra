@@ -81,9 +81,35 @@ fn create_dir_private(dir: &Path) -> std::io::Result<()> {
     }
 }
 
-/// Creates `$VELRA_HOME` (0700 on POSIX) if missing.
+/// Drops the group and world bits from a directory that already exists.
+///
+/// `create_dir_private` only decides the mode of a directory it creates itself.
+/// A `$VELRA_HOME` that arrived some other way — an installer, an unpacked
+/// backup, a plain `mkdir ~/.velra` — carries the ambient umask instead, which
+/// is 0755 on a stock POSIX box. This only ever clears bits, so a home
+/// deliberately left read-only at 0500 keeps that mode (§8.1 G1).
+#[cfg(unix)]
+fn tighten_dir(dir: &Path) {
+    use std::os::unix::fs::PermissionsExt;
+    let Ok(meta) = std::fs::metadata(dir) else {
+        return;
+    };
+    let mode = meta.permissions().mode() & 0o777;
+    if mode & 0o077 != 0 {
+        // Best effort: a home owned by someone else is still usable, and
+        // failing here would turn a permission bit into a blocked hook.
+        let _ = std::fs::set_permissions(dir, std::fs::Permissions::from_mode(mode & 0o700));
+    }
+}
+
+#[cfg(not(unix))]
+fn tighten_dir(_dir: &Path) {}
+
+/// Creates `$VELRA_HOME` (0700 on POSIX) if missing, and narrows it to 0700 if
+/// it already exists with group or world access.
 pub fn ensure_home(home: &Path) -> std::io::Result<()> {
     if home.is_dir() {
+        tighten_dir(home);
         return Ok(());
     }
     create_dir_private(home)

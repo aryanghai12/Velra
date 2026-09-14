@@ -144,9 +144,13 @@ fn d5_parallel_post_tool_use_delivers_exactly_once() {
         .conn
         .query_row("SELECT created_ms FROM checkpoints", [], |r| r.get(0))
         .unwrap();
-    let db_path = log.env.db_path();
-    let session = log.env.session.clone();
-    drop(log);
+    // Close the setup connection but keep the temp dir: the threads below open
+    // this path themselves, and dropping the whole `Log` would delete the
+    // database out from under them. POSIX unlinks it right away; Windows leaves
+    // it behind, which is the only reason this ever passed there.
+    let env = log.into_env();
+    let db_path = env.db_path();
+    let session = env.session.clone();
 
     let emitted = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
     let barrier = std::sync::Arc::new(std::sync::Barrier::new(8));

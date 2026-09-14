@@ -210,6 +210,16 @@ impl Log {
         }
     }
 
+    /// Closes the setup connection and hands back the `Env`.
+    ///
+    /// `Env` owns the temp dir, so dropping a whole `Log` deletes the database
+    /// along with it. A test that wants to reopen the database itself — say to
+    /// race several connections against it — needs the directory to outlive
+    /// that first connection.
+    pub fn into_env(self) -> Env {
+        self.env
+    }
+
     fn next(&mut self) -> (i64, String) {
         self.ts += 1_000;
         self.seq += 1;

@@ -237,6 +237,27 @@ pub struct Db {
     pub rotated_corrupt: Option<PathBuf>,
 }
 
+/// Drops the group and world bits from a file that already exists.
+///
+/// SQLite creates a database with 0666 masked by the umask — 0644 on a stock
+/// POSIX box — which is wider than prompts, paths and failure output deserve
+/// even inside a 0700 home. Only ever clears bits, and never fails an open over
+/// one: a database we can read but not chmod is still usable.
+#[cfg(unix)]
+fn make_private(path: &Path) {
+    use std::os::unix::fs::PermissionsExt;
+    let Ok(meta) = std::fs::metadata(path) else {
+        return;
+    };
+    let mode = meta.permissions().mode() & 0o777;
+    if mode & 0o077 != 0 {
+        let _ = std::fs::set_permissions(path, std::fs::Permissions::from_mode(mode & 0o700));
+    }
+}
+
+#[cfg(not(unix))]
+fn make_private(_path: &Path) {}
+
 impl Db {
     /// Opens (creating and migrating if needed) with the role's settings.
     /// A corrupt file is renamed to `velra.db.corrupt-{ts}` and recreated.
@@ -259,6 +280,9 @@ impl Db {
                 | OpenFlags::SQLITE_OPEN_CREATE
                 | OpenFlags::SQLITE_OPEN_NO_MUTEX,
         )?;
+        // Before `migrate` turns on WAL: SQLite derives the -wal and -shm modes
+        // from the database file, so tightening it here makes them private too.
+        make_private(path);
         conn.busy_timeout(role.busy_timeout())?;
         conn.execute_batch(
             "PRAGMA synchronous = NORMAL; PRAGMA temp_store = MEMORY; PRAGMA foreign_keys = OFF; \

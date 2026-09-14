@@ -303,17 +303,41 @@ fn j3_no_network_capable_crate_is_linked() {
 #[test]
 fn state_files_are_private_on_posix() {
     let env = Env::new();
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        // The harness created $VELRA_HOME with `create_dir_all`, so it carries
+        // the runner's umask (0755 under the usual 022). Pin it wide on purpose:
+        // what follows then measures velra's own tightening rather than whatever
+        // umask the runner happened to have.
+        std::fs::set_permissions(&env.home, std::fs::Permissions::from_mode(0o755))
+            .expect("widen home");
+    }
     env.hook("stop", &env.base_payload("Stop"))
         .assert_contract();
     assert!(env.db_path().exists());
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
-        let mode = std::fs::metadata(&env.home)
-            .expect("home meta")
-            .permissions()
-            .mode()
-            & 0o777;
-        assert_eq!(mode, 0o700, "home is 0700");
+        let mode = |p: &std::path::Path| {
+            std::fs::metadata(p)
+                .unwrap_or_else(|e| panic!("metadata for {}: {e}", p.display()))
+                .permissions()
+                .mode()
+                & 0o777
+        };
+        assert_eq!(mode(&env.home), 0o700, "home is 0700");
+        assert_eq!(mode(&env.db_path()), 0o600, "velra.db is 0600");
+        // SQLite takes these from the database file's own mode.
+        for suffix in ["-wal", "-shm"] {
+            let side = env.home.join(format!("velra.db{suffix}"));
+            if side.exists() {
+                assert_eq!(mode(&side), 0o600, "velra.db{suffix} is 0600");
+            }
+        }
+        let spool = env.spool_dir();
+        if spool.is_dir() {
+            assert_eq!(mode(&spool), 0o700, "spool is 0700");
+        }
     }
 }
