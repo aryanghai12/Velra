@@ -67,6 +67,42 @@ pub fn relative_to_root(abs: &str, root: &str) -> String {
     }
 }
 
+/// `relative_to_root`, retried with both ends fully resolved.
+///
+/// A plain prefix test is not enough when `abs` reaches the file by a different
+/// route than `root` takes: `/var` against `/private/var` on macOS, an 8.3 short
+/// name against its long form on Windows. Without this, a path inside the
+/// project reads as being outside it, and the capsule prints an absolute path
+/// (or drops the mention entirely). Resolving costs a syscall, so it runs only
+/// once the cheap test has already failed.
+pub fn relative_to_root_resolved(abs: &str, root: &str) -> String {
+    let direct = relative_to_root(abs, root);
+    if !is_absolute_str(&direct) {
+        return direct;
+    }
+    let (Some(a), Some(r)) = (
+        resolve_for_compare(Path::new(abs)),
+        canonical(Path::new(root)),
+    ) else {
+        return direct;
+    };
+    let resolved = relative_to_root(&a.to_string_lossy(), &r.to_string_lossy());
+    if is_absolute_str(&resolved) {
+        direct
+    } else {
+        resolved
+    }
+}
+
+/// `canonical`, falling back to resolving the parent so a file that does not
+/// exist yet — one the tool is about to create — still compares correctly.
+fn resolve_for_compare(p: &Path) -> Option<PathBuf> {
+    if let Some(c) = canonical(p) {
+        return Some(c);
+    }
+    Some(canonical(p.parent()?)?.join(p.file_name()?))
+}
+
 /// Resolves a stored (relative or absolute) path against `root`.
 pub fn resolve(stored: &str, root: &Path) -> PathBuf {
     let p = Path::new(stored);
@@ -161,6 +197,30 @@ mod tests {
             "src/a.rs"
         );
         assert_eq!(normalize_abs(r"\\?\C:\x\y"), "C:/x/y");
+    }
+
+    /// The macOS case: `/var/...` reaching a file whose root is recorded as
+    /// `/private/var/...`. A plain prefix test calls that "outside the project".
+    #[test]
+    #[cfg(unix)]
+    fn resolves_a_root_reached_by_another_route() {
+        let dir = tempfile::tempdir().unwrap();
+        let real = dir.path().join("real");
+        std::fs::create_dir_all(real.join("src")).unwrap();
+        std::fs::write(real.join("src/a.rs"), "").unwrap();
+        let link = dir.path().join("link");
+        std::os::unix::fs::symlink(&real, &link).unwrap();
+
+        let root = real.to_string_lossy().into_owned();
+        let via_link = link.join("src/a.rs").to_string_lossy().into_owned();
+        assert!(is_absolute_str(&relative_to_root(&via_link, &root)));
+        assert_eq!(relative_to_root_resolved(&via_link, &root), "src/a.rs");
+
+        // A path that really is outside the root still reads as absolute.
+        let outside = dir.path().join("elsewhere.rs");
+        std::fs::write(&outside, "").unwrap();
+        let outside = outside.to_string_lossy().into_owned();
+        assert!(is_absolute_str(&relative_to_root_resolved(&outside, &root)));
     }
 
     #[test]

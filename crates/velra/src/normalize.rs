@@ -332,7 +332,7 @@ pub fn redact_tail(s: &str, max_bytes: usize) -> String {
 
 /// Project-relative display path, with sensitive paths flagged (§9.2).
 pub fn display_path(abs: &str, root: &str) -> (String, bool) {
-    let rel = paths::relative_to_root(abs, root);
+    let rel = paths::relative_to_root_resolved(abs, root);
     let sensitive = paths::is_sensitive(&rel);
     (rel, sensitive)
 }

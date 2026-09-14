@@ -5,7 +5,7 @@ mod common;
 use common::Log;
 use proptest::prelude::*;
 use velra_core::continuation::{self, Delivery, DeliveryRequest};
-use velra_core::db::{Db, Role};
+use velra_core::db::{Db, DbError, Role};
 use velra_core::model::{Channel, ContinuationState};
 
 fn deliver(log: &mut Log, channel: Channel, key: &str, ts: i64) -> Option<Delivery> {
@@ -172,16 +172,18 @@ fn d5_parallel_post_tool_use_delivers_exactly_once() {
                 delivery_key: &key,
                 ts_ms: created + 1 + i as i64,
             };
-            if continuation::deliver(&mut db.conn, &req, |_| {
+            match continuation::deliver(&mut db.conn, &req, |_| {
                 emitted.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
                 true
-            })
-            .expect("deliver")
-            .is_some()
-            {
-                1
-            } else {
-                0
+            }) {
+                Ok(d) => usize::from(d.is_some()),
+                // What the hook itself does with this (§15): losing the write
+                // lock inside the role's 100 ms budget leaves the continuation
+                // deliverable for the next hook. It is not a delivery, and it
+                // is not a failure either — with eight threads on one lock it
+                // is the expected outcome for the seven that lose.
+                Err(DbError::Busy) => 0,
+                Err(e) => panic!("deliver: {e}"),
             }
         }));
     }

@@ -657,7 +657,7 @@ fn resolve_mentions(ctx: &Ctx<'_>, output: &str) -> Result<Vec<serde_json::Value
         let Some(found) = candidates.into_iter().find(|c| c.is_file()) else {
             continue;
         };
-        let rel = paths::relative_to_root(&found.to_string_lossy(), &root_str);
+        let rel = paths::relative_to_root_resolved(&found.to_string_lossy(), &root_str);
         if paths::is_absolute_str(&rel) {
             continue; // outside the project root
         }
