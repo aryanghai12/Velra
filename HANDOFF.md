@@ -118,6 +118,18 @@ MSVC build tools are **not** installed and installing them needs admin. Rust is
 therefore set up with host `x86_64-pc-windows-gnu`, and a portable WinLibs
 MinGW-w64 GCC provides the C toolchain that `rusqlite` (bundled SQLite) needs.
 
+The repository carries **no `rust-toolchain.toml`** — it used to, and pinning a
+bare channel there resolved against this machine's default host (GNU) while
+forcing that choice on every other contributor too. The GNU toolchain is now
+selected by a machine-local rustup directory override instead:
+
+```bash
+rustup override set 1.98.1-x86_64-pc-windows-gnu    # already set here
+```
+
+That lives in `~/.rustup/settings.toml`, not in the repo, so a fresh clone
+elsewhere just uses whatever host toolchain that machine already has.
+
 **Tool shells do not inherit that PATH.** Before `cargo build --release` (debug
 usually works from cache; release needs `dlltool.exe`):
 

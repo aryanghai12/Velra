@@ -1,7 +1,9 @@
 # Homebrew formula for Velra.
 #
-# Published to aryanghai12/homebrew-tap by the release workflow; the
-# version and sha256 values below are rewritten per release.
+# Template for the aryanghai12/homebrew-tap formula. The version and sha256
+# values below are placeholders, filled in from the release checksums when the
+# tap is updated; publishing the tap is not yet automated, so this file is not
+# an installable formula as it stands.
 #
 #   brew install aryanghai12/tap/velra
 class Velra < Formula

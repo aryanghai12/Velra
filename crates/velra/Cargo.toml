@@ -16,6 +16,31 @@ readme = "../../README.md"
 name = "velra"
 path = "src/main.rs"
 
+# `cargo binstall velra` fetches the signed release archive built by
+# .github/workflows/release.yml instead of compiling. This is the path that
+# needs no C compiler, no Visual Studio Build Tools and no linker setup.
+#
+# Archives are flat: the binary sits at the archive root next to README.md,
+# LICENSE and SECURITY.md.
+[package.metadata.binstall]
+pkg-url = "{ repo }/releases/download/v{ version }/velra-{ target }.tar.gz"
+pkg-fmt = "tgz"
+bin-dir = "{ bin }{ binary-ext }"
+
+[package.metadata.binstall.overrides.x86_64-pc-windows-msvc]
+pkg-url = "{ repo }/releases/download/v{ version }/velra-{ target }.zip"
+pkg-fmt = "zip"
+
+[package.metadata.binstall.overrides.aarch64-pc-windows-msvc]
+pkg-url = "{ repo }/releases/download/v{ version }/velra-{ target }.zip"
+pkg-fmt = "zip"
+
+# Windows-GNU hosts have no release artifact of their own; the MSVC binary is
+# statically linked and runs there unchanged.
+[package.metadata.binstall.overrides.x86_64-pc-windows-gnu]
+pkg-url = "{ repo }/releases/download/v{ version }/velra-x86_64-pc-windows-msvc.zip"
+pkg-fmt = "zip"
+
 [features]
 # Enables VELRA_TEST_* fault injection (panic / stall) used by acceptance tests G2/G3.
 fault-injection = []

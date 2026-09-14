@@ -1,0 +1,25 @@
+# Shell scripts and the npm launcher must keep LF endings no matter what
+# core.autocrlf a contributor has set. A CRLF install.sh fails on Linux with
+# `set: Illegal option -`, which is an unhelpful way to greet a new user.
+*.sh    text eol=lf
+*.bash  text eol=lf
+install/install.sh text eol=lf
+npm/velra/bin/velra.js text eol=lf
+
+# PowerShell is happy with either, but keep the repo consistent.
+*.ps1   text eol=crlf
+
+# Rust, config and docs: normalize to LF in the index.
+*.rs    text eol=lf
+*.toml  text eol=lf
+*.md    text eol=lf
+*.yml   text eol=lf
+*.yaml  text eol=lf
+*.json  text eol=lf
+*.py    text eol=lf
+
+# Binary assets: never touched.
+*.png   binary
+*.db    binary
+*.tar.gz binary
+*.zip   binary

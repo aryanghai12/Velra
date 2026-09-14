@@ -6,6 +6,48 @@ All notable changes to Velra are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- **The npm package installs itself.** `npm install -g velra` and `npx velra`
+  no longer depend on the unpublished `@velra/cli-*` platform packages. The
+  launcher resolves the host target, downloads the matching release archive
+  from GitHub Releases, verifies its published SHA-256, extracts it (gzip/tar
+  and zip are decoded in-process — no external `tar`, no npm dependencies) and
+  caches it at a stable path under `$VELRA_HOME/cache/v<version>/<target>/`.
+  Resolution order: `$VELRA_BINARY`, a vendored binary beside the launcher, the
+  cache, then the network. `VELRA_NO_DOWNLOAD=1` keeps it offline.
+- **Removed `rust-toolchain.toml`.** Pinning a bare channel there resolved
+  against each machine's *default host* triple, which silently forced
+  windows-gnu builds — and `dlltool.exe` failures — on Windows contributors who
+  had MSVC available. Builds now use whatever host toolchain is installed. CI
+  runs `stable` on Linux, macOS and Windows, and a separate job compiles
+  against the declared MSRV of 1.98.
+
+### Added
+
+- **`cargo binstall velra`.** `package.metadata.binstall` maps every released
+  target to its archive, so Rust users get a prebuilt binary without a C
+  compiler, Visual Studio Build Tools or a linker. Windows-GNU hosts are mapped
+  to the statically linked MSVC binary.
+- **`.gitattributes`.** Pins LF on the shell scripts and the npm launcher. The
+  committed blobs were already LF, but a Windows checkout could materialise
+  them with CRLF, and running such a copy under WSL or Linux fails with
+  `set: Illegal option -`.
+
+### Fixed
+
+- `.gitignore` excluded `/npm/**/bin/`, so the npm launcher - the package's
+  only entry point - was never tracked. The rule now ignores binaries dropped
+  into that directory without swallowing its source.
+- Unrendered `{{VELRA_DOMAIN}}` placeholders in the npm launcher's error paths.
+- Installer self-documented URLs pointed at `github.com/.../install.sh`, which
+  404s; they now point at the raw content URL that actually serves the script.
+- `install.sh` ran `velra enable` a second time while building its own failure
+  message — backticks inside a double-quoted string are command substitution.
+- `build.rs` no longer declares a `rerun-if-changed` on `../../.git/HEAD` when
+  that path does not exist, which forced a rebuild on every run of an installed
+  crate.
+
 ## [0.1.0] — unreleased
 
 First release. One job: your task survives `/compact` in Claude Code.

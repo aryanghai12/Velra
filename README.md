@@ -8,10 +8,20 @@
 </p>
 
 <p align="center">
-  <a href="BENCHMARK_REPORT.md">Benchmark report</a> &middot;
-  <a href="bench/results/EVIDENCE.md">Raw evidence</a> &middot;
-  <a href="DECISIONS.md">Design decisions</a> &middot;
-  <a href="HANDOFF.md">Handoff notes</a>
+  <a href="#quickstart"><strong>Quickstart</strong></a> &nbsp;·&nbsp;
+  <a href="#benchmarks"><strong>Benchmarks</strong></a> &nbsp;·&nbsp;
+  <a href="#architecture"><strong>Architecture</strong></a> &nbsp;·&nbsp;
+  <a href="#security"><strong>Security</strong></a>
+</p>
+
+<p align="center">
+  <sub>
+    <a href="BENCHMARK_REPORT.md">Full benchmark report</a> ·
+    <a href="bench/results/EVIDENCE.md">Raw evidence</a> ·
+    <a href="DECISIONS.md">Design decisions</a> ·
+    <a href="CHANGELOG.md">Changelog</a> ·
+    <a href="HANDOFF.md">Handoff notes</a>
+  </sub>
 </p>
 
 ![Velra Benchmark Proof](assets/proof.png)
@@ -22,6 +32,164 @@ red box.
 
 **If this is useful to you, star the repo.** It is the only signal I have that
 the v0.2 work is worth doing.
+
+---
+
+## Quickstart
+
+Velra is a single native binary. No daemon, no background process, nothing in
+your PATH at hook time, no runtime dependencies at all.
+
+### Tier 1 — install a prebuilt binary (one command, no compiler)
+
+Pick whichever line matches how you already install things. All four download
+the same statically linked binary from
+[GitHub Releases](https://github.com/aryanghai12/velra/releases) and verify its
+published SHA-256 before installing it. **None of them need a C or C++
+compiler, Visual Studio Build Tools, Xcode, or a Rust toolchain.**
+
+**macOS and Linux**
+
+```bash
+curl -LsSf https://raw.githubusercontent.com/aryanghai12/velra/main/install/install.sh | sh
+```
+
+**Windows (PowerShell)**
+
+```powershell
+powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/aryanghai12/velra/main/install/install.ps1 | iex"
+```
+
+**npm — any platform**
+
+```bash
+npm install -g velra
+```
+
+Or with no permanent install at all:
+
+```bash
+npx velra enable
+```
+
+**Rust users — cargo-binstall**
+
+```bash
+cargo binstall velra
+```
+
+`cargo binstall` fetches the same release archive rather than compiling it, so
+it is instant and needs no linker. If you do not have it:
+`cargo install cargo-binstall` (or grab its own prebuilt binary).
+
+Then register the hooks:
+
+```bash
+velra enable
+```
+
+The installer scripts accept `--enable` / `-Enable` to do that in the same
+step. Nothing is registered unless you ask for it.
+
+<details>
+<summary>Supported platforms</summary>
+
+| OS | Architectures | Artifact |
+|---|---|---|
+| Linux | x86_64, aarch64 | `*-unknown-linux-musl` — statically linked, works on any distro, glibc version irrelevant |
+| macOS | Apple silicon, Intel | `aarch64-apple-darwin`, `x86_64-apple-darwin` |
+| Windows | x64, ARM64 | `*-pc-windows-msvc` — static CRT, no redistributable needed |
+
+Windows-GNU hosts are covered too: `cargo binstall` maps them to the MSVC
+binary, which is statically linked and runs there unchanged.
+
+</details>
+
+### Tier 2 — build from source (contributors)
+
+Building compiles SQLite from source, so this path — and only this path —
+needs a working C toolchain (MSVC Build Tools on Windows, `cc` elsewhere). If
+you just want to *use* Velra, Tier 1 is strictly easier.
+
+```bash
+git clone https://github.com/aryanghai12/velra
+cd velra
+cargo build --release -p velra
+./target/release/velra enable          # Windows: .\target\release\velra.exe enable
+```
+
+Or straight from crates.io:
+
+```bash
+cargo install velra
+```
+
+There is no `rust-toolchain.toml` in this repository and no forced target: the
+build uses whatever host toolchain you already have. The MSRV is **1.98**,
+declared in `Cargo.toml` and enforced by its own CI job.
+
+### Verify the install
+
+```bash
+velra status
+```
+
+```
+✓ Enabled (13 hook handlers registered)
+  Claude Code: 2.1.270 (from VS Code extension)
+  Binary:      /home/you/.velra/bin/velra
+  Database:    ~/.velra/velra.db (0 KiB)
+  Tracking:    0 session(s), 0 event(s)
+```
+
+If anything looks wrong, `doctor` tells you exactly what and exits non-zero:
+
+```bash
+velra doctor
+```
+
+```
+✓ settings parse: ~/.claude/settings.json
+✓ binary: /home/you/.velra/bin/velra
+✓ 13 hook handlers registered across 10 events
+✓ database: WAL, schema v2
+✓ no recent errors
+```
+
+### The actual workflow
+
+There isn't one. That is the point.
+
+1. Run `velra enable` **once**. It writes hook registrations into your
+   user-level `~/.claude/settings.json`, so Velra applies to every directory
+   and every project on the machine from that moment on.
+2. Keep using Claude Code exactly as you did before. Velra is invoked by Claude
+   Code when an event fires, does its work in a few milliseconds, and exits.
+   There is nothing running between invocations.
+3. When context fills up and `/compact` runs, Velra freezes a snapshot first
+   and injects a bounded continuation capsule into the session that follows.
+   You do not do anything.
+4. Curious what would survive right now? `velra inspect`. Want the detail
+   behind a line? `velra inspect --checkpoint <id> --section dead-ends`.
+
+Every hook exits 0. Always. If the database is locked, corrupt, read-only or
+missing, Claude Code never notices.
+
+### Uninstall
+
+```bash
+velra disable
+```
+
+That removes the hook registrations and restores `~/.claude/settings.json`
+**byte for byte** — comments, key order and trailing whitespace intact. It is
+tested, and it is the same guarantee whichever way you installed.
+
+To remove the rest: delete `~/.velra`, and `npm uninstall -g velra` or
+`rm ~/.velra/bin/velra` depending on how it got there.
+
+Add `--dry-run` to `enable` or `disable` to print the settings diff without
+writing anything.
 
 ---
 
@@ -82,7 +250,7 @@ under pressure rather than larger, and it degrades in a defined order.
 
 ---
 
-## Benchmark results
+## Benchmarks
 
 Two Claude Code sessions. Identical repository (88 files, one planted one cent
 rounding defect), identical 16 turn script, `/compact` at turn 14, measured on
@@ -133,47 +301,7 @@ subtracted. Two tempting explanations were chased and both were wrong, and
 
 ---
 
-## Quickstart
-
-Three steps, no daemon, no background process.
-
-**1. Build**
-
-```bash
-cargo build --release -p velra
-```
-
-**2. Enable globally**
-
-```bash
-./target/release/velra enable          # Windows: .\target\release\velra.exe enable
-```
-
-**3. Verify**
-
-```bash
-./target/release/velra status
-```
-
-```
-✓ Enabled (13 hook handlers registered)
-  Claude Code: 2.1.270 (from VS Code extension)
-  Database:    ~/.velra/velra.db (0 KiB)
-  Tracking:    0 session(s), 0 event(s)
-```
-
-`enable` writes hook registrations into `~/.claude/settings.json` **once**.
-That file is user level, not project level, so Velra applies to every
-directory and every project on the machine from that moment on. There is no
-daemon, nothing in your PATH, and nothing running between hook invocations:
-Claude Code starts a short lived process when an event fires, and it exits.
-
-`velra disable` removes those registrations and restores the file byte for
-byte, comments and key order intact. It is tested.
-
----
-
-## How it works
+## Architecture
 
 **1. Hooks, not a wrapper.** Velra registers 13 handlers across 10 Claude Code
 hook events. It never wraps, proxies, or intercepts your session. It is invoked
@@ -219,7 +347,7 @@ notices. That property has its own chaos test suite.
 | `velra status` | Enabled or not, versions, database size, live continuations. |
 | `velra inspect` | What would survive a `/compact` right now. |
 | `velra inspect --checkpoint <id> --section dead-ends` | Full detail behind any capsule line. |
-| `velra doctor` | Diagnose a broken install. |
+| `velra doctor` | Diagnose a broken install. Exits non-zero when something is wrong. |
 
 Add `--dry-run` to `enable` or `disable` to print the settings diff without
 writing it.
@@ -245,16 +373,33 @@ budget_tokens = 600
 | `CLAUDE_CONFIG_DIR` | Respected when locating `settings.json`. |
 | `CLAUDE_PROJECT_DIR` | Respected when resolving the project root. |
 
+Install-time only, honoured by the installers and the npm launcher:
+`VELRA_VERSION`, `VELRA_DOWNLOAD_BASE`, `VELRA_NO_MODIFY_PATH`,
+`VELRA_BINARY`, `VELRA_NO_DOWNLOAD`.
+
 ---
 
-## Privacy
+## Security
 
-Everything stays on your machine. There is no network code in the hook path.
+Everything stays on your machine. There is **no network code in the hook
+path** — the only network access in the whole project is an installer
+downloading a release archive from GitHub, and CI fails the build if a
+network-capable crate ever enters the hook path's dependency graph.
+
+No accounts, no telemetry, no API keys, no LLM calls. Velra does not read your
+conversation transcript.
 
 Redaction runs **before** anything is persisted, including the file spool.
 Files matching `.env`, `*.pem`, `id_rsa*`, and `.ssh/**` are stored as a path
 and a hash with no excerpt at all. Velra writes nothing inside your repository
 and never touches project level `.claude/settings*.json`.
+
+Every download is checksum-verified against the SHA-256 published with the
+release, and release archives carry GitHub build provenance attestations. The
+npm package has zero dependencies and no postinstall script.
+
+Full detail, including exactly what is captured per tool event and the
+vulnerability reporting process: [SECURITY.md](SECURITY.md).
 
 ---
 
@@ -270,6 +415,11 @@ python bench/run_full_benchmark.py                                     # the rea
 
 Two tests are `#[cfg(unix)]` and do not compile on Windows, so the same tree
 reports 159 on Linux and 157 here. Nothing is missing when the count is lower.
+
+The repository pins no toolchain. CI runs `stable` on Linux, macOS and Windows,
+plus a separate job that compiles against the declared MSRV of 1.98. Building
+from source needs a C toolchain for the bundled SQLite; installing a release
+binary does not.
 
 [HANDOFF.md](HANDOFF.md) has the full picture for picking this up cold,
 including the toolchain notes and the gotchas that cost time.

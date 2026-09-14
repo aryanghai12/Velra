@@ -22,9 +22,12 @@
 /bench/results/pre-compact.json
 /bench/results/user-prompt-submit.json
 
-# npm wrapper build output
-/npm/**/bin/
+# npm wrapper: ignore binaries dropped into bin/ for a vendored/offline build,
+# but never the launcher source itself - it is the package's entry point.
+/npm/**/bin/*
+!/npm/velra/bin/velra.js
 /npm/**/node_modules/
+/npm/**/*.tgz
 
 # Local databases. Velra's own state lives in ~/.velra, but a stray trial or a
 # manual `VELRA_HOME=. velra enable` can drop one in the tree.

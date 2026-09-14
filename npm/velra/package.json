@@ -3,10 +3,14 @@
   "version": "0.1.0",
   "description": "Lossless compaction for Claude Code: your task survives /compact.",
   "keywords": ["claude-code", "compaction", "hooks", "cli", "developer-tools"],
-  "homepage": "https://github.com/aryanghai12/Velra",
+  "homepage": "https://github.com/aryanghai12/velra#readme",
+  "bugs": {
+    "url": "https://github.com/aryanghai12/velra/issues"
+  },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/aryanghai12/velra.git"
+    "url": "git+https://github.com/aryanghai12/velra.git",
+    "directory": "npm/velra"
   },
   "license": "MIT",
   "bin": {
@@ -15,13 +19,5 @@
   "files": ["bin/velra.js", "README.md"],
   "engines": {
     "node": ">=16"
-  },
-  "optionalDependencies": {
-    "@velra/cli-darwin-arm64": "0.1.0",
-    "@velra/cli-darwin-x64": "0.1.0",
-    "@velra/cli-linux-x64": "0.1.0",
-    "@velra/cli-linux-arm64": "0.1.0",
-    "@velra/cli-win32-x64": "0.1.0",
-    "@velra/cli-win32-arm64": "0.1.0"
   }
 }

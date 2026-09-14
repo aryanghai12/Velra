@@ -14,6 +14,10 @@ fn main() {
         "cargo:rustc-env=VELRA_TARGET={}",
         std::env::var("TARGET").unwrap_or_default()
     );
-    println!("cargo:rerun-if-changed=../../.git/HEAD");
+    // Only when building from a checkout. A published crate has no .git, and
+    // naming a path that does not exist makes cargo rebuild on every run.
+    if std::path::Path::new("../../.git/HEAD").exists() {
+        println!("cargo:rerun-if-changed=../../.git/HEAD");
+    }
     println!("cargo:rerun-if-changed=build.rs");
 }

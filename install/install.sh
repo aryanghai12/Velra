@@ -1,8 +1,8 @@
 #!/bin/sh
 # Velra installer for macOS and Linux.
 #
-#   curl -LsSf https://github.com/aryanghai12/Velra/install.sh | sh
-#   curl -LsSf https://github.com/aryanghai12/Velra/install.sh | sh -s -- --enable
+#   curl -LsSf https://raw.githubusercontent.com/aryanghai12/velra/main/install/install.sh | sh
+#   curl -LsSf https://raw.githubusercontent.com/aryanghai12/velra/main/install/install.sh | sh -s -- --enable
 #
 # Environment:
 #   VELRA_VERSION          version to install (default: latest release)
@@ -162,7 +162,7 @@ if [ "${VELRA_NO_MODIFY_PATH:-0}" != "1" ]; then
 fi
 
 if [ "$RUN_ENABLE" = "1" ]; then
-  "$BIN_DIR/velra" enable || err "velra: `velra enable` failed"
+  "$BIN_DIR/velra" enable || err 'velra: `velra enable` failed'
 fi
 
 say ""
