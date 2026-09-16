@@ -431,6 +431,22 @@ proptest! {
         prop_assert!(rendered.tokens <= HARD_CEILING_TOKENS, "{} tokens", rendered.tokens);
         prop_assert!(rendered.text.chars().count() <= ABSOLUTE_MAX_CHARS);
         prop_assert!(rendered.text.ends_with("</VELRA_CONTINUATION>"));
+        // The ceiling backstop cuts lines and re-closes the tag. An earlier
+        // version could emit a second closing tag, which `ends_with` alone
+        // does not catch: the block would still end correctly and still be
+        // malformed. Count it.
+        prop_assert_eq!(
+            rendered.text.matches("</VELRA_CONTINUATION>").count(),
+            1,
+            "exactly one closing tag: {}",
+            rendered.text
+        );
+        prop_assert_eq!(
+            rendered.text.matches("<VELRA_CONTINUATION ").count(),
+            1,
+            "exactly one opening tag: {}",
+            rendered.text
+        );
         // Sections that are never removed.
         prop_assert!(rendered.text.contains("[CONTEXT]"));
         prop_assert!(rendered.text.contains("[STATUS]"));
@@ -516,6 +532,58 @@ fn e2_truncation_ladder_runs_in_order() {
     assert!(tight.steps > 0);
     assert!(tight.text.matches("\n- src/file").count() <= 4);
     assert!(tight.tokens <= HARD_CEILING_TOKENS);
+}
+
+/// The `[WORKING_FILES]` cliff, pinned as measured — this is an **open
+/// defect**, not a guarantee.
+///
+/// `SPEC_STEPS` sets `working_max = 4` as its first rung and `working_max = 0`
+/// as its last, with nothing between them, so under pressure the section goes
+/// from four files to none in a single move. §18 of the v0.1 benchmark report
+/// records the consequence: `[WORKING_FILES]` absent from 4 of 4 delivered
+/// capsules, every one of which came in 78 or more tokens under the ceiling.
+///
+/// This test asserts the cliff is still exactly where the report says it is,
+/// so that the planned `working_max = 2` rung has to come here and flip it
+/// deliberately rather than changing the benchmark's meaning in silence. The
+/// `bench/scenarios/s3_working_set.py` scenario measures what the cliff costs
+/// an agent; this measures that the cliff is there.
+#[test]
+fn the_working_files_ladder_still_steps_from_four_to_zero() {
+    let counts: Vec<usize> = (0..8)
+        .map(|i| {
+            let mut snapshot = arb_snapshot_minimal();
+            snapshot.working_files = (0..8)
+                .map(|n| WorkingFileView {
+                    path: format!("src/ledger/module{n}.py"),
+                    edits: 1,
+                    reads: 1,
+                    in_failure: false,
+                })
+                .collect();
+            snapshot.root = Some(IntentView {
+                id: 1,
+                // Enough pressure to walk the ladder a rung at a time.
+                text: "o".repeat(40 * (i + 1)),
+                ts_ms: common::BASE_MS,
+            });
+            render::render(&snapshot, &RenderConfig::default())
+                .text
+                .matches("\n- src/ledger/module")
+                .count()
+        })
+        .collect();
+
+    // Every rendered state lists eight files, four, or none. There is no rung
+    // in between, which is the defect.
+    for listed in &counts {
+        assert!(
+            matches!(listed, 0 | 4 | 8),
+            "the ladder produced {listed} working files; a value between 1 and \
+             3 would mean the intermediate rung has landed. Update this test \
+             and §18 of the report together when it does. Observed: {counts:?}"
+        );
+    }
 }
 
 /// E2/H3: the budget estimator must stay at or above what the real tokenizer

@@ -1,0 +1,138 @@
+{
+  "preregistration_version": "1.0.0",
+  "product": "velra",
+  "target_version": "0.1.1",
+  "written": "2026-09-15",
+  "purpose": "Decide whether Velra's continuation capsule changes post-compaction behaviour, using scenarios whose answer is not recoverable from the repository. Registered before any live session of this experiment was run.",
+
+  "why_this_replaces_the_v0.1_design": [
+    "The v0.1 benchmark's control measured Claude Code's compaction as not lossy on its task, so H1 and H2 were untested rather than proven or refuted.",
+    "The v0.1 fixture's failing test carried a docstring stating the fix ('The discount is a property of the invoice, not of each line'), which at least one recorded replicate quotes back as its reasoning. The measured turn was partly a reading task.",
+    "Both arms solved the v0.1 task in 2-4 tool calls, so the task had no room to separate them.",
+    "The v0.1 comparison of capsule size against the native summary used a real tokenizer for one side and a chars/4 estimate for the other."
+  ],
+
+  "replicates": {
+    "minimum_per_arm": 4,
+    "rationale": "With a 2xN contingency table and a perfect split, the one-sided Fisher exact p is 1/C(2n,n): n=3 gives 0.050, n=4 gives 0.014. Four replicates per arm is the smallest n at which a perfect separation clears p<0.05, so it is the registered minimum. Anything below it is reported as descriptive only.",
+    "default": 4
+  },
+
+  "arms": {
+    "baseline": "velra disable is run before the session, so the hooks are absent from the user-level Claude Code settings file. Claude Code's own compaction summary is the only continuation.",
+    "velra": "velra enable is run before the session. Everything else - fixture, turn script, model, flags, budget - is byte for byte identical."
+  },
+
+  "validity": {
+    "valid_trial_criteria": [
+      "every turn in the scenario's script was sent and produced a result line",
+      "no turn ended with subtype error_max_budget or error_during_execution",
+      "compaction actually occurred: the stream reports compact_result success AND the session transcript contains an isCompactSummary entry",
+      "the measured turn is present in the captured stream",
+      "arm integrity: the velra arm observed at least one hook invocation on the stream, and the baseline arm observed none"
+    ],
+    "invalid_trials": "recorded in full, counted, and excluded only from the measures that depend on the criterion they failed. An invalid trial is never silently dropped and never re-run to replace a result that was already seen.",
+    "control_gate": "E1, E2 and E3 are decided per scenario and are INCONCLUSIVE for any scenario whose information-loss control reports compaction as not lossy, no matter how the arms scored."
+  },
+
+  "control": {
+    "name": "per-scenario information-loss probe",
+    "method": "The scenario's own turn script is replayed with Velra disabled, with a no-tool probe turn before /compact and two after it (the first is contaminated because the compaction request's usage is billed to the turn after it). A canary constant, read incidentally in an early turn and never asked about or written into any reply, is then requested with tools forbidden.",
+    "lossy_definition": "context reduction > 20% AND the canary is not recalled verbatim",
+    "note": "This measures whether anything was forgotten. It does not measure whether the thing Velra carries was forgotten; that is what the scenario's own behavioural metric measures."
+  },
+
+  "hypotheses": [
+    {
+      "id": "E1",
+      "scenario": "s1-dead-end-pair",
+      "mechanism": "[DEAD_ENDS]",
+      "statement": "After compaction, the Velra arm re-edits a file already tried and reverted less often than the baseline arm.",
+      "primary_metric": "avoided_dead_ends",
+      "success": "Velra's rate of avoided_dead_ends exceeds baseline's, one-sided Fisher exact p < 0.05, and the control reports compaction lossy.",
+      "failure": "baseline's rate is greater than or equal to Velra's.",
+      "inconclusive": "Velra's rate is higher but p >= 0.05, or the control reports compaction not lossy."
+    },
+    {
+      "id": "E2",
+      "scenario": "s2-hidden-constraint",
+      "mechanism": "[ROOT_TASK_OBJECTIVE]",
+      "statement": "After compaction, the Velra arm honours a constraint stated once in turn 0 more often than the baseline arm. Both arms can make the suite green; only a remembered constraint picks the right way.",
+      "primary_metric": "constraint_honoured",
+      "success": "Velra's rate of constraint_honoured exceeds baseline's, one-sided Fisher exact p < 0.05, and the control reports compaction lossy.",
+      "failure": "baseline's rate is greater than or equal to Velra's.",
+      "inconclusive": "Velra's rate is higher but p >= 0.05, or the control reports compaction not lossy."
+    },
+    {
+      "id": "E3",
+      "scenario": "s3-working-set",
+      "mechanism": "[WORKING_FILES]",
+      "statement": "After a sweep across 84 unrelated modules and a compaction, the Velra arm resolves an anaphoric reference to a file it read earlier more often, and in fewer tool calls, than the baseline arm.",
+      "primary_metric": "hit_the_agreed_file",
+      "secondary_metric": "tool_calls_before_first_edit",
+      "success": "Velra's rate of hit_the_agreed_file exceeds baseline's, one-sided Fisher exact p < 0.05, and the control reports compaction lossy.",
+      "failure": "baseline's rate is greater than or equal to Velra's.",
+      "inconclusive": "Velra's rate is higher but p >= 0.05, or the control reports compaction not lossy.",
+      "prior": "Section 18 of the v0.1 report records [WORKING_FILES] absent from 4 of 4 delivered capsules, because render.rs's ladder steps working_max from 4 straight to 0. If that behaviour is unchanged, E3 is expected to FAIL, and the registered expectation is recorded here so that a failure is not reported as a surprise."
+    },
+    {
+      "id": "E4",
+      "scenario": "all",
+      "mechanism": "truncation ladder",
+      "statement": "The delivered continuation block measures at most 800 real tokens on Anthropic's tokenizer in every valid Velra trial, and its median is below the median native compaction summary measured with the same tokenizer.",
+      "primary_metric": "measured_tokens",
+      "success": "worst measured capsule <= 800, measurement control delta 0 in every trial, and median capsule < median native summary.",
+      "failure": "any capsule above 800, or any non-zero measurement control.",
+      "note": "The second clause is what the v0.1 report could not state honestly: it compared a real-tokenizer capsule against a chars/4 estimate of the summary. Both sides are measured the same way here."
+    },
+    {
+      "id": "E5",
+      "scenario": "all",
+      "mechanism": "hook contract",
+      "statement": "Every hook invocation observed on Claude Code's own event stream exits 0 and writes nothing to stderr.",
+      "primary_metric": "nonzero_exits, stderr_writes",
+      "success": "zero non-zero exits and zero stderr writes across all observed invocations, with at least 100 invocations observed.",
+      "failure": "any non-zero exit or any stderr byte. This is the highest-severity defect class in the project and a single occurrence fails the hypothesis."
+    },
+    {
+      "id": "E6",
+      "scenario": "all",
+      "mechanism": "capsule acceptance",
+      "statement": "The delivered capsule is not rejected by the agent as injected, fabricated or untrusted content.",
+      "primary_metric": "prompt_rejection_rate",
+      "success": "zero rejections across all valid Velra trials.",
+      "failure": "any rejection.",
+      "note": "Made a first-class metric here. In v0.1 it was found by grepping transcripts after the fact: 1 of 3 replicates on 2026-09-13, 0 of 4 on 2026-09-14, an unbounded 1/7 overall."
+    }
+  ],
+
+  "secondary_metrics": [
+    "tool calls on the measured turn",
+    "source file re-reads before the first edit on the measured turn",
+    "wall time and API cost per trial",
+    "capsule sections delivered, and which of them the ladder dropped",
+    "working-file precision and recall against the scenario's own relevant-file set",
+    "dead ends recorded in the database versus dead ends delivered in the capsule",
+    "dead-end attribution mechanism (git_command versus external)",
+    "native compaction summary size, real tokens",
+    "hook latency, marginal over a spawn control"
+  ],
+
+  "regression_checks": {
+    "description": "Run offline before every live session. A failure here aborts the run rather than producing evidence about a binary whose known defects have come back.",
+    "checks": [
+      {"id": "RC1", "name": "fixture leak scan", "what": "no generated fixture file contains a phrase naming its own fix", "guards": "the v0.1 TODO leak and the v0.1 failing-test docstring leak"},
+      {"id": "RC2", "name": "fixture ground truth", "what": "every declared dead end leaves the suite red and every declared fix makes it green, verified by running pytest", "guards": "a fixture whose dead end silently becomes a fix"},
+      {"id": "RC3", "name": "cargo test --workspace", "what": "the Rust suite, which carries a named regression test for each defect the v0.1 benchmark found", "guards": "all five v0.1 capsule defects"},
+      {"id": "RC4", "name": "provenance", "what": "the binary's reported commit matches the working tree's HEAD and the tree is clean", "guards": "attributing results to a commit the binary was not built from"}
+    ]
+  },
+
+  "prohibited": [
+    "changing any threshold or success criterion in this file after a live session has been run; a changed criterion invalidates every result collected under the old one",
+    "re-running a trial because its result was unwelcome",
+    "reporting an implementation result as a behavioural one without a treatment-versus-control comparison",
+    "giving the Velra arm any input the baseline arm does not receive",
+    "excluding an invalid trial from the count of trials run"
+  ]
+}

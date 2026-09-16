@@ -6,6 +6,60 @@ All notable changes to Velra are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- **A v0.1.1 efficacy benchmark** (`python bench/run_efficacy_benchmark.py`),
+  built to answer the question the v0.1 benchmark could not: does the
+  continuation capsule change what the agent *does* after compaction? Three
+  scenarios, each targeting one capsule section and each built so the answer is
+  **not recoverable from the repository** — two eliminated approaches
+  (`[DEAD_ENDS]`), a constraint stated once in the first turn where both
+  possible fixes make the suite green (`[ROOT_TASK_OBJECTIVE]`), and an
+  anaphoric reference to a file read before a sweep across 84 unrelated modules
+  (`[WORKING_FILES]`). Success criteria, valid-trial rules and the replicate
+  minimum are pre-registered in `bench/harness/preregistration.json` and hashed
+  into every artifact; the verdict script refuses to evaluate results produced
+  under a different hash. Four replicates per arm is a floor rather than a
+  preference: with a 2×N table, a perfect split reaches one-sided Fisher
+  p = 0.050 at n=3 and 0.014 at n=4. `bench/README.md` records what each design
+  decision is a response to.
+- **An offline regression gate** (`bench/harness/regression_gate.py`) that must
+  pass before any live session is paid for: a leak scan over every generated
+  fixture, ground truth verified by running pytest against each declared dead
+  end and fix, a named regression test asserted present for each of the nine
+  defects the v0.1 benchmark found, and a provenance check.
+- **An offline self-test** (`bench/harness/selftest.py`) that runs the entire
+  analysis pipeline on synthetic captures with scripted outcomes and checks
+  every branch of the verdict logic, in about fifteen seconds and for nothing.
+- `bench/tests/` — the benchmark harness's own unit tests, including checks
+  that recompute v0.1's published numbers from its recorded raw captures.
+- `capsule.rs::the_working_files_ladder_still_steps_from_four_to_zero` pins the
+  `[WORKING_FILES]` cliff as measured, so the planned `working_max = 2` rung has
+  to flip it deliberately. The capsule property test now also asserts exactly
+  one opening and one closing tag, which `ends_with` alone did not catch.
+
+### Fixed
+
+- **`velra --version` could report a stale commit.** `build.rs` declared
+  `rerun-if-changed` on `.git/HEAD`, which on a branch holds `ref:
+  refs/heads/<name>` and does not change when you commit — only the ref file
+  does — so cargo never re-ran the build script and the binary kept reporting
+  whatever sha it was first built at. The v0.1 benchmark's four-replicate
+  dataset is attributed to `e9f40151c` while the tree it ran from was several
+  commits further on. The ref `HEAD` points at and `packed-refs` are now watched
+  too, and `.git` is resolved through the `gitdir:` indirection so worktrees and
+  submodules work.
+- **Two defects in the v0.1 benchmark fixture**, both of which made its measured
+  turn easier than it claimed to be. `test_exact_payment_settles_invoice`
+  carried the docstring *"The discount is a property of the invoice, not of each
+  line"* — the fix, in one sentence, in the first file every trial reads; the
+  recorded `saturated-velra-r4` transcript quotes it back as its reasoning. And
+  the generator's "before the promotion" commit used a string replacement that
+  matched nothing, so `discount_for` was present from the first commit and the
+  commit whose message says it applies the promotion never touched `rules.py`.
+  Both are fixed in `bench/fixture/make_fixture.py`; the recorded v0.1 results
+  are left exactly as they were measured.
+
 ### Changed
 
 - **Quickstart commands no longer carry shell traps.** The primary Windows line

@@ -99,7 +99,14 @@ tests/fixtures/tokenizer/             2 delivered capsules + measured token coun
 crates/velra/tests/                   acceptance suite + common/mod.rs harness
 scripts/smoke.py                      full product pass against the release binary
 bench/run.sh                          §4 budgets (hyperfine optional)
-bench/run_full_benchmark.py           the empirical benchmark (≈ $2.80/replicate)
+bench/run_full_benchmark.py           the v0.1 benchmark (≈ $2.80/replicate)
+bench/run_efficacy_benchmark.py       the v0.1.1 efficacy benchmark (≈ $40-60)
+bench/README.md                       what each benchmark answers, and why
+bench/scenarios/                      the three v0.1.1 scenarios + ground truth
+bench/harness/preregistration.json    hypotheses and criteria, fixed before the run
+bench/harness/regression_gate.py      everything free that must pass first
+bench/harness/selftest.py             the v0.1.1 pipeline, offline, ~15 s
+bench/tests/                          the harness's own unit tests
 bench/harness/claude_binary.py        resolves the active Claude Code binary
 install/ npm/ .github/workflows/      distribution
 
@@ -164,7 +171,18 @@ INSTA_UPDATE=always cargo test --workspace --all-features              # refresh
 python scripts/smoke.py                                                # product pass
 bash bench/run.sh                                                      # §4 budgets
 VELRA_STRESS=1 cargo test -p velra --all-features --test storage       # full C1 shape
+python -m pytest bench/tests -q                                        # benchmark harness tests
+python bench/harness/selftest.py                                       # benchmark pipeline, offline
+python bench/harness/regression_gate.py --binary target/release/velra.exe
 ```
+
+`rustup`'s default toolchain on this box is `stable-x86_64-pc-windows-msvc`
+and there is no MSVC linker installed, so a bare `cargo test` fails at link
+time with `link: extra operand` — that is a GNU `link.exe` on PATH being
+handed MSVC arguments, not a code failure. Use
+`cargo +stable-x86_64-pc-windows-gnu`. The regression gate detects this and
+selects the toolchain matching the release binary's target triple on its own;
+`$VELRA_BENCH_CARGO_TOOLCHAIN` overrides.
 
 ---
 

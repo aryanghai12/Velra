@@ -447,8 +447,17 @@ cargo test --workspace --all-features                                  # 157 tes
 cargo clippy --workspace --all-targets --all-features -- -D warnings
 cargo fmt --all
 python scripts/smoke.py                                                # full product pass
-python bench/run_full_benchmark.py                                     # the real experiment
+python -m pytest bench/tests -q                                        # the harness's own tests
+python bench/harness/selftest.py                                       # the benchmark pipeline, offline
+python bench/run_full_benchmark.py                                     # the v0.1 experiment
+python bench/run_efficacy_benchmark.py                                 # the v0.1.1 efficacy experiment
 ```
+
+The last one is the experiment the open problems above are blocking on. It runs
+three scenarios whose answers are **not recoverable from the repository**, with
+success criteria pre-registered in `bench/harness/preregistration.json` and
+hashed into every artifact. [`bench/README.md`](bench/README.md) explains the
+design and what each decision is a response to.
 
 Two tests are `#[cfg(unix)]` and do not compile on Windows, so the same tree
 reports 159 on Linux and 157 here. Nothing is missing when the count is lower.

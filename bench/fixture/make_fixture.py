@@ -291,7 +291,7 @@ def test_overpayment_is_reported():
 
 
 def test_exact_payment_settles_invoice():
-    """The discount is a property of the invoice, not of each line."""
+    """An exact payment of the promotional total settles the invoice."""
     invoice = build_invoice()
     result = settle(invoice, Money.from_str("1324.83"))
     assert result.status == "SETTLED"
@@ -363,17 +363,22 @@ def main() -> int:
     write(repo / "conftest.py", CONFTEST)
     write(repo / ".gitignore", "__pycache__/\n*.pyc\n.pytest_cache/\n")
 
+    # The first commit predates the promotion, so it has neither the rate nor
+    # the discount helper. An earlier version of this replacement quoted a
+    # docstring this module does not contain, so it matched nothing and the
+    # "before the promotion" commit silently shipped `discount_for` anyway --
+    # which also meant the next commit, the one whose message says it applies
+    # the promotion, did not touch `rules.py` at all.
     rules_v1 = RULES.replace(
+        '# Promotional rate for the current billing period.\n'
+        'PROMO_RATE = Decimal("0.074")\n\n', ""
+    ).replace(
         'def discount_for(amount: Money) -> Money:\n'
-        '    """The promotional discount owed on ``amount``.\n'
-        '\n'
-        '    Rounds to the nearest cent, so callers must be careful about *what* they\n'
-        '    pass: discounting a subtotal once is not the same as discounting each\n'
-        '    line item and adding the results.\n'
-        '    """\n'
+        '    """The promotional discount owed on ``amount``, to the nearest cent."""\n'
         '    return amount.scaled(PROMO_RATE)\n\n\n',
         "",
-    )
+    ).replace("from decimal import Decimal\n\n", "")
+    assert "discount_for" not in rules_v1, "commit 1 must predate the promotion"
     engine_v1 = ENGINE.replace(
         "    discount = ZERO\n"
         "    for item in invoice.items:\n"
