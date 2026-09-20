@@ -1,13 +1,14 @@
 //! Builds a render [`Snapshot`] from the materialized tables, applying the
 //! deterministic content-selection rules of §16.2.
 
+use crate::constraint::ConstraintKind;
 use crate::git;
 use crate::model::{CommandKind, IntentLevel, Mechanism, Outcome, Trigger};
 use crate::paths;
 use crate::reducer::{project_root, session_epoch};
 use crate::render::{
-    AttemptView, CommandRef, DeadEndView, FailureView, IntentView, NextTarget, Snapshot,
-    WorkingFileView,
+    AttemptView, CommandRef, ConstraintView, DeadEndView, FailureView, IntentView, NextTarget,
+    Snapshot, WorkingFileView,
 };
 use crate::shell;
 use rusqlite::{params, Connection, OptionalExtension};
@@ -25,6 +26,8 @@ pub struct SnapshotMeta {
 }
 
 const DEAD_ENDS_MAX: usize = 4;
+/// Constraint sentences carried into a snapshot before the ladder trims them.
+const CONSTRAINTS_MAX: usize = 3;
 const ATTEMPTS_MAX: usize = 4;
 const WORKING_MAX: usize = 8;
 
@@ -58,30 +61,66 @@ fn command_ref(conn: &Connection, id: i64) -> rusqlite::Result<Option<CommandRef
 }
 
 /// One `file_stats` row plus whether the capsule already names the file.
-struct FileStat {
-    path: String,
-    edits: u32,
-    reads: u32,
-    in_failure: bool,
-    first_touch_ms: i64,
+///
+/// Public because the ranking derived from it is a documented, tested property
+/// of the ledger rather than a private detail of one query.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct FileStat {
+    pub path: String,
+    pub edits: u32,
+    pub reads: u32,
+    pub in_failure: bool,
+    pub first_touch_ms: i64,
     /// Named by a dead end, a live attempt, or the failing output.
-    pinned: bool,
+    pub pinned: bool,
 }
 
 /// Rank of a file in `[FILE_ACTIVITY]`, highest first.
+///
+/// ```text
+/// score = 6*pinned + 4*in_failure + 3*min(edits,3) + 2*[reads>=2] + min(reads,3)
+/// ```
 ///
 /// The weights separate scarce evidence from abundant evidence. Editing a file
 /// or seeing it named in a failing test's output happens to a handful of files
 /// per task; reading one happens to dozens, and a single read is the weakest
 /// thing the log records — it is what a breadth-first sweep leaves behind.
 /// Coming *back* to a file is worth more than the second read itself, because
-/// that is the difference between skimming and working.
-fn working_score(s: &FileStat) -> u32 {
+/// that is the difference between skimming and working. Every term saturates,
+/// so no single signal can be farmed: forty reads of one file rank it exactly
+/// as three reads do.
+///
+/// The range is 0..=24 (6 + 4 + 9 + 2 + 3). Ties are broken, in order, by edits, then reads, then
+/// *earliest* first touch, then path — see [`rank`].
+pub fn working_score(s: &FileStat) -> u32 {
     6 * u32::from(s.pinned)
         + 4 * u32::from(s.in_failure)
         + 3 * s.edits.min(3)
         + 2 * u32::from(s.reads >= 2)
         + s.reads.min(3)
+}
+
+/// Sorts `stats` into `[FILE_ACTIVITY]` order, highest rank first.
+///
+/// Recency decides nothing but the very last tie, and deliberately in the
+/// *older* direction. Ranking ties by "most recently touched" hands the whole
+/// list to whatever the agent did last: in the v0.1 benchmark an audit sweep
+/// across 84 unrelated modules, each read exactly once, filled the section and
+/// pushed out the two files the failing test ran through. Among files with
+/// equally thin evidence the ones the session opened with are the ones that
+/// framed it, so first touch wins (D59).
+///
+/// A pure function of the rows, so the ordering is reproducible from the ledger
+/// alone and can be tested without a database.
+pub fn rank(stats: &mut [FileStat]) {
+    stats.sort_by(|a, b| {
+        working_score(b)
+            .cmp(&working_score(a))
+            .then(b.edits.cmp(&a.edits))
+            .then(b.reads.cmp(&a.reads))
+            .then(a.first_touch_ms.cmp(&b.first_touch_ms))
+            .then(a.path.cmp(&b.path))
+    });
 }
 
 /// Splits a stored `- old\n+ new` excerpt into its two lines.
@@ -142,6 +181,28 @@ pub fn build(
             }
         }
     }
+
+    // Constraints (schema v3). Oldest first: the order the user stated them in
+    // is the only ordering the log supports, and a later sentence never
+    // silently outranks an earlier one.
+    let constraints: Vec<ConstraintView> = conn
+        .prepare_cached(
+            "SELECT id, text, kind, cue, prompt_ordinal, created_ms FROM constraints \
+             WHERE session_id = ?1 AND epoch = ?2 AND superseded_ms IS NULL \
+             ORDER BY id LIMIT ?3",
+        )?
+        .query_map(params![sid, epoch, CONSTRAINTS_MAX as i64], |r| {
+            let kind: String = r.get(2)?;
+            Ok(ConstraintView {
+                id: r.get(0)?,
+                text: r.get(1)?,
+                kind: ConstraintKind::parse(&kind).unwrap_or(ConstraintKind::Requirement),
+                cue: r.get(3)?,
+                prompt_ordinal: r.get(4)?,
+                ts_ms: r.get(5)?,
+            })
+        })?
+        .collect::<rusqlite::Result<_>>()?;
 
     let git = root_path.as_deref().and_then(git::head_info);
     let edit_count: i64 = conn
@@ -310,20 +371,9 @@ pub fn build(
         });
     }
 
-    // Working files (§16.2).
-    //
-    // Two signals decide the list. Evidence comes first: a file the capsule
-    // already talks about (a dead end, a live attempt, a path named in the
-    // failing output) is kept whatever else competes, then the rest are ranked
-    // by how much the session invested in them.
-    //
-    // Recency decides nothing but the very last tie, and deliberately in the
-    // *older* direction. Ranking ties by "most recently touched" hands the
-    // whole list to whatever the agent did last: in the v0.1 benchmark an
-    // audit sweep across 84 unrelated modules, each read exactly once, filled
-    // `[FILE_ACTIVITY]` and pushed out the two files the failing test ran
-    // through. Among files with equally thin evidence the ones the session
-    // opened with are the ones that framed it, so first touch wins (D59).
+    // Working files (§16.2). Evidence comes first: a file the capsule already
+    // talks about (a dead end, a live attempt, a path named in the failing
+    // output) is pinned, and the rest are ranked by `working_score`.
     let pinned: std::collections::HashSet<&str> = dead_ends
         .iter()
         .map(|d| d.path.as_str())
@@ -352,14 +402,7 @@ pub fn build(
     for s in &mut stats {
         s.pinned = pinned.contains(s.path.as_str());
     }
-    stats.sort_by(|a, b| {
-        working_score(b)
-            .cmp(&working_score(a))
-            .then(b.edits.cmp(&a.edits))
-            .then(b.reads.cmp(&a.reads))
-            .then(a.first_touch_ms.cmp(&b.first_touch_ms))
-            .then(a.path.cmp(&b.path))
-    });
+    rank(&mut stats);
     let working_files: Vec<WorkingFileView> = stats
         .into_iter()
         .take(WORKING_MAX)
@@ -410,6 +453,7 @@ pub fn build(
         project_id,
         epoch,
         root,
+        constraints,
         subtask,
         latest,
         git,
@@ -427,11 +471,12 @@ pub fn build(
 }
 
 /// Whether the session's current epoch has anything worth checkpointing
-/// (§15.2 step 4): a ROOT, a command, or an edit.
+/// (§15.2 step 4): a ROOT, a stated constraint, a command, or an edit.
 pub fn has_state(conn: &Connection, session_id: &str) -> rusqlite::Result<bool> {
     let epoch = session_epoch(conn, session_id)?;
     conn.prepare_cached(
         "SELECT EXISTS (SELECT 1 FROM intents WHERE session_id = ?1 AND epoch = ?2 AND level = 'ROOT' AND superseded_ms IS NULL) \
+             OR EXISTS (SELECT 1 FROM constraints WHERE session_id = ?1 AND epoch = ?2 AND superseded_ms IS NULL) \
              OR EXISTS (SELECT 1 FROM commands WHERE session_id = ?1 AND epoch = ?2) \
              OR EXISTS (SELECT 1 FROM edits WHERE session_id = ?1 AND epoch = ?2)",
     )?

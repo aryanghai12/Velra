@@ -29,6 +29,28 @@ fn tool_payload(env: &Env, index: usize) -> String {
     .to_string()
 }
 
+/// **Run this with `--features fault-injection`.**
+///
+/// The `VELRA_TEST_WATCHDOG_MS` below only takes effect in a build that has
+/// that feature (`hook.rs::watchdog_ms` is `#[cfg]`-gated on it, deliberately,
+/// so no environment variable can disable the watchdog in a shipped binary).
+/// A plain `cargo test` therefore runs this storm against the real 250 ms
+/// deadline, and on a loaded machine some of the 200 hook processes spend
+/// longer than that before they have even armed their event for the spool --
+/// `db-open` alone was measured at 168 ms under this load. The watchdog then
+/// does exactly what it promises: it flushes what it can and exits 0 rather
+/// than making Claude Code wait. The event is gone, the process leaves no log
+/// line, and this assertion fails.
+///
+/// Measured on 2026-09-20: 3 of 10 default runs lost between 1 and 5 events;
+/// 0 of 8 runs with `--features fault-injection`. The flake predates the
+/// v0.1.2 ledger work -- the same 2-in-10 rate reproduces on the commit before
+/// it. `scripts/diagnose_event_loss.py` reproduces it outside cargo and keeps
+/// the failing home directory.
+///
+/// Nothing here is weakened to accommodate that: the assertions below are the
+/// same exact counts they always were. What the feature flag changes is
+/// whether the test is measuring the storage layer or the watchdog.
 #[test]
 fn c1_parallel_processes_lose_no_events_and_create_no_duplicates() {
     let (processes, per_process) = stress_shape();

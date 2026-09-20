@@ -4,6 +4,7 @@
 
 pub mod checkpoint;
 pub mod commands;
+pub mod constraint;
 pub mod continuation;
 pub mod db;
 pub mod event;

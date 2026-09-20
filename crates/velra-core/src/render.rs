@@ -3,64 +3,82 @@
 //! Rendering is a pure function of a [`Snapshot`] and a [`RenderConfig`]:
 //! identical input yields byte-identical output on every platform.
 
+use crate::constraint::ConstraintKind;
 use crate::git::GitInfo;
 use crate::model::{CommandKind, Mechanism, Outcome, Trigger};
 use crate::text::{estimate_tokens, truncate_chars, truncate_chars_front};
 use crate::time::{hh_mm, rfc3339_utc};
 
 pub const RENDER_VERSION: i64 = 1;
-/// Target size in *estimated* tokens.
-///
-/// The spec's budget is 800 real tokens, but the budget is enforced against
-/// `estimate_tokens`, and that estimate is not exact: it under-reads what
-/// Anthropic's tokenizer actually charges, so rendering to 800 admits capsules
-/// that land over 800 in the only place the number matters, which is the bill.
-///
-/// The margin is set by the worst under-read ever measured, not the average.
-/// Across the eight delivered capsules of the v0.1.1 efficacy benchmark,
-/// `bench/harness/measure_tokens.py` paired each estimate against its real
-/// count:
-///
-/// | estimated | real | under-read |
-/// |----------:|-----:|-----------:|
-/// | 728 | 777 | 6.7% |
-/// | 748 | 790 | 5.6% |
-/// | 746 | 791 | 6.0% |
-/// | 745 | 804 | **7.9%** |
-/// | 728 | 753 | 3.4% |
-/// | 722 | 753 | 4.3% |
-/// | 729 | 751 | 3.0% |
-/// | 723 | 751 | 3.9% |
-///
-/// The fourth row is why E4 failed: a capsule rendered to the old 745 target
-/// cost 804 real tokens, four over the ceiling. 745 was chosen against a ~6%
-/// under-read observed in v0.1; the real tail is 7.9%.
-///
-/// 730 tolerates an under-read of 9.6% (800 / 730) before a capsule can breach
-/// 800, which clears the measured 7.9% with margin. It is also deliberately
-/// above 720: at 720 the benchmark's own state reached the ladder's last step
-/// and dropped `[FILE_ACTIVITY]` entirely, costing the agent the list
-/// of files the task ran through. 730 is the largest target that keeps the
-/// ceiling strict without hitting that cliff.
-///
-/// Re-derive this if `estimate_tokens` ever gets tighter;
-/// `bench/harness/measure_tokens.py` is what measures the gap.
-pub const DEFAULT_BUDGET_TOKENS: u32 = 730;
 
-/// The spec's budget, kept only as the figure the margin is measured against.
+/// Target size in *estimated* tokens, and — since v0.1.2 — a hard stop rather
+/// than an aspiration.
+///
+/// # Why this is not simply 800
+///
+/// The spec's budget is 800 *real* tokens on Anthropic's tokenizer. The
+/// renderer can only measure [`estimate_tokens`], so the target has to leave
+/// room for whatever the estimator gets wrong. Two things were wrong before
+/// v0.1.2 and both are fixed here; the number moved because of them, not
+/// instead of them.
+///
+/// **1. The ladder had no hard stop.** `run_steps` returned as soon as its
+/// rungs were exhausted, whether or not the target had been met, so the only
+/// bound actually enforced was [`HARD_CEILING_TOKENS`] — 1,000, not 730. A
+/// capsule anywhere in that band was shipped without complaint. `render_impl`
+/// now runs both ladders against the caller's target and then applies
+/// [`enforce_ceiling`] at that target, which removes lines and finally
+/// characters until the text fits. The returned text is therefore at or below
+/// `budget_tokens` by construction, and
+/// `render_never_exceeds_its_target_for_any_input` asserts it over generated
+/// snapshots.
+///
+/// **2. The estimator under-read the current format.** Measured against the
+/// eight capsules Claude Code actually received during the v0.1.1 efficacy
+/// benchmark — `bench/results/v0.1.1/trials/*/delivered_capsule.txt` paired
+/// with the tokenizer counts in `token_measurement.json` — the old walk came in
+/// below the real cost every single time, by as much as 7.9% of its own
+/// reading. That is why E4 failed with a capsule of 804 real tokens against an
+/// 800 ceiling. The walk now charges prose at three letters per token instead
+/// of four (English, as Claude's tokenizer sees it, is nearer three), and it
+/// reads at or above the real count on all ten measured capsules, old format
+/// and new. `estimator_is_above_real_tokenizer_counts` holds it there.
+///
+/// # What is and is not guaranteed
+///
+/// Guaranteed, as a property of the code: a rendered capsule never estimates
+/// above `budget_tokens`, and never exceeds [`ABSOLUTE_MAX_CHARS`].
+///
+/// Not guaranteed, because it cannot be without shipping the tokenizer: that
+/// the real count is at or below 800. What can be said is that the estimator
+/// has never under-read a measured capsule, and that 740 leaves 60 tokens —
+/// 8.1% — of slack on top of that. The benchmark measures the real count on
+/// every delivered capsule rather than trusting this paragraph.
+pub const DEFAULT_BUDGET_TOKENS: u32 = 740;
+
+/// The spec's budget, kept as the figure the margin is measured against.
 const SPEC_BUDGET_TOKENS: u32 = 800;
 
-/// The worst estimator under-read measured against Anthropic's tokenizer,
-/// as a percentage. See the table on `DEFAULT_BUDGET_TOKENS`.
-const MEASURED_UNDER_READ_PCT: u32 = 8;
+/// Slack between the render target and the spec budget, as a percentage of the
+/// spec budget. It is head-room against the estimator being wrong in the
+/// direction that costs money, on a format it has not seen yet.
+const REQUIRED_SLACK_PCT: u32 = 7;
 
-/// Lifting the default back towards the spec figure has to be deliberate: this
-/// fails the build if the margin drops below the estimator's measured
-/// under-read.
+/// Raising the default towards the spec figure has to be deliberate: this fails
+/// the build if the slack drops below what the estimator has ever needed.
 const _: () = assert!(
-    SPEC_BUDGET_TOKENS - DEFAULT_BUDGET_TOKENS >= SPEC_BUDGET_TOKENS * MEASURED_UNDER_READ_PCT / 100,
-    "DEFAULT_BUDGET_TOKENS leaves less headroom than the estimator's measured error"
+    SPEC_BUDGET_TOKENS - DEFAULT_BUDGET_TOKENS >= SPEC_BUDGET_TOKENS * REQUIRED_SLACK_PCT / 100,
+    "DEFAULT_BUDGET_TOKENS leaves less slack than the estimator's measured error allows"
 );
+
+/// Floor for `budget_tokens`.
+///
+/// The hard stop can always shrink a capsule, but it cannot shrink it below a
+/// well formed block: an opening tag, a preamble and a closing tag cost what
+/// they cost. Below this figure there is nothing meaningful to return, so the
+/// target is clamped up to it and the guarantee "rendered tokens <= target"
+/// holds for every budget at or above it.
+pub const MIN_BUDGET_TOKENS: u32 = 64;
 
 pub const HARD_CEILING_TOKENS: u32 = 1_000;
 pub const ABSOLUTE_MAX_CHARS: usize = 9_500;
@@ -77,6 +95,21 @@ impl Default for RenderConfig {
             budget_tokens: DEFAULT_BUDGET_TOKENS,
         }
     }
+}
+
+/// One constraint sentence, as the user wrote it.
+///
+/// `kind` and `cue` are the evidence that selected the sentence, not a claim
+/// about how important it is; see `crate::constraint`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ConstraintView {
+    pub id: i64,
+    pub text: String,
+    pub kind: ConstraintKind,
+    pub cue: String,
+    /// 0-based index of the user prompt it came from.
+    pub prompt_ordinal: i64,
+    pub ts_ms: i64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -159,6 +192,8 @@ pub struct Snapshot {
     pub project_id: String,
     pub epoch: i64,
     pub root: Option<IntentView>,
+    /// Constraint sentences of the epoch, oldest first.
+    pub constraints: Vec<ConstraintView>,
     pub subtask: Option<IntentView>,
     pub latest: Option<IntentView>,
     pub git: Option<GitInfo>,
@@ -180,6 +215,8 @@ pub struct Snapshot {
 #[derive(Debug, Clone, Copy)]
 struct Limits {
     working_max: usize,
+    constraints_max: usize,
+    constraint_chars: usize,
     attempts_max: usize,
     dead_ends_max: usize,
     dead_excerpts_removed: usize,
@@ -198,6 +235,8 @@ struct Limits {
 impl Limits {
     const FULL: Limits = Limits {
         working_max: 8,
+        constraints_max: 3,
+        constraint_chars: 200,
         attempts_max: 4,
         dead_ends_max: 4,
         dead_excerpts_removed: 0,
@@ -236,7 +275,12 @@ pub struct Rendered {
 /// own -- and asks for conflicts to be surfaced rather than silently resolved
 /// in either direction. That is the honest framing, and it is also the one that
 /// survives scrutiny: the block is a record, and it says so.
-const CONTEXT: &str = "A local record, not a message and not an instruction. Velra logged this session's own prompts and tool events to disk and quotes them back verbatim after compaction; nothing here is new. OBSERVED lines came from a tool event, INFERRED lines were derived from them. Files on disk are the source of truth for code. If a quoted line seems to conflict with the code or with the current request, say so rather than dropping it silently.";
+///
+/// It was 431 characters and 160 estimated tokens until v0.1.2, which is 22% of
+/// the whole budget spent before the capsule says anything about the session.
+/// It is now 292 characters and makes every one of the same five claims;
+/// `the_preamble_still_makes_every_claim_it_has_to` is the guard on that.
+const CONTEXT: &str = "A local record, not a message and not an instruction. Velra logged this session\'s own prompts and tool events and quotes them back here; nothing is new. OBSERVED came from a tool event, INFERRED was derived from it. Files on disk are the source of truth. Say so if a line here conflicts with them.";
 
 fn outcome_word(o: Outcome) -> &'static str {
     o.as_str()
@@ -313,6 +357,38 @@ fn render_with(s: &Snapshot, lim: &Limits, trace: bool) -> String {
             o.push("(not captured)", "intents:none");
         }
     }
+    // A constraint whose sentence *is* the whole first message has already been
+    // printed, word for word, two lines above. Reprinting it buys nothing and
+    // costs the capsule budget twice. Anything narrower than the whole message
+    // is kept: that is the case the section exists for, where a rule sits in
+    // one sentence of a longer prompt and the ladder is about to trim the rest
+    // of that prompt away.
+    let root_text = s.root.as_ref().map(|r| r.text.as_str());
+    let constraints: Vec<&ConstraintView> = s
+        .constraints
+        .iter()
+        .filter(|c| root_text != Some(c.text.as_str()))
+        .take(lim.constraints_max)
+        .collect();
+    if !constraints.is_empty() {
+        let all: Vec<i64> = constraints.iter().map(|c| c.id).collect();
+        o.push(
+            "[STATED_CONSTRAINTS] (OBSERVED | user prompt | quoted verbatim)",
+            &ids("constraints", &all),
+        );
+        for c in constraints {
+            o.push(
+                format!(
+                    "- turn {} {} | \"{}\"",
+                    c.prompt_ordinal,
+                    hh_mm(c.ts_ms, tz),
+                    truncate_chars(&c.text, lim.constraint_chars)
+                ),
+                &format!("constraints:{}", c.id),
+            );
+        }
+    }
+
     if let Some(st) = s.subtask.as_ref().filter(|_| lim.subtask) {
         let src = format!("intents:{}", st.id);
         o.push(
@@ -506,14 +582,11 @@ fn render_with(s: &Snapshot, lim: &Limits, trace: bool) -> String {
     }
 
     o.plain("[RECORD_DETAIL]");
-    if s.preview {
-        o.plain("Full detail for any section: `velra inspect --section <dead-ends|failure|files|attempts>`");
-    } else {
-        o.plain(format!(
-            "Full detail for any section: `velra inspect --checkpoint {} --section <dead-ends|failure|files|attempts>`",
-            s.checkpoint_id
-        ));
-    }
+    // Neither the checkpoint id nor the list of section names is repeated here.
+    // The id is already in the opening tag, and spelling it twice cost about 30
+    // tokens of dense ULID; the four section names cost another 40 to say what
+    // `velra inspect --section` prints when given a name it does not know.
+    o.plain("Full detail for any section: `velra inspect --section <name>`");
     o.plain("</VELRA_WORKSPACE_STATE>");
     o.lines.join("\n")
 }
@@ -537,6 +610,14 @@ const SPEC_STEPS: &[Step] = &[
     |l, _| std::mem::replace(&mut l.failure_lines, 3) != 3,
     |l, _| std::mem::replace(&mut l.latest_chars, 120) != 120,
     |l, _| std::mem::replace(&mut l.root_chars, 160) != 160,
+    // The rung that used to be missing. Before v0.1.2 the ladder stepped
+    // `working_max` from 4 straight to 0, so `[FILE_ACTIVITY]` went from four
+    // files to none in one move -- and section 18 of the v0.1 report records the
+    // result: the section absent from 4 of 4 delivered capsules, every one of
+    // them well under the ceiling. Two files is most of what the section is
+    // worth and costs two lines.
+    |l, _| std::mem::replace(&mut l.working_max, 2) != 2,
+    |l, _| std::mem::replace(&mut l.constraint_chars, 140) != 140,
     |l, _| std::mem::replace(&mut l.working_max, 0) != 0,
 ];
 
@@ -559,7 +640,10 @@ const CEILING_STEPS: &[Step] = &[
     |l, _| std::mem::replace(&mut l.path_chars, 60) != 60,
     |l, _| std::mem::replace(&mut l.command_chars, 80) != 80,
     |l, _| std::mem::replace(&mut l.latest, false),
+    |l, _| std::mem::replace(&mut l.constraints_max, 2) != 2,
     |l, _| std::mem::replace(&mut l.root_chars, 100) != 100,
+    |l, _| std::mem::replace(&mut l.constraint_chars, 100) != 100,
+    |l, _| std::mem::replace(&mut l.constraints_max, 1) != 1,
     |l, _| std::mem::replace(&mut l.dead_ends_max, 2) != 2,
     |l, _| std::mem::replace(&mut l.subtask, false),
     |l, _| std::mem::replace(&mut l.dead_ends_max, 1) != 1,
@@ -568,14 +652,24 @@ const CEILING_STEPS: &[Step] = &[
     |l, _| std::mem::replace(&mut l.root_chars, 60) != 60,
 ];
 
-/// Last-resort guarantee that the block never exceeds the ceiling (E2).
+/// Last-resort guarantee that the block never exceeds `ceiling` (E2).
 ///
 /// Every ladder step above is a judgement about which content matters least.
-/// This is not a judgement — it is the backstop that makes "≤ 1,000 tokens and
-/// ≤ 9,500 characters, always" a property rather than an expectation. It drops
-/// whole lines from the end of the body, keeping the opening tag through
-/// `[WORKSPACE_STATE]` and the `[RECORD_DETAIL]` tail, so whatever survives is still a well
-/// formed capsule that closes its own tag.
+/// This is not a judgement -- it is the backstop that turns "at or below the
+/// target, always" from an expectation into a property. It works in two moves,
+/// and only the second one is unconditional:
+///
+///  1. Drop whole lines from the end of the body, keeping the opening tag
+///     through `[WORKSPACE_STATE]` and the `[RECORD_DETAIL]` tail, so whatever
+///     survives is still a well formed capsule that closes its own tag.
+///  2. If even the protected head is too large -- a pathological checkpoint id,
+///     a 300-character constraint, an estimator that reads the head alone above
+///     the target -- shrink the head by binary search on characters until it
+///     fits, then close the tag.
+///
+/// Step 2 is what makes the guarantee real. It used to truncate to a fixed
+/// 2,000 characters and hope, which meant a small `budget_tokens` could still
+/// return something above it.
 fn enforce_ceiling(text: String, ceiling: u32, max_chars: usize) -> String {
     let fits = |t: &str| estimate_tokens(t) <= ceiling && t.chars().count() <= max_chars;
     if fits(&text) {
@@ -611,17 +705,44 @@ fn enforce_ceiling(text: String, ceiling: u32, max_chars: usize) -> String {
     if fits(&candidate) {
         return candidate;
     }
-    // Only reachable if the protected head alone is oversized, which needs a
-    // pathological checkpoint id. Cut hard and close the tag.
+    hard_trim(&candidate, ceiling, max_chars)
+}
+
+/// The unconditional shrink. Halves the character budget until the result fits,
+/// then walks back up, so the returned text is the longest prefix-with-tag that
+/// satisfies both bounds.
+///
+/// Terminates because `fits` is true at length zero: an empty body plus the
+/// closing tag estimates a handful of tokens, and `ceiling` is clamped to at
+/// least that by `render_impl`.
+fn hard_trim(text: &str, ceiling: u32, max_chars: usize) -> String {
     const CLOSE: &str = "</VELRA_WORKSPACE_STATE>";
-    let mut out = truncate_chars(&candidate, max_chars.min(2_000))
-        .trim_end()
-        .to_string();
-    if !out.ends_with(CLOSE) {
-        out.push('\n');
-        out.push_str(CLOSE);
+    let build = |chars: usize| {
+        let mut out = truncate_chars(text, chars).trim_end().to_string();
+        if !out.ends_with(CLOSE) {
+            out.push('\n');
+            out.push_str(CLOSE);
+        }
+        out
+    };
+    let fits = |t: &str| estimate_tokens(t) <= ceiling && t.chars().count() <= max_chars;
+
+    let mut lo = 0usize;
+    let mut hi = text.chars().count().min(max_chars);
+    // `build(0)` is the closing tag alone, which always fits; if even that does
+    // not, the caller's ceiling is below a single tag and the tag wins.
+    if !fits(&build(lo)) {
+        return CLOSE.to_string();
     }
-    out
+    while lo < hi {
+        let mid = lo + (hi - lo).div_ceil(2);
+        if fits(&build(mid)) {
+            lo = mid;
+        } else {
+            hi = mid - 1;
+        }
+    }
+    build(lo)
 }
 
 fn run_steps(
@@ -649,21 +770,24 @@ fn run_steps(
 }
 
 fn render_impl(s: &Snapshot, cfg: &RenderConfig, trace: bool) -> Rendered {
-    let target = cfg.budget_tokens.clamp(1, HARD_CEILING_TOKENS);
+    let target = cfg
+        .budget_tokens
+        .clamp(MIN_BUDGET_TOKENS, HARD_CEILING_TOKENS);
     let mut lim = Limits::FULL;
     let mut steps = 0;
     let mut text = run_steps(s, &mut lim, SPEC_STEPS, target, trace, &mut steps);
-    if estimate_tokens(&text) > HARD_CEILING_TOKENS || text.chars().count() > ABSOLUTE_MAX_CHARS {
-        text = run_steps(
-            s,
-            &mut lim,
-            CEILING_STEPS,
-            HARD_CEILING_TOKENS,
-            trace,
-            &mut steps,
-        );
+    // Both ladders now run against the caller's target rather than against the
+    // ceiling. Before v0.1.2 the second ladder was skipped unless the text was
+    // already above 1,000 estimated tokens, so anything between the target and
+    // the ceiling was shipped untouched and `budget_tokens` meant nothing once
+    // the first ladder ran out of rungs.
+    if estimate_tokens(&text) > target || text.chars().count() > ABSOLUTE_MAX_CHARS {
+        text = run_steps(s, &mut lim, CEILING_STEPS, target, trace, &mut steps);
     }
-    text = enforce_ceiling(text, HARD_CEILING_TOKENS, ABSOLUTE_MAX_CHARS);
+    // The hard stop. After this line the text is at or below `target` estimated
+    // tokens and at or below ABSOLUTE_MAX_CHARS characters, for every input.
+    text = enforce_ceiling(text, target, ABSOLUTE_MAX_CHARS);
+    debug_assert!(estimate_tokens(&text) <= target);
     Rendered {
         tokens: estimate_tokens(&text),
         text,
@@ -732,6 +856,7 @@ mod tests {
             project_id: "p1".into(),
             epoch: 1,
             root: None,
+            constraints: vec![],
             subtask: None,
             latest: None,
             git: None,
@@ -753,7 +878,7 @@ mod tests {
         let r = render(&base(), &RenderConfig::default());
         let expected = "<VELRA_WORKSPACE_STATE v=\"1\" checkpoint=\"ckpt_01TEST\" captured=\"2026-09-12T10:04:05Z\" trigger=\"manual\">\n[ABOUT_THIS_RECORD]\n".to_string()
             + CONTEXT
-            + "\n[FIRST_MESSAGE]\n(not captured)\n[WORKSPACE_STATE]\nno git | 0 edits this task | last test run: none\n[RECORD_DETAIL]\nFull detail for any section: `velra inspect --checkpoint ckpt_01TEST --section <dead-ends|failure|files|attempts>`\n</VELRA_WORKSPACE_STATE>";
+            + "\n[FIRST_MESSAGE]\n(not captured)\n[WORKSPACE_STATE]\nno git | 0 edits this task | last test run: none\n[RECORD_DETAIL]\nFull detail for any section: `velra inspect --section <name>`\n</VELRA_WORKSPACE_STATE>";
         assert_eq!(r.text, expected);
         assert_eq!(r.steps, 0);
     }

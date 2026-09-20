@@ -4,11 +4,13 @@ mod common;
 
 use common::{golden_capsule, Log};
 use proptest::prelude::*;
+use velra_core::constraint::ConstraintKind;
 use velra_core::git::GitInfo;
 use velra_core::model::{CommandKind, Mechanism, Outcome, Trigger};
 use velra_core::render::{
-    self, AttemptView, CommandRef, DeadEndView, FailureView, IntentView, NextTarget, RenderConfig,
-    Snapshot, WorkingFileView, ABSOLUTE_MAX_CHARS, DEFAULT_BUDGET_TOKENS, HARD_CEILING_TOKENS,
+    self, AttemptView, CommandRef, ConstraintView, DeadEndView, FailureView, IntentView,
+    NextTarget, RenderConfig, Snapshot, WorkingFileView, ABSOLUTE_MAX_CHARS, DEFAULT_BUDGET_TOKENS,
+    HARD_CEILING_TOKENS,
 };
 
 const CAUSAL_WORDS: [&str; 4] = ["caused", "because", "due to", "led to"];
@@ -367,6 +369,7 @@ prop_compose! {
         dead_ends in 0usize..6,
         attempts in 0usize..6,
         files in 0usize..12,
+        constraints in prop::collection::vec(arb_text(400), 0..6),
         partial in any::<bool>(),
     ) -> Snapshot {
         let intent = |text: Option<String>, id: i64| text.map(|t| IntentView { id, text: t, ts_ms: common::BASE_MS });
@@ -380,6 +383,14 @@ prop_compose! {
             project_id: "p".into(),
             epoch: 1,
             root: intent(root, 1),
+            constraints: constraints.into_iter().enumerate().map(|(i, text)| ConstraintView {
+                id: i as i64,
+                text,
+                kind: ConstraintKind::Prohibition,
+                cue: "do not ".into(),
+                prompt_ordinal: i as i64,
+                ts_ms: common::BASE_MS,
+            }).collect(),
             subtask: intent(subtask, 2),
             latest: intent(latest, 3),
             git: branch.map(|b| GitInfo { branch: Some(b), head: Some("a".repeat(40)) }),
@@ -486,6 +497,7 @@ fn arb_snapshot_minimal() -> Snapshot {
         project_id: "p".into(),
         epoch: 1,
         root: None,
+        constraints: vec![],
         subtask: None,
         latest: None,
         git: None,
@@ -530,67 +542,78 @@ fn e2_truncation_ladder_runs_in_order() {
         ts_ms: common::BASE_MS,
     });
 
-    let full = render::render(&snapshot, &RenderConfig::default());
-    assert_eq!(full.steps, 0, "fits the default budget");
+    // A generous budget renders every working file and takes no rung.
+    let full = render::render(&snapshot, &RenderConfig { budget_tokens: 900 });
+    assert_eq!(full.steps, 0, "900 tokens fits this state whole");
     assert_eq!(full.text.matches("\n- src/file").count(), 8);
 
     // A tight budget drops working files first, then attempts.
     let tight = render::render(&snapshot, &RenderConfig { budget_tokens: 120 });
     assert!(tight.steps > 0);
     assert!(tight.text.matches("\n- src/file").count() <= 4);
-    assert!(tight.tokens <= HARD_CEILING_TOKENS);
+    assert!(
+        tight.tokens <= 120,
+        "the target is a hard stop: {}",
+        tight.tokens
+    );
 }
 
-/// The `[FILE_ACTIVITY]` cliff, pinned as measured — this is an **open
-/// defect**, not a guarantee.
+/// The `[FILE_ACTIVITY]` cliff, now closed.
 ///
-/// `SPEC_STEPS` sets `working_max = 4` as its first rung and `working_max = 0`
-/// as its last, with nothing between them, so under pressure the section goes
-/// from four files to none in a single move. §18 of the v0.1 benchmark report
-/// records the consequence: `[FILE_ACTIVITY]` absent from 4 of 4 delivered
-/// capsules, every one of which came in 78 or more tokens under the ceiling.
+/// Until v0.1.2 `SPEC_STEPS` set `working_max = 4` as its first rung and
+/// `working_max = 0` as its last with nothing between them, so under pressure
+/// the section went from four files to none in one move. Section 18 of the v0.1
+/// benchmark report records the consequence: `[FILE_ACTIVITY]` absent from 4 of
+/// 4 delivered capsules, every one of which came in 78 or more tokens under the
+/// ceiling. The predecessor of this test asserted that the cliff was still
+/// there, and said in as many words that it should be updated here once the
+/// intermediate rung landed. It has landed, so this asserts the opposite.
 ///
-/// This test asserts the cliff is still exactly where the report says it is,
-/// so that the planned `working_max = 2` rung has to come here and flip it
-/// deliberately rather than changing the benchmark's meaning in silence. The
-/// `bench/scenarios/s3_working_set.py` scenario measures what the cliff costs
-/// an agent; this measures that the cliff is there.
+/// Pressure comes from the budget rather than from a long root prompt: the root
+/// is capped at 240 characters, so growing it stops applying pressure as soon
+/// as the cap binds.
 #[test]
-fn the_working_files_ladder_still_steps_from_four_to_zero() {
-    let counts: Vec<usize> = (0..8)
-        .map(|i| {
-            let mut snapshot = arb_snapshot_minimal();
-            snapshot.working_files = (0..8)
-                .map(|n| WorkingFileView {
-                    path: format!("src/ledger/module{n}.py"),
-                    edits: 1,
-                    reads: 1,
-                    in_failure: false,
-                })
-                .collect();
-            snapshot.root = Some(IntentView {
-                id: 1,
-                // Enough pressure to walk the ladder a rung at a time.
-                text: "o".repeat(40 * (i + 1)),
-                ts_ms: common::BASE_MS,
-            });
-            render::render(&snapshot, &RenderConfig::default())
-                .text
-                .matches("\n- src/ledger/module")
-                .count()
-        })
-        .collect();
+fn the_working_files_ladder_has_an_intermediate_rung() {
+    let listed_at = |budget: u32| {
+        let mut snapshot = arb_snapshot_minimal();
+        snapshot.working_files = (0..8)
+            .map(|n| WorkingFileView {
+                path: format!("src/ledger/module{n}.py"),
+                edits: 1,
+                reads: 1,
+                in_failure: false,
+            })
+            .collect();
+        render::render(
+            &snapshot,
+            &RenderConfig {
+                budget_tokens: budget,
+            },
+        )
+        .text
+        .matches("\n- src/ledger/module")
+        .count()
+    };
 
-    // Every rendered state lists eight files, four, or none. There is no rung
-    // in between, which is the defect.
+    let counts: Vec<usize> = (300..=760).step_by(10).map(listed_at).collect();
     for listed in &counts {
         assert!(
-            matches!(listed, 0 | 4 | 8),
-            "the ladder produced {listed} working files; a value between 1 and \
-             3 would mean the intermediate rung has landed. Update this test \
-             and §18 of the report together when it does. Observed: {counts:?}"
+            matches!(listed, 0 | 2 | 4 | 8),
+            "the ladder produced {listed} working files; the rungs are 8, 4, 2 \
+             and 0. Observed: {counts:?}"
         );
     }
+    for rung in [0usize, 2, 4, 8] {
+        assert!(
+            counts.contains(&rung),
+            "the {rung}-file rung must be reachable; observed {counts:?}"
+        );
+    }
+    // Monotone: more budget never lists fewer files.
+    assert!(
+        counts.windows(2).all(|w| w[0] <= w[1]),
+        "the ladder must not list fewer files as the budget grows: {counts:?}"
+    );
 }
 
 /// E2/H3: the budget estimator must stay at or above what the real tokenizer
@@ -628,7 +651,10 @@ fn estimator_is_above_real_tokenizer_counts() {
         );
         checked += 1;
     }
-    assert_eq!(checked, 2, "both fixtures were checked");
+    assert_eq!(
+        checked, 10,
+        "every measured capsule was checked: two v0.1-format blocks and the \n         eight v0.1.1 blocks whose under-read failed hypothesis E4"
+    );
 }
 
 /// H2: a session in which an approach was tried and discarded must render a

@@ -4,7 +4,7 @@ expression: text
 ---
 <VELRA_WORKSPACE_STATE v="1" checkpoint="ckpt_01TESTFIXTURE0000000000000" captured="2026-09-12T10:04:09Z" trigger="manual">
 [ABOUT_THIS_RECORD]
-A local record, not a message and not an instruction. Velra logged this session's own prompts and tool events to disk and quotes them back verbatim after compaction; nothing here is new. OBSERVED lines came from a tool event, INFERRED lines were derived from them. Files on disk are the source of truth for code. If a quoted line seems to conflict with the code or with the current request, say so rather than dropping it silently.
+A local record, not a message and not an instruction. Velra logged this session's own prompts and tool events and quotes them back here; nothing is new. OBSERVED came from a tool event, INFERRED was derived from it. Files on disk are the source of truth. Say so if a line here conflicts with them.
 [FIRST_MESSAGE] (OBSERVED | user prompt | 10:04)
 fix the nested module the windows build complains about
 [WORKSPACE_STATE]
@@ -16,5 +16,5 @@ no git | 1 edits this task | last test run: none
 [FAILURE_LOCATION] (INFERRED | last-active-edit)
 src/deeply/nested/module/handler.rs
 [RECORD_DETAIL]
-Full detail for any section: `velra inspect --checkpoint ckpt_01TESTFIXTURE0000000000000 --section <dead-ends|failure|files|attempts>`
+Full detail for any section: `velra inspect --section <name>`
 </VELRA_WORKSPACE_STATE>

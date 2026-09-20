@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 /// Schema version stored in `PRAGMA user_version`.
-pub const SCHEMA_VERSION: i64 = 2;
+pub const SCHEMA_VERSION: i64 = 3;
 
 /// Schema v1 (§10.4) plus secondary indexes used by the reducer and renderer.
 const SCHEMA_V1: &str = r#"
@@ -142,8 +142,33 @@ ALTER TABLE file_stats ADD COLUMN first_touch_ms INTEGER NOT NULL DEFAULT 0;
 UPDATE file_stats SET first_touch_ms = last_touch_ms;
 "#;
 
+/// Schema v3: constraints stated in a user prompt.
+///
+/// Until this table existed, a constraint survived compaction only if it
+/// happened to sit inside the first 160-240 characters of the session's very
+/// first prompt, because that is all `[FIRST_MESSAGE]` carries once the
+/// truncation ladder has run. A rule stated in the second sentence of turn 0,
+/// or in any later turn, was observed, stored in `events`, and then dropped on
+/// the floor by every projection downstream of it.
+///
+/// A row here is a sentence the user wrote, quoted verbatim, together with the
+/// cue that selected it (`crates/velra-core/src/constraint.rs`) and the event
+/// it came from. It is never a paraphrase and never an inference.
+const SCHEMA_V3: &str = r#"
+CREATE TABLE constraints (
+  id INTEGER PRIMARY KEY, session_id TEXT NOT NULL, epoch INTEGER NOT NULL,
+  text TEXT NOT NULL, cue TEXT NOT NULL,
+  kind TEXT NOT NULL CHECK (kind IN ('labelled','prohibition','requirement')),
+  source_event_id INTEGER NOT NULL, prompt_ordinal INTEGER NOT NULL,
+  created_ms INTEGER NOT NULL, superseded_ms INTEGER
+) STRICT;
+CREATE UNIQUE INDEX constraints_unique ON constraints(session_id, epoch, text);
+CREATE INDEX constraints_live ON constraints(session_id, epoch, id)
+  WHERE superseded_ms IS NULL;
+"#;
+
 /// Forward-only migrations; index `i` upgrades from version `i` to `i + 1`.
-const MIGRATIONS: &[&str] = &[SCHEMA_V1, SCHEMA_V2];
+const MIGRATIONS: &[&str] = &[SCHEMA_V1, SCHEMA_V2, SCHEMA_V3];
 
 /// Connection role, which determines lock waiting (§10.2).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

@@ -161,30 +161,45 @@ pub fn clean_terminal_output(s: &str) -> String {
 /// Estimated token count used for capsule budgets (§16.3).
 ///
 /// A single characters-per-token ratio cannot serve this text. English prose
-/// runs near four characters per token, but the capsule is deliberately dense
-/// — bracketed section tags, POSIX and Windows paths, a 26-character ULID and
-/// quoted code fragments — and measures 2.07–2.16. The former
-/// `ceil(chars / 3.2)` therefore under-read real capsules by about a third,
-/// and the truncation ladder stopped while the block was still over budget.
+/// runs near four characters per token, but the capsule is also deliberately
+/// dense — bracketed section tags, POSIX and Windows paths, a 26-character ULID
+/// and quoted code fragments — and those measure 2.07–2.16. The original
+/// `ceil(chars / 3.2)` therefore under-read real capsules by about a third, and
+/// the truncation ladder stopped while the block was still over budget.
 ///
 /// This walks the string and charges per run the way a byte-pair tokenizer
-/// does: a word that follows a space absorbs about four letters per token; a
+/// does: a word that follows a space absorbs about three letters per token; a
 /// word glued to punctuation (a path segment after `/` or `_`) fragments at
 /// about two; digits group in threes; each remaining ASCII byte is its own
-/// token; non-ASCII costs two per character.
+/// token; non-ASCII costs two per character. A margin of 1/32 is added last so
+/// the estimate errs high, which is the side a budget must fail on.
 ///
-/// A small margin is added last so the estimate errs high, which is the side a
-/// budget must fail on. It is deliberately small — 1/32 — because every point
-/// of margin is content the capsule then declines to carry: against the two
-/// capsules in `tests/fixtures/tokenizer/`, whose true cost was measured with
-/// Anthropic's tokenizer, the unmargined walk reads +3.0% and -0.1%, so 1/32
-/// clears the worst observed under-read thirty times over.
+/// # Calibration
+///
+/// `LEAD_DIV` was 4 until v0.1.2, on the strength of the two v0.1-format
+/// capsules in `tests/fixtures/tokenizer/`, where the walk over-reads by 3–6%.
+/// That calibration did not survive the format change. The v0.1.1 capsule opens
+/// with a ~340-character prose paragraph, and against the eight capsules Claude
+/// Code actually received during the v0.1.1 efficacy benchmark the walk came in
+/// *below* the real cost every single time — by up to 7.9% of its own reading,
+/// which is why one delivered capsule cost 804 tokens against an 800 ceiling.
+///
+/// Four letters per token is simply not what Claude's tokenizer charges for
+/// English; three is much closer. At `LEAD_DIV = 3` the walk reads at or above
+/// the real count on all ten measured capsules, old format and new, and
+/// over-reads by at most 13.6%. That over-read is content the capsule declines
+/// to carry, and it is the right side to be wrong on.
+///
+/// `crates/velra/tests/capsule.rs::estimator_is_above_real_tokenizer_counts`
+/// holds this against every measured fixture. Re-derive it whenever the capsule
+/// format changes; `bench/harness/measure_tokens.py` is what measures the gap.
 ///
 /// Deterministic and allocation-free: the same bytes always yield the same
 /// number on every platform, which the capsule goldens depend on.
 pub fn estimate_tokens(s: &str) -> u32 {
     /// Letters per token for a word starting at a whitespace boundary.
-    const LEAD_DIV: u64 = 4;
+    /// See the calibration note above: 4 under-read the current format.
+    const LEAD_DIV: u64 = 3;
     /// Letters per token for a word glued to the previous character.
     const GLUED_DIV: u64 = 2;
     const DIGIT_DIV: u64 = 3;
@@ -315,8 +330,8 @@ mod tests {
              Claude Code tool events before the conversation was compacted.";
         let prose_per_token = prose.len() as f64 / f64::from(estimate_tokens(prose));
         assert!(
-            (2.5..=4.0).contains(&prose_per_token),
-            "prose should estimate near 3 chars/token, got {prose_per_token:.2}"
+            (2.0..=3.2).contains(&prose_per_token),
+            "prose should estimate near 2.6 chars/token, got {prose_per_token:.2}"
         );
         assert!(
             prose_per_token > per_token,

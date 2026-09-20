@@ -1,0 +1,25 @@
+<VELRA_CONTINUATION v="1" checkpoint="ckpt_01M2Z0DR92XRMACVQQKSBC4QD4" captured="2026-09-20T08:55:17Z" trigger="manual">
+[CONTEXT]
+Velra is a local tool that recorded this task state from Claude Code tool events before the conversation was compacted. Entries are observations of tool activity. Links between an edit and a later test result are unconfirmed unless stated. Files on disk are the current source of truth for code.
+[ROOT_TASK_OBJECTIVE] (OBSERVED | user prompt | 14:21)
+Constraint for this whole task: engine.settle must keep iterating invoice.items when it computes the discount; finance reconciles the per-line figures. Now run `python -m pytest -q` and tell me exactly which test fails, at which line, an...
+[LATEST_REQUEST] (OBSERVED | user prompt | 14:25)
+Summarise the audit findings so far in a short table.
+[STATUS]
+main @ de734a7 | 0 edits this task | last test run: FAIL
+[ACTIVE_FAILURE] (OBSERVED | test run | 14:22)
+Command: python -m pytest -q 2>&1 | head -60
+Result: FAIL
+  E         + UNDERPAID
+  tests\test_engine.py:54: AssertionError
+  FAILED tests/test_engine.py::test_exact_payment_settles_invoice - AssertionEr...
+[WORKING_FILES] (OBSERVED)
+- tests/test_engine.py | edited 0x, read 1x, in failure output
+- src/ledger/money.py | edited 0x, read 1x
+- src/ledger/rules.py | edited 0x, read 1x
+- src/ledger/engine.py | edited 0x, read 1x
+[NEXT_KNOWN_TARGET] (INFERRED | failure-location)
+tests/test_engine.py:54
+[RECOVERY]
+Full detail for any section: `velra inspect --checkpoint ckpt_01M2Z0DR92XRMACVQQKSBC4QD4 --section <dead-ends|failure|files|attempts>`
+</VELRA_CONTINUATION>

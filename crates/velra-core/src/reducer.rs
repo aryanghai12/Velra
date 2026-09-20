@@ -5,6 +5,7 @@
 //! and a crash mid-batch rolls back cleanly.
 
 use crate::commands::{self, OutcomeInput};
+use crate::constraint;
 use crate::db::{self, DbError, Result};
 use crate::event::{EventRow, FileObservation, Payload};
 use crate::hash;
@@ -347,7 +348,8 @@ fn set_intent(ctx: &Ctx<'_>, level: IntentLevel, text: &str) -> Result<()> {
 }
 
 fn apply_prompt(ctx: &mut Ctx<'_>) -> Result<()> {
-    let norm = intent::normalize_prompt(ctx.ev.payload.prompt.as_deref().unwrap_or(""));
+    let raw = ctx.ev.payload.prompt.as_deref().unwrap_or("");
+    let norm = intent::normalize_prompt(raw);
     let has_root = live_intent_id(ctx, IntentLevel::Root)?.is_some();
     match intent::classify_prompt(&norm, has_root) {
         IntentAction::None => {}
@@ -360,6 +362,49 @@ fn apply_prompt(ctx: &mut Ctx<'_>) -> Result<()> {
         IntentAction::Subtask(t) => set_intent(ctx, IntentLevel::Subtask, &t)?,
         IntentAction::Root(t) => set_intent(ctx, IntentLevel::Root, &t)?,
         IntentAction::Latest(t) => set_intent(ctx, IntentLevel::Latest, &t)?,
+    }
+    // Constraints are recorded for every prompt, including ones that change no
+    // intent: a rule can be stated in a follow-up as easily as in turn 0, and
+    // the intent rules would classify that follow-up as nothing more than the
+    // LATEST message and truncate it away.
+    record_constraints(ctx, raw)?;
+    Ok(())
+}
+
+/// The ordinal of this prompt within the session, 0-based.
+///
+/// Counted over `events` rather than kept as a column so it stays correct when
+/// a spooled prompt is ingested out of order: the number is derived, like
+/// everything else in the projection.
+fn prompt_ordinal(ctx: &Ctx<'_>) -> Result<i64> {
+    Ok(ctx
+        .tx
+        .prepare_cached(
+            "SELECT COUNT(*) FROM events WHERE session_id = ?1              AND hook_event = 'UserPromptSubmit' AND id < ?2",
+        )?
+        .query_row(params![ctx.ev.session_id, ctx.ev.id], |r| r.get(0))?)
+}
+
+fn record_constraints(ctx: &Ctx<'_>, prompt: &str) -> Result<()> {
+    let found = constraint::extract(prompt);
+    if found.is_empty() {
+        return Ok(());
+    }
+    let ordinal = prompt_ordinal(ctx)?;
+    let mut stmt = ctx.tx.prepare_cached(
+        "INSERT OR IGNORE INTO constraints          (session_id, epoch, text, cue, kind, source_event_id, prompt_ordinal, created_ms)          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+    )?;
+    for c in found {
+        stmt.execute(params![
+            ctx.ev.session_id,
+            ctx.epoch,
+            c.text,
+            c.cue,
+            c.kind.as_str(),
+            ctx.ev.id,
+            ordinal,
+            ctx.ev.ts_ms
+        ])?;
     }
     Ok(())
 }

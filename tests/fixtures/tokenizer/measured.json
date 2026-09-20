@@ -1,10 +1,62 @@
 {
   "capsule-r1.txt": {
     "chars": 2056,
-    "measured_tokens": 951
+    "measured_tokens": 951,
+    "format": "v0.1 VELRA_CONTINUATION",
+    "source": "bench/results/ (v0.1 benchmark)"
   },
   "capsule-r2.txt": {
     "chars": 2377,
-    "measured_tokens": 1147
+    "measured_tokens": 1147,
+    "format": "v0.1 VELRA_CONTINUATION",
+    "source": "bench/results/ (v0.1 benchmark)"
+  },
+  "v0.1.1-s1-dead-end-pair-velra-r1.txt": {
+    "chars": 1605,
+    "measured_tokens": 777,
+    "format": "v0.1.1 VELRA_WORKSPACE_STATE",
+    "source": "bench/results/v0.1.1/trials/s1-dead-end-pair-velra-r1"
+  },
+  "v0.1.1-s1-dead-end-pair-velra-r2.txt": {
+    "chars": 1674,
+    "measured_tokens": 790,
+    "format": "v0.1.1 VELRA_WORKSPACE_STATE",
+    "source": "bench/results/v0.1.1/trials/s1-dead-end-pair-velra-r2"
+  },
+  "v0.1.1-s1-dead-end-pair-velra-r3.txt": {
+    "chars": 1660,
+    "measured_tokens": 791,
+    "format": "v0.1.1 VELRA_WORKSPACE_STATE",
+    "source": "bench/results/v0.1.1/trials/s1-dead-end-pair-velra-r3"
+  },
+  "v0.1.1-s1-dead-end-pair-velra-r4.txt": {
+    "chars": 1653,
+    "measured_tokens": 804,
+    "format": "v0.1.1 VELRA_WORKSPACE_STATE",
+    "source": "bench/results/v0.1.1/trials/s1-dead-end-pair-velra-r4"
+  },
+  "v0.1.1-s2-hidden-constraint-velra-r1.txt": {
+    "chars": 1609,
+    "measured_tokens": 753,
+    "format": "v0.1.1 VELRA_WORKSPACE_STATE",
+    "source": "bench/results/v0.1.1/trials/s2-hidden-constraint-velra-r1"
+  },
+  "v0.1.1-s2-hidden-constraint-velra-r2.txt": {
+    "chars": 1608,
+    "measured_tokens": 753,
+    "format": "v0.1.1 VELRA_WORKSPACE_STATE",
+    "source": "bench/results/v0.1.1/trials/s2-hidden-constraint-velra-r2"
+  },
+  "v0.1.1-s2-hidden-constraint-velra-r3.txt": {
+    "chars": 1608,
+    "measured_tokens": 751,
+    "format": "v0.1.1 VELRA_WORKSPACE_STATE",
+    "source": "bench/results/v0.1.1/trials/s2-hidden-constraint-velra-r3"
+  },
+  "v0.1.1-s2-hidden-constraint-velra-r4.txt": {
+    "chars": 1608,
+    "measured_tokens": 751,
+    "format": "v0.1.1 VELRA_WORKSPACE_STATE",
+    "source": "bench/results/v0.1.1/trials/s2-hidden-constraint-velra-r4"
   }
 }
