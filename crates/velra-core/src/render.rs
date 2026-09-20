@@ -67,7 +67,8 @@ const REQUIRED_SLACK_PCT: u32 = 7;
 /// Raising the default towards the spec figure has to be deliberate: this fails
 /// the build if the slack drops below what the estimator has ever needed.
 const _: () = assert!(
-    SPEC_BUDGET_TOKENS - DEFAULT_BUDGET_TOKENS >= SPEC_BUDGET_TOKENS * REQUIRED_SLACK_PCT / 100,
+    SPEC_BUDGET_TOKENS - DEFAULT_BUDGET_TOKENS
+        >= SPEC_BUDGET_TOKENS * MEASURED_UNDER_READ_PCT / 100,
     "DEFAULT_BUDGET_TOKENS leaves less slack than the estimator's measured error allows"
 );
 
