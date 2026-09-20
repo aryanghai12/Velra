@@ -1,0 +1,210 @@
+{
+  "preregistration_version": "2.0.0",
+  "product": "velra",
+  "target_version": "0.1.2",
+  "written": "2026-09-21",
+  "supersedes": "preregistration.json (1.0.0), which stays on disk unchanged because the v0.1.1 artifacts were collected under it and must remain interpretable",
+  "purpose": "Decide whether Velra materially improves post-compaction engineering outcomes *because* it preserved operational state that native compaction lost. Registered before any live session of this experiment was run.",
+
+  "what_v1_could_not_answer": [
+    "v1 asked whether the arms differed. It could not say why, because it had one number where it needed five: capture, delivery, acceptance, utilisation and outcome were collapsed into a single behavioural rate.",
+    "v1's control measured whether compaction forgot *anything* (an incidental canary constant). It never measured whether compaction forgot *the thing the scenario was about*, so a scenario could be scored while its target fact survived the boundary intact.",
+    "v1's s1 and s2 both came out with the baseline at or above Velra (3/3 and 4/4 against 4/4 and 3/4). Those are ceiling effects: the post-compaction task did not require the lost information, so the metric could not discriminate whatever the capsule did.",
+    "v1's s3 was never run, so E3 was inconclusive for want of data rather than for want of an effect.",
+    "v1's leak scan covered generated files only. It did not cover filenames, the post-compaction prompt, or the environment, and s3's target was recoverable from the tree: legacy_tsv_v2.py was the single tab-named importer with DELIMITER = None."
+  ],
+
+  "causal_chain": {
+    "description": "Every scenario is evaluated stage by stage. A stage that fails stops the chain and names the failure class. No stage may be skipped, and 'the capsule exists' is never evidence for 'Velra works'.",
+    "stages": [
+      {
+        "id": 1,
+        "name": "COMPACTION_LOSS",
+        "question": "Did native Claude Code compaction actually lose the target fact?",
+        "measured_by": "bench/harness/loss_probe.py, Velra disabled, replaying the scenario's own turns to the boundary and then asking one no-tool probe per declared target fact",
+        "pass_rule": "the fact is not recalled in a majority of valid control replicates",
+        "on_failure": "the scenario is marked NOT CAUSALLY TESTABLE. It is reported, it is not counted as a Velra success, and it is not counted as a Velra failure."
+      },
+      {
+        "id": 2,
+        "name": "CAPTURE",
+        "question": "Was the target state in the ledger before the compaction boundary?",
+        "measured_by": "bench/harness/stages.py, querying the trial's own velra.db with the scenario's registered SQL, bounded by checkpoints.event_watermark",
+        "pass_rule": "at least one supporting row exists at or below the watermark for every declared target fact",
+        "on_failure": "CAPTURE_FAILURE. Distinct from delivery: the capsule cannot carry what the ledger never held."
+      },
+      {
+        "id": 3,
+        "name": "DELIVERY",
+        "question": "Did the rendered capsule carry the fact into the session, once, after compaction, within budget?",
+        "measured_by": "the raw stream capture, never the database; token counts from bench/harness/measure_tokens.py",
+        "pass_rule": "delivered after the compaction boundary, exactly once, every hook exit 0, the target fact present in the delivered bytes, the measured token count at most 800 on Anthropic's tokenizer, and the measurement's own control delta 0",
+        "on_failure": "DELIVERY_FAILURE"
+      },
+      {
+        "id": 4,
+        "name": "ACCEPTANCE",
+        "question": "Did the agent treat the block as trustworthy workspace state?",
+        "measured_by": "regex classification of the post-compaction transcript into REJECTED / ACKNOWLEDGED / SILENT",
+        "pass_rule": "not REJECTED",
+        "note": "SILENT is not a failure. An agent may use the state without narrating that it did, and scoring silence as rejection would turn a difference in prose style into a verdict.",
+        "on_failure": "ACCEPTANCE_FAILURE"
+      },
+      {
+        "id": 5,
+        "name": "UTILISATION",
+        "question": "Did the preserved state change the agent's behaviour in a way that produced a correct outcome?",
+        "measured_by": "the scenario's own score function, against fixture ground truth and the final tree, never against the agent's self-report",
+        "pass_rule": "the registered primary metric holds and the task is correct",
+        "on_failure": "UTILISATION_FAILURE"
+      }
+    ]
+  },
+
+  "metric_policy": {
+    "primary": "task correctness, as each scenario defines it",
+    "secondary_reported_never_decisive": [
+      "avoided a rejected approach",
+      "constraint honoured",
+      "correct working file selected",
+      "unnecessary file reads",
+      "tool calls on the measured turn",
+      "repeated investigations and redundant debugging",
+      "turns to the correct action"
+    ],
+    "explicitly_not_a_success_criterion": "fewer tool calls. An agent that spends more calls and gets the answer right has done better than one that spends fewer and gets it wrong. Tool-call counts are descriptive."
+  },
+
+  "replicates": {
+    "minimum_per_arm": 4,
+    "rationale": "With a 2xN contingency table and a perfect split, the one-sided Fisher exact p is 1/C(2n,n): n=3 gives 0.050, n=4 gives 0.014. Four per arm is the smallest n at which perfect separation clears p<0.05. Below it, every behavioural result is reported as descriptive only.",
+    "default": 4
+  },
+
+  "arms": {
+    "baseline": "velra disable is run before the session, so the hooks are absent from the user-level Claude Code settings file. Claude Code's own compaction summary is the only continuation.",
+    "velra": "velra enable is run before the session. Everything else - fixture, turn script, model, flags, budget - is byte for byte identical.",
+    "identical_post_compaction_prompt": "The measured turn is one string in the scenario definition and is sent verbatim to both arms. No arm is told what to choose, and neither arm's prompt mentions the target fact."
+  },
+
+  "pairing": {
+    "design": "matched pairs",
+    "matched_on": ["scenario", "pair_id", "fixture_seed", "model", "turn_count", "compact_turn_index", "measured_turn_index", "claude_version", "velra_commit"],
+    "differs_on": ["velra enablement, and nothing else"],
+    "recorded_in": "trial_meta.json -> pair_key, written by scenario_trial.py at capture time",
+    "rejection_rule": "A pair enters the comparison only when both arms are on disk, both are usable for the behavioural measure, both carry a behavioural score, and every matched-on field agrees. Any other pair is dropped whole, named in the aggregate with the reason, and never replaced by an unmatched trial from the other arm.",
+    "fixture_seed": "sha256 over the turn script, the declared variants, the target-fact probes and the source of every module that writes the tree. Any change to what a fixture is changes the seed, and the analysis refuses to pair across it."
+  },
+
+  "validity": {
+    "valid_trial_criteria": [
+      "every turn in the scenario's script was sent and produced a result line",
+      "no turn ended with subtype error_max_budget or error_during_execution",
+      "compaction actually occurred: the stream reports compact_result success AND the session transcript contains an isCompactSummary entry",
+      "the measured turn is present in the captured stream",
+      "arm integrity: the velra arm observed at least one hook invocation on the stream, and the baseline arm observed none"
+    ],
+    "invalid_trials": "recorded in full, counted, and excluded only from the measures that depend on the criterion they failed. An invalid trial is never silently dropped and never re-run to replace a result that was already seen."
+  },
+
+  "leak_scan": {
+    "description": "A scenario whose answer is readable without recall measures reading, not memory. The scan runs before any live trial and a hit on a fatal surface rejects the scenario.",
+    "surfaces": ["tree", "filenames", "pre_prompts", "post_prompt", "environment"],
+    "fatal_surfaces": ["tree", "filenames", "post_prompt", "environment"],
+    "non_fatal": "pre_prompts. The turn script is allowed to state the target once, before compaction: that is the setup, and it is what the boundary is supposed to destroy.",
+    "also_checked": "the fixture manifest naming the true fix is written outside the repository, so an agent working in the tree cannot read the answer out of its own working directory"
+  },
+
+  "hypotheses": [
+    {
+      "id": "H1",
+      "scenario": "s1-dead-end-pair",
+      "mechanism": "[REVERTED_EDITS]",
+      "target_fact": "s1-burned-twin",
+      "statement": "After compaction, the Velra arm avoids re-editing the file already tried and reverted, and lands the fix, more often than the baseline arm.",
+      "primary_metric": "avoided_dead_ends",
+      "why_the_decision_depends_on_it": "promos.discount_total and surcharges.handling_total are the same module written twice. Which one loses the cent depends on how 0.074 and 0.0185 land against three specific line amounts, and nothing in the tree says which. An agent that has lost the elimination is choosing between two candidates it cannot tell apart.",
+      "success": "Velra's rate exceeds baseline's, one-sided Fisher exact p < 0.05 on matched pairs, and stage 1 reports the target fact lost.",
+      "failure": "baseline's rate is greater than or equal to Velra's.",
+      "inconclusive": "Velra's rate is higher but p >= 0.05, or fewer than the registered minimum of matched pairs survive.",
+      "not_causally_testable": "stage 1 reports the target fact recalled by a majority of control replicates."
+    },
+    {
+      "id": "H2",
+      "scenario": "s2-hidden-constraint",
+      "mechanism": "[STATED_CONSTRAINTS]",
+      "target_fact": "s2-turn-zero-constraint",
+      "statement": "After compaction, the Velra arm honours a constraint stated once in turn 0 more often than the baseline arm. Both arms can make the suite green; only a remembered constraint picks the right way.",
+      "primary_metric": "constraint_honoured",
+      "why_the_decision_depends_on_it": "both fixes make the suite green, so the tests cannot decide between them, and the repository never states the constraint.",
+      "note_on_the_mechanism": "v0.1.1 carried this constraint only if it happened to fit inside the truncated first message. v0.1.2 adds a constraints table and a [STATED_CONSTRAINTS] section, so the sentence is captured and rendered in its own right. That is a change in the treatment, not in the measurement: the scenario, its prompts and its scoring are unchanged from v0.1.1 except for the target-fact declaration.",
+      "success": "Velra's rate exceeds baseline's, one-sided Fisher exact p < 0.05 on matched pairs, and stage 1 reports the target fact lost.",
+      "failure": "baseline's rate is greater than or equal to Velra's.",
+      "inconclusive": "Velra's rate is higher but p >= 0.05, or fewer than the registered minimum of matched pairs survive.",
+      "prior": "In v0.1.1 the baseline honoured this constraint 4/4 and Velra 3/4. If that repeats with the constraint now demonstrably captured and delivered, the honest reading is that the capsule does not change this behaviour, and the report says so."
+    },
+    {
+      "id": "H3",
+      "scenario": "s3-working-set",
+      "mechanism": "[FILE_ACTIVITY]",
+      "target_fact": "s3-agreed-file",
+      "statement": "After a sweep across 84 unrelated modules and a compaction, the Velra arm resolves an anaphoric reference to a file it read earlier - fixing that module and not its two identically broken siblings - more often than the baseline arm.",
+      "primary_metric": "resolved_the_reference",
+      "primary_metric_definition": "the agreed module carries a tab delimiter in the final tree AND neither sibling was edited on the measured turn.",
+      "why_precision_is_part_of_the_metric": "the three legacy_tsv modules are broken identically, so 'repair every importer that splits on whitespace' fixes the target as a side effect without ever resolving the reference. Scoring the target alone would count that as a hit and the scenario would measure thoroughness instead of recall. target_fixed and repaired_every_candidate are reported separately so a run where both arms repair everything is visible as such.",
+      "why_the_decision_depends_on_it": "the measured turn is 'Now make that fix', and 'that' is never written into the repository. Three importers are broken in the same visible way, and the suite is green throughout so no failing test points anywhere.",
+      "success": "Velra's rate exceeds baseline's, one-sided Fisher exact p < 0.05 on matched pairs, and stage 1 reports the target fact lost.",
+      "failure": "baseline's rate is greater than or equal to Velra's.",
+      "inconclusive": "Velra's rate is higher but p >= 0.05, or fewer than the registered minimum of matched pairs survive.",
+      "prior": "Measured on 2026-09-21 against a recorded v0.1.1 ledger, [FILE_ACTIVITY] needs about 775 estimated tokens to survive the ladder and the registered target is 740, so the section is expected to be ABSENT from delivered capsules on states of that size. If it is, H3 is expected to fail at stage 3 (DELIVERY) rather than at stage 5, and that distinction is the point of running it."
+    },
+    {
+      "id": "H4",
+      "scenario": "all",
+      "mechanism": "truncation ladder and token budget",
+      "statement": "Every delivered capsule measures at most 800 real tokens on Anthropic's tokenizer, and its median is below the median native compaction summary measured with the same tokenizer.",
+      "primary_metric": "measured_tokens",
+      "success": "worst measured capsule <= 800, measurement control delta 0 in every trial, and median capsule < median native summary.",
+      "failure": "any capsule above 800, or any non-zero measurement control.",
+      "note": "v0.1.1 failed this at 804 tokens because the estimator under-read the capsule format by up to 7.9%. v0.1.2 recalibrates the estimator against all ten measured capsules and makes the render target a hard stop. The claim is still empirical: the renderer guarantees its own estimate, not the tokenizer's count."
+    },
+    {
+      "id": "H5",
+      "scenario": "all",
+      "mechanism": "hook contract",
+      "statement": "Every hook invocation observed on Claude Code's own event stream exits 0 and writes nothing to stderr.",
+      "primary_metric": "nonzero_exits, stderr_writes",
+      "success": "zero non-zero exits and zero stderr writes across all observed invocations, with at least 100 invocations observed.",
+      "failure": "any non-zero exit or any stderr byte."
+    },
+    {
+      "id": "H6",
+      "scenario": "all",
+      "mechanism": "capsule acceptance",
+      "statement": "The delivered capsule is not rejected by the agent as injected, fabricated or untrusted content.",
+      "primary_metric": "acceptance verdict",
+      "success": "zero REJECTED verdicts across all valid Velra trials.",
+      "failure": "any REJECTED verdict.",
+      "note": "v0.1.1 recorded 1 rejection in 8 deliveries. v0.1.2 keeps the provenance preamble that was written in response to it and shortens it; the five claims it has to make are asserted individually by a unit test."
+    }
+  ],
+
+  "possible_outcomes": {
+    "description": "The design can produce any of these, and the runner is not permitted to prefer one.",
+    "values": ["BASELINE WINS", "VELRA WINS", "TIE", "INCONCLUSIVE", "NOT CAUSALLY TESTABLE"],
+    "baseline_win_is_a_result": "A scenario in which the baseline matches or beats Velra is reported as a failure of the hypothesis, in the summary table, with the same prominence as a win."
+  },
+
+  "prohibited": [
+    "changing any threshold or success criterion in this file after a live session has been run; a changed criterion invalidates every result collected under the old one",
+    "re-running a trial because its result was unwelcome",
+    "optimising a scenario prompt after seeing live results",
+    "reporting an implementation result as a behavioural one without a treatment-versus-control comparison",
+    "giving the Velra arm any input the baseline arm does not receive",
+    "excluding an invalid trial from the count of trials run",
+    "treating 'memory preserved' as equivalent to 'task improved'",
+    "treating fewer tool calls as evidence of improvement",
+    "claiming success when a causal stage is missing or n/a",
+    "modifying anything under bench/results/v0.1.1/ or bench/results/, which are the historical record"
+  ]
+}

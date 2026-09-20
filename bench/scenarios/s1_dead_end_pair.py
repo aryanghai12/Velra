@@ -53,6 +53,7 @@ import pathlib
 from . import base
 from .base import (CONFTEST, MONEY, MONEY_DEAD_END, RULES, Scenario, Variant,
                    git, write)
+from .targets import TargetFact
 
 NAME = "s1-dead-end-pair"
 
@@ -448,6 +449,42 @@ def build_tree(repo: pathlib.Path) -> dict:
     }
 
 
+# --------------------------------------------------------------------------
+# What compaction has to destroy for this scenario to mean anything
+# --------------------------------------------------------------------------
+
+TARGET_FACTS = (
+    TargetFact(
+        id="s1-burned-twin",
+        what="src/ledger/surcharges.py was collapsed and reverted before the "
+             "boundary, and collapsing it changed nothing.",
+        probe="Earlier in this session we changed one of the two per-line "
+              "aggregator modules so it rounded once on the subtotal, saw the "
+              "suite fail in exactly the same way, and reverted it with git. "
+              "Which module was that? Reply with just the file path.",
+        recalled_markers=("surcharges",),
+        ledger_table="dead_ends",
+        ledger_sql=(
+            "SELECT d.id, d.path, d.mechanism, d.command_text, d.resolved_ms, "
+            "       e.id AS event_id "
+            "FROM dead_ends d "
+            "JOIN edits x ON x.id = (SELECT MIN(value) FROM json_each(d.edit_ids)) "
+            "JOIN events e ON e.id = x.event_id "
+            "WHERE d.path LIKE '%surcharges.py' AND d.reapplied = 0 "
+            "  AND e.id <= ?1"),
+        capsule_markers=("surcharges.py",),
+        necessary_because=(
+            "promos.discount_total and surcharges.handling_total are written to "
+            "be the same module twice: same loop, same per-line rounding call, "
+            "same docstring skeleton. Which of them loses the cent depends on "
+            "how 0.074 and 0.0185 happen to land against three specific line "
+            "amounts, and nothing in the tree says which. An agent that has lost "
+            "the elimination is choosing between two candidates it cannot tell "
+            "apart; one that still has it is choosing between one."),
+    ),
+)
+
+
 # Turns 0-6 establish the failure and burn both dead ends. Turns 7-14 are a
 # real, unrelated audit across the 84 surrounding modules: not padding, and
 # large enough that by the boundary the failing test is ten turns old.
@@ -600,6 +637,7 @@ SCENARIO = Scenario(
         "discount_total is", "promos is the", "handling_total is correct",
         "surcharges is correct", "not surcharges", "not promos",
     ),
+    target_facts=TARGET_FACTS,
     canary={
         "file": "src/ledger/adapters/adyen_uk.py",
         "const": "API_KEY_PREFIX",

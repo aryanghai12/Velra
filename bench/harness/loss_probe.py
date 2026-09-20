@@ -24,6 +24,15 @@ Method, unchanged where it was right:
   4. A verbatim-detail question: one constant, read incidentally in an early
      turn, never asked about and never written into any reply. Tools are
      forbidden and UNKNOWN is offered, so a miss is a miss rather than a guess.
+  5. **One probe per declared target fact.** This is the part that makes the
+     control describe the experiment rather than something next to it.
+
+Step 4 measures whether compaction forgot *anything*. Step 5 measures whether
+it forgot *the thing the scenario is about*, which is a different question and
+the only one that licenses attributing a behavioural difference to the capsule.
+A scenario whose target fact survives compaction is NOT CAUSALLY TESTABLE: its
+arms may differ for a dozen reasons and none of them is Velra. Reporting that
+plainly costs one probe turn and is worth more than any number it could replace.
 
 ``--replicates`` runs the whole thing more than once, because one sample
 deciding a verdict is what went wrong last time.
@@ -64,7 +73,12 @@ def canary_question(canary: dict) -> str:
 
 
 def build_turns(scenario) -> tuple[list[str], dict]:
-    """The scenario's own turns, up to the boundary, plus the probe sequence."""
+    """The scenario's own turns, up to the boundary, plus the probe sequence.
+
+    Target-fact probes come last, after the canary, so they cannot prime it --
+    and each one is asked in its own turn, because a single question covering
+    several facts lets a partial answer look like a whole one.
+    """
     before = list(scenario.turns[:scenario.compact_index])
     turns = before + [PROBE, "/compact", PROBE, PROBE,
                       canary_question(scenario.canary)]
@@ -75,6 +89,11 @@ def build_turns(scenario) -> tuple[list[str], dict]:
         "probe_after": len(before) + 3,
         "canary": len(before) + 4,
     }
+    fact_indices = {}
+    for fact in scenario.target_facts:
+        fact_indices[fact.id] = len(turns)
+        turns.append(fact.question())
+    indices["target_facts"] = fact_indices
     return turns, indices
 
 
@@ -160,6 +179,12 @@ def one_run(scenario, fixture: pathlib.Path, model: str,
     before = rec(idx["probe_before"])
     after = rec(idx["probe_after"])
     canary = rec(idx["canary"])
+    facts = {}
+    for fact in scenario.target_facts:
+        record = rec(idx["target_facts"][fact.id])
+        facts[fact.id] = fact.recalled((record or {}).get("text", ""))
+        facts[fact.id]["turn"] = idx["target_facts"][fact.id]
+        facts[fact.id]["answered"] = record is not None
     answer = (canary or {}).get("text", "").strip()
     value = scenario.canary["value"]
     recalled = value in answer
@@ -182,6 +207,7 @@ def one_run(scenario, fixture: pathlib.Path, model: str,
         "canary_recalled": recalled,
         "canary_said_unknown": "UNKNOWN" in answer.upper(),
         "canary_used_tool": "<TOOL:" in answer,
+        "target_facts": facts,
         # A run where compaction did not happen tells us nothing either way.
         "valid": compact_status == "success" and b is not None and a is not None,
         "compaction_is_lossy": bool(
@@ -224,6 +250,17 @@ def main() -> int:
         "reduction_pct_each": reductions,
         "reduction_pct_median": round(statistics.median(reductions), 1) if reductions else None,
         "canary_recalled_each": [r["canary_recalled"] for r in valid],
+        # Stage 1 of the causal chain reads this. One entry per declared target
+        # fact, one row per replicate; `stages.stage_compaction_loss` applies
+        # the majority rule to it.
+        "target_facts": {
+            fact.id: [
+                {**r["target_facts"][fact.id], "valid": r["valid"]}
+                for r in runs if fact.id in (r.get("target_facts") or {})
+            ]
+            for fact in scenario.target_facts
+        },
+        "target_facts_declared": [fact.id for fact in scenario.target_facts],
         # The gate the verdict script reads. A scenario counts as lossy only
         # if a majority of its valid control runs lost the canary: one sample
         # deciding two hypotheses is what went wrong in v0.1.
@@ -241,6 +278,16 @@ def main() -> int:
     print(f"\n{scenario.name}: {len(lossy)}/{len(valid)} valid control runs lossy; "
           f"median reduction {out['reduction_pct_median']}%; "
           f"-> compaction_is_lossy = {out['compaction_is_lossy']}")
+    for fact_id, rows in out["target_facts"].items():
+        usable = [r for r in rows if r["valid"]]
+        lost = [r for r in usable if not r["recalled"]]
+        verdict = ("LOST" if usable and len(lost) * 2 > len(usable)
+                   else "SURVIVED -- scenario NOT CAUSALLY TESTABLE")
+        print(f"  target fact {fact_id}: forgotten in {len(lost)}/{len(usable)} "
+              f"valid runs -> {verdict}")
+        for r in usable:
+            print(f"      {'miss' if not r['recalled'] else 'RECALL'}: "
+                  f"{r['answer'][:110]!r}")
     return 0
 
 

@@ -35,15 +35,32 @@ import pathlib
 from . import base
 from .base import (CONFTEST, ENGINE_TRUE_FIX, INIT, MONEY, RULES, TESTS,
                    Scenario, Variant, git, write)
+from .targets import TargetFact
 
 NAME = "s3-working-set"
 
 TARGET = "src/ledger/importers/legacy_tsv_v2.py"
 SIBLING = "src/ledger/importers/legacy_tsv_v1.py"
 
-# The three legacy_tsv modules are generated with an explicit tab delimiter.
-# v2 is mutated to split on whitespace instead, which contradicts nothing
-# written down anywhere: it is simply wrong, and only a human says so.
+# All three legacy_tsv modules split on whitespace, and all three are wrong to.
+#
+# The v0.1.1 fixture mutated only v2, which left the answer readable: v2 was the
+# single tab-named importer with `DELIMITER = None`, so an agent that had
+# forgotten the conversation entirely could grep the importers, find the one odd
+# module, and "resolve" the anaphor without recalling anything. That is a
+# ceiling effect, and it would have been scored as a success for whichever arm
+# happened to grep.
+#
+# With all three broken the tree offers three indistinguishable candidates. Only
+# turn 3 says which one we agreed to fix, and turn 3 is on the far side of the
+# compaction boundary. Fixing all three is a perfectly reasonable thing for a
+# forgetful agent to do, and it is exactly what the precision half of the metric
+# is there to catch: the question is whether the agent resolved the reference,
+# not whether it repaired the package.
+TARGET_SIBLINGS = (
+    "src/ledger/importers/legacy_tsv_v1.py",
+    "src/ledger/importers/legacy_tsv_v3.py",
+)
 TAB_DELIMITER = 'DELIMITER = "\\t"'
 NO_DELIMITER = "DELIMITER = None"
 
@@ -60,13 +77,15 @@ def build_tree(repo: pathlib.Path) -> dict:
     noise_files = base.build_noise(repo)
     write(repo / "tests" / "test_engine.py", TESTS)
 
-    # Mutate v2 so it splits on whitespace. The generated module declares
-    # DELIMITER and branches on it; setting it to None is the documented
-    # "split on whitespace" path, so the module stays plausible code.
-    target = repo / TARGET
-    source = target.read_text(encoding="utf-8")
-    assert TAB_DELIMITER in source, "generated legacy_tsv_v2 lost its delimiter"
-    write(target, source.replace(TAB_DELIMITER, NO_DELIMITER, 1))
+    # Mutate all three legacy_tsv modules so they split on whitespace. The
+    # generated module declares DELIMITER and branches on it; setting it to None
+    # is the documented "split on whitespace" path, so each module stays
+    # plausible code and none of them stands out.
+    for rel in (TARGET, *TARGET_SIBLINGS):
+        path = repo / rel
+        source = path.read_text(encoding="utf-8")
+        assert TAB_DELIMITER in source, f"generated {rel} lost its delimiter"
+        write(path, source.replace(TAB_DELIMITER, NO_DELIMITER, 1))
 
     git(repo, "add", "-A")
     git(repo, "commit", "-q", "-m", "Ledger platform: adapters, reporting, importers, validation")
@@ -78,9 +97,12 @@ def build_tree(repo: pathlib.Path) -> dict:
         "true_fix_symbol": "DELIMITER",
         # What the final tree must show for the task to be done.
         "required_final_state": [{"file": TARGET, "contains": TAB_DELIMITER}],
-        # Editing these is collateral damage: the sibling importers are not
-        # broken, and changing them is a symptom of guessing.
-        "sibling_files": [SIBLING, "src/ledger/importers/legacy_tsv_v3.py"],
+        # Editing these is the signature of a guess. They are broken in
+        # exactly the same visible way as the target, so an agent that repairs
+        # them is repairing the package rather than answering the question it
+        # was asked, which is which module *we agreed on*.
+        "sibling_files": list(TARGET_SIBLINGS),
+        "decoy_count": len(TARGET_SIBLINGS),
         "dead_end_files": [],
         "dead_end_file": None,
         "anaphor": "the module we agreed to fix",
@@ -88,6 +110,33 @@ def build_tree(repo: pathlib.Path) -> dict:
         "noise_module_count": len(noise_files),
         "suite_must_stay_green": True,
     }
+
+
+TARGET_FACTS = (
+    TargetFact(
+        id="s3-agreed-file",
+        what=f"{TARGET} is the module turn 3 named as the one to fix.",
+        probe="Four turns in, before the audit, we agreed on one specific "
+              "module to fix and deferred the change. Which module was it? "
+              "Reply with just the file path.",
+        recalled_markers=("legacy_tsv_v2",),
+        ledger_table="file_stats",
+        ledger_sql=(
+            "SELECT f.path, f.reads, f.edits, f.first_touch_ms, f.last_touch_ms "
+            "FROM file_stats f "
+            "WHERE f.path LIKE '%legacy_tsv_v2.py' AND f.reads >= 1 "
+            "  AND f.last_touch_ms <= (SELECT COALESCE(MAX(ts_ms), 0) FROM events "
+            "                          WHERE id <= ?1)"),
+        capsule_markers=("legacy_tsv_v2",),
+        necessary_because=(
+            "the measured turn is 'Now make that fix', and 'that' is never "
+            "written into the repository. Three importers are broken in the "
+            "same visible way, so the tree cannot disambiguate them; there is "
+            "no failing test pointing anywhere, because the suite is green "
+            "throughout. The reference resolves from the conversation, from the "
+            "capsule, or not at all."),
+    ),
+)
 
 
 TURNS = [
@@ -114,6 +163,10 @@ TURNS = [
     "Now read every module under src/ledger/reporting and list, for each one, "
     "its COLUMNS tuple and its grouping key.",
 
+    # This turn used to hand the answer over: when v2 was the only tab-named
+    # importer splitting on whitespace, "which ones split on whitespace" named
+    # it. With all three legacy_tsv modules mutated it is what it was meant to
+    # be, which is a reading task across thirty modules.
     "Now read every module under src/ledger/importers and tell me which ones "
     "use an explicit delimiter and which split on whitespace, with the "
     "RECORD_KIND of each.",
@@ -155,18 +208,31 @@ def score(final_tree: dict, measured: dict, manifest: dict) -> dict:
 
     siblings = [f for f in manifest["sibling_files"] if touched(f)]
     first = (measured.get("first_edit_file") or "").lower()
+    # Precision is part of the primary metric, not a footnote beside it.
+    #
+    # The three candidates are broken identically, so "repair every importer
+    # that splits on whitespace" fixes the target as a side effect without ever
+    # resolving the reference. Scoring the target alone would count that as a
+    # hit and the scenario would measure thoroughness instead of recall. It is
+    # reported separately too, so a run where both arms repair everything is
+    # visible as such rather than as a tie.
+    resolved = bool(done and not siblings)
     return {
-        "primary": "hit_the_agreed_file",
-        "hit_the_agreed_file": done,
+        "primary": "resolved_the_reference",
+        "resolved_the_reference": resolved,
+        "target_fixed": done,
+        "hit_the_agreed_file": done,  # kept: the v0.1.1 artifacts use this name
         "first_edit_on_target": first.endswith(TARGET.lower()),
         "siblings_edited": siblings,
+        "repaired_every_candidate": bool(done and len(siblings) == len(
+            manifest["sibling_files"])),
         "made_no_edit": measured["edit_count"] == 0,
         # How much work it took to get back to a file it had already read.
         "tool_calls_before_first_edit": measured.get("first_edit_index"),
         "search_calls": measured["buckets"]["search"],
         "read_calls": measured["buckets"]["read"],
         "suite_green": final_tree["pytest_exit"] == 0,
-        "success": bool(done and not siblings and final_tree["pytest_exit"] == 0),
+        "success": bool(resolved and final_tree["pytest_exit"] == 0),
     }
 
 
@@ -179,17 +245,23 @@ SCENARIO = Scenario(
     hypothesis=(
         "After compaction and a sweep across 84 unrelated modules, an agent "
         "carrying the capsule resolves an anaphoric reference to a file it "
-        "read earlier in fewer tool calls, and more often at all, than an "
-        "agent carrying only Claude Code's own summary."),
+        "read earlier -- fixing that module and not its two identically broken "
+        "siblings -- more often than an agent carrying only Claude Code's own "
+        "summary."),
     build_tree=build_tree,
     turns=TURNS,
     compact_index=COMPACT_INDEX,
     measured_index=MEASURED_INDEX,
     variants=(),
     leak_terms=(
+        # Phrases that would name the target without recall. `legacy_tsv_v2`
+        # itself cannot go on this list: turn 3 has to say it once, and the wide
+        # scan reports that as a non-fatal `pre_prompts` hit by design.
         "splits on whitespace even though", "should be a tab",
         "the bug we are going to fix", "agreed to fix", "TODO(importers)",
+        "the module we agreed", "v2 is the one", "fix v2",
     ),
+    target_facts=TARGET_FACTS,
     canary={
         "file": "src/ledger/adapters/adyen_uk.py",
         "const": "API_KEY_PREFIX",

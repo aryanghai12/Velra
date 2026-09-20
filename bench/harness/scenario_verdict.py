@@ -71,8 +71,8 @@ def decide_behavioural(hid: str, spec: dict, agg: dict, control: dict | None) ->
     out["pairing"] = pairing
     if not pairing.get("n_pairs"):
         dropped = ", ".join(
-            f"r{d['replicate']} ({'; '.join(r['arm'] + ': ' + r['reason'] for r in d['because'])})"
-            for d in pairing.get("dropped_replicates", []))
+            f"{d['pair_id']} ({'; '.join(r['arm'] + ': ' + r['reason'] for r in d['because'])})"
+            for d in pairing.get("dropped_pairs", []))
         out.update(verdict=INCONCLUSIVE,
                    why="no replicate has a usable trial on both arms, so there "
                        "is no matched pair to compare"

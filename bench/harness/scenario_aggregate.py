@@ -105,36 +105,79 @@ def summarise(rows: list[dict]) -> dict:
     }
 
 
+#: Every field of `pair_key` that must be identical across the two arms.
+#:
+#: `fixture_seed` covers the generator, the turn script and the declared ground
+#: truth; the rest cover the things a seed cannot see. Velra enablement is the
+#: one difference a pair is allowed to have, and it is not in this list.
+PAIR_INVARIANTS = (
+    "scenario",
+    "pair_id",
+    "fixture_seed",
+    "model",
+    "turn_count",
+    "compact_turn_index",
+    "measured_turn_index",
+    "claude_version",
+    "velra_commit",
+)
+
+
+def pair_key_mismatch(velra: dict, baseline: dict) -> list[dict]:
+    """Fields on which two arms disagree. Empty means they are a matched pair."""
+    a = velra.get("pair_key") or {}
+    b = baseline.get("pair_key") or {}
+    if not a or not b:
+        missing = [arm for arm, key in (("velra", a), ("baseline", b)) if not key]
+        return [{"field": "pair_key", "reason": "absent",
+                 "missing_on": missing,
+                 "note": "trial captured before pair identity was recorded"}]
+    return [{"field": f, "velra": a.get(f), "baseline": b.get(f)}
+            for f in PAIR_INVARIANTS if a.get(f) != b.get(f)]
+
+
 def pair_up(velra_rows: list[dict], baseline_rows: list[dict]) -> dict:
-    """Match the two arms replicate by replicate, and keep only whole pairs.
+    """Match the two arms into pairs, and keep only whole, verified pairs.
 
-    The design is a matched pair: replicate *r* of a scenario builds one
-    fixture per arm from the same generator at the same revision, sends the
-    same turns in the same order, and differs in exactly one thing, which is
-    whether Velra's hooks are installed. The comparison is only a comparison
-    of that one difference while the two sides are the same replicates.
+    The design is a matched pair: one pair of a scenario builds one fixture per
+    arm from the same generator at the same revision, sends the same turns in
+    the same order, runs the same model against the same Claude Code build, and
+    differs in exactly one thing, which is whether Velra's hooks are installed.
+    The comparison is only a comparison of that one difference while all of that
+    holds.
 
-    Pooling each arm separately breaks that, and it broke it silently. In the
+    Pooling each arm separately breaks it, and it broke it silently. In the
     v0.1.1 run `s1-dead-end-pair-baseline-r1` was invalid -- no compaction
     occurred, so the post-compaction turn never happened -- and the aggregate
     went on to compare 4 Velra trials against the 3 surviving baselines and
-    report `4/4 against 3/3` as though the arms had been matched. Fisher's
-    exact test on unequal, unmatched groups is not the test the
-    pre-registration names, and r1's Velra trial was scored against baselines
-    from other replicates.
+    report `4/4 against 3/3` as though the arms had been matched.
 
-    So a replicate enters the comparison only when *both* of its arms are
-    usable for the behavioural measure. Dropped replicates are named in
-    `report`, with the arm and the criterion that lost them, because a pair
-    silently discarded is exactly the failure this function exists to stop.
+    Matching on the `replicate` integer alone, which is what the first fix did,
+    is better but still an assumption about how the runner was invoked rather
+    than a fact about the trials: it cannot notice two arms built from different
+    fixture generators, or run against different Claude Code builds. So a pair
+    now enters the comparison only when
+
+      * both arms are on disk,
+      * both are usable for the behavioural measure,
+      * both carry a behavioural score, and
+      * every field of `PAIR_INVARIANTS` agrees between them.
+
+    Everything dropped is named in `report`, with the arm and the reason,
+    because a pair silently discarded is exactly the failure this exists to
+    stop.
     """
-    def by_replicate(rows: list[dict]) -> dict[int, dict]:
-        return {r["replicate"]: r for r in rows}
+    def by_pair(rows: list[dict]) -> dict[str, dict]:
+        out: dict[str, dict] = {}
+        for r in rows:
+            key = r.get("pair_id") or f"{r.get('scenario')}#r{r.get('replicate')}"
+            out[key] = r
+        return out
 
-    velra, base = by_replicate(velra_rows), by_replicate(baseline_rows)
+    velra, base = by_pair(velra_rows), by_pair(baseline_rows)
     pairs, dropped = [], []
-    for replicate in sorted(set(velra) | set(base)):
-        v, b = velra.get(replicate), base.get(replicate)
+    for pair_id in sorted(set(velra) | set(base)):
+        v, b = velra.get(pair_id), base.get(pair_id)
         reasons = []
         for arm, row in (("velra", v), ("baseline", b)):
             if row is None:
@@ -144,25 +187,34 @@ def pair_up(velra_rows: list[dict], baseline_rows: list[dict]) -> dict:
                                 "failed_criteria": row["validity"]["failed_criteria"]})
             elif not row.get("behaviour"):
                 reasons.append({"arm": arm, "reason": "no behavioural score"})
+        if not reasons:
+            mismatch = pair_key_mismatch(v, b)
+            if mismatch:
+                reasons.append({"arm": "both", "reason": "pair key mismatch",
+                                "fields": mismatch})
         if reasons:
-            dropped.append({"replicate": replicate, "because": reasons})
+            dropped.append({"pair_id": pair_id, "because": reasons})
             continue
-        pairs.append({"replicate": replicate,
+        pairs.append({"pair_id": pair_id,
+                      "replicate": v.get("replicate"),
+                      "pair_key": v.get("pair_key"),
                       "velra": v["behaviour"], "baseline": b["behaviour"]})
 
     return {
         "pairs": pairs,
         "report": {
-            "design": "matched pairs, one replicate per pair",
-            "paired_replicates": [p["replicate"] for p in pairs],
+            "design": "matched pairs, matched on recorded pair identity",
+            "invariants": list(PAIR_INVARIANTS),
+            "paired_ids": [p["pair_id"] for p in pairs],
             "n_pairs": len(pairs),
-            "dropped_replicates": dropped,
+            "dropped_pairs": dropped,
             # Kept visible so a shrinking denominator cannot hide: these are
             # the per-arm counts the old unpaired comparison would have used.
             "usable_velra": len([r for r in velra_rows
                                  if validity.usable_for(r["validity"], "behavioural")]),
             "usable_baseline": len([r for r in baseline_rows
                                     if validity.usable_for(r["validity"], "behavioural")]),
+            "symmetric": len(velra) == len(base) == len(set(velra) & set(base)),
         },
     }
 

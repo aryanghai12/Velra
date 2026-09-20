@@ -99,6 +99,11 @@ def main() -> int:
     ap.add_argument("--fixture", required=True)
     ap.add_argument("--model", default="sonnet")
     ap.add_argument("--replicate", type=int, default=1)
+    ap.add_argument("--pair-id", default=None,
+                    help="identity of the matched pair this trial belongs "
+                         "to. Defaults to <scenario>#r<replicate>, which is "
+                         "what the runner passes; give it explicitly only "
+                         "when re-running one arm of an existing pair.")
     ap.add_argument("--max-budget-usd", type=float, default=12.0)
     ap.add_argument("--velra-binary", default=str(
         REPO_ROOT / "target" / "release" /
@@ -285,10 +290,31 @@ def main() -> int:
     (out / "final_state.json").write_text(
         json.dumps(final_state, indent=2), encoding="utf-8", newline="")
 
+    # Pair identity, recorded rather than inferred.
+    #
+    # The v0.1.1 aggregate matched arms on the `replicate` integer alone.
+    # That is an assumption about how the runner was invoked, not a fact
+    # about the trials, and it cannot notice two arms built from different
+    # fixture generators, different models or different Claude Code builds.
+    # Everything that has to match for a pair to be a pair is written here
+    # and checked by `scenario_aggregate.pair_up`.
+    pair_id = args.pair_id or f"{args.scenario}#r{args.replicate}"
     meta = {
         "scenario": args.scenario,
         "arm": args.arm,
         "replicate": args.replicate,
+        "pair_id": pair_id,
+        "pair_key": {
+            "scenario": args.scenario,
+            "pair_id": pair_id,
+            "fixture_seed": manifest.get("fixture_seed"),
+            "model": args.model,
+            "turn_count": len(turns),
+            "compact_turn_index": scenario.compact_index,
+            "measured_turn_index": scenario.measured_index,
+            "claude_version": claude_binary.version_of(CLAUDE),
+            "velra_commit": provenance.collect(velra_bin).get("embedded_commit"),
+        },
         "model": args.model,
         "session_id": session_id,
         "transcript_source": str(transcript_src) if transcript_src else None,

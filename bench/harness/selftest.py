@@ -149,8 +149,24 @@ def write_trial(root: pathlib.Path, scenario, arm: str, replicate: int,
         "pytest_output": "", "git_diff": "", "git_status": "", "git_log": "",
     }, indent=2), encoding="utf-8", newline="")
 
+    # Pair identity, exactly as `scenario_trial.py` records it. The synthetic
+    # captures have to carry it or the selftest stops exercising the pairing
+    # contract it exists to check.
+    pair_id = f"{scenario.name}#r{replicate}"
+    pair_key = {
+        "scenario": scenario.name,
+        "pair_id": pair_id,
+        "fixture_seed": manifest.get("fixture_seed"),
+        "model": "selftest",
+        "turn_count": len(scenario.turns),
+        "compact_turn_index": scenario.compact_index,
+        "measured_turn_index": measured,
+        "claude_version": "0.0.0",
+        "velra_commit": "selftest",
+    }
     (trial / "trial_meta.json").write_text(json.dumps({
         "scenario": scenario.name, "arm": arm, "replicate": replicate,
+        "pair_id": pair_id, "pair_key": pair_key,
         "model": "selftest", "session_id": f"sess-{scenario.name}-{arm}-{replicate}",
         "wall_seconds": 200.0, "turns_sent": len(scenario.turns),
         "turns_expected": len(scenario.turns),

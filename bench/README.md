@@ -1,12 +1,13 @@
 # Velra benchmarks
 
-Two benchmark systems live here. They measure different things and they do not
-share results.
+Three benchmark systems live here. They measure different things and they do
+not share results.
 
 | | What it answers | Runner | Results |
 |---|---|---|---|
 | **v0.1** | Is the capsule delivered, bounded and deterministic? Do the hooks stay out of the way? | `bench/run_full_benchmark.py` | `bench/results/` |
 | **v0.1.1 efficacy** | Does the capsule change what the agent *does* after compaction? | `bench/run_efficacy_benchmark.py` | `bench/results/v0.1.1/` |
+| **v0.1.2 hardened** | Does it change what the agent does *because* it preserved state compaction lost? | `bench/run_hardened_eval.py` | `bench/results/v0.1.2/` |
 
 The v0.1 report ([`BENCHMARK_REPORT.md`](../BENCHMARK_REPORT.md)) settled the
 first question and could not settle the second: its control measured Claude
@@ -14,6 +15,60 @@ Code's compaction as *not lossy* on its task, so both of its behavioural
 hypotheses came out INCONCLUSIVE. The v0.1.1 system exists to answer the second
 question properly, and its design is a direct response to why the first one
 could not.
+
+The v0.1.2 system exists because v0.1.1 answered the second question with a
+number that could not be interpreted. Its s1 and s2 both came out with the
+baseline at or above Velra, and nothing in the artifacts could say whether that
+was because the capsule did not help, because it never carried the thing it was
+supposed to, or because compaction had not destroyed that thing in the first
+place. Those need different fixes and it reported them as one result.
+
+### What changed, and why
+
+**One number became five stages.** Every scenario now declares a *target fact*
+and the chain is evaluated a stage at a time: did compaction lose it (measured
+against the baseline, not assumed), did Velra's ledger hold it before the
+checkpoint, did the delivered bytes carry it, did the agent accept the block,
+did the outcome change. A stage that fails stops the chain and names the failure
+class. `bench/harness/stages.py`.
+
+**The control probes the scenario, not a canary.** v0.1.1 asked whether
+compaction forgot *anything* — an incidental constant read in an early turn. It
+never asked whether compaction forgot the thing the scenario was about. A
+scenario whose target fact survives the boundary is now reported as
+**NOT CAUSALLY TESTABLE** and is counted as neither a win nor a loss.
+
+**Leak scanning covers every surface an agent can read**, not just generated
+files: contents, filenames, the post-compaction prompt and the environment. That
+is what caught s3 — `legacy_tsv_v2.py` was the only tab-named importer with
+`DELIMITER = None`, so the anaphor was resolvable by grep. All three legacy_tsv
+modules are now broken identically.
+
+**Pairing is matched on recorded identity.** `trial_meta.json` carries a
+`pair_key` (fixture seed, model, Claude Code build, Velra commit, turn script
+shape) and a pair enters the comparison only when every field agrees on both
+arms. Mismatched and half-missing pairs are dropped whole and named.
+
+**Correctness is the primary metric everywhere.** Tool-call counts are recorded
+and are never the verdict.
+
+The rules are frozen in
+[`harness/preregistration_v2.json`](harness/preregistration_v2.json), hashed
+into every artifact. `preregistration.json` (1.0.0) is left byte-for-byte alone
+because the v0.1.1 results carry its hash.
+
+### Running it
+
+```bash
+python bench/run_hardened_eval.py --dry-run   # free: build, tests, fixtures,
+                                              # leak scans, readiness gate
+python bench/run_hardened_eval.py --live      # the expensive part
+```
+
+The dry run spends nothing and ends in `READY FOR LIVE EVALUATION` or a list of
+blocking defects. `--resume`, `--only`, `--pairs` and `--force` make a partial
+run restartable without overwriting anything: a re-run quarantines the old trial
+rather than deleting it.
 
 ---
 

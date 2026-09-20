@@ -61,6 +61,8 @@ def analyse(trial: pathlib.Path) -> dict:
         "mechanism": scenario.mechanism,
         "arm": meta["arm"],
         "replicate": meta["replicate"],
+        "pair_id": meta.get("pair_id"),
+        "pair_key": meta.get("pair_key"),
         "model": meta["model"],
         "session_id": meta["session_id"],
         "wall_seconds": meta["wall_seconds"],

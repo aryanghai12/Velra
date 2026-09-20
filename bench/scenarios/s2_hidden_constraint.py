@@ -37,6 +37,7 @@ from . import base
 from .base import (CONFTEST, ENGINE, ENGINE_LOOP_PRESERVING_FIX,
                    ENGINE_TRUE_FIX, INIT, MONEY, RULES, RULES_DIRTY, TESTS,
                    Scenario, Variant, git, write)
+from .targets import TargetFact
 
 NAME = "s2-hidden-constraint"
 
@@ -85,6 +86,35 @@ def build_tree(repo: pathlib.Path) -> dict:
         "expected_status": "SETTLED",
         "observed_status": "UNDERPAID",
     }
+
+
+TARGET_FACTS = (
+    TargetFact(
+        id="s2-turn-zero-constraint",
+        what="The constraint stated in the first sentence of turn 0: settle "
+             "must keep iterating invoice.items when it computes the discount.",
+        probe="At the very start of this task I stated one constraint about how "
+              "engine.settle must compute the discount. Quote it back to me.",
+        recalled_markers=("iterating invoice.items", "invoice.items",
+                          "per-line figures", "keep iterating"),
+        ledger_table="constraints",
+        ledger_sql=(
+            "SELECT c.id, c.text, c.kind, c.cue, c.prompt_ordinal, c.source_event_id "
+            "FROM constraints c "
+            "WHERE c.superseded_ms IS NULL "
+            "  AND LOWER(c.text) LIKE '%invoice.items%' "
+            "  AND c.source_event_id <= ?1"),
+        capsule_markers=("invoice.items",),
+        necessary_because=(
+            "both fixes make the suite green, so the tests cannot decide "
+            "between them, and the repository never states the constraint. The "
+            "natural fix -- one discount on the subtotal -- is the one every "
+            "recorded v0.1 session reached for. Only the remembered sentence "
+            "distinguishes the compliant implementation from the attractive "
+            "one, which is why a wrong answer here is visible and a right one "
+            "is too."),
+    ),
+)
 
 
 TURNS = [
@@ -229,6 +259,7 @@ SCENARIO = Scenario(
         "round once", "rounds three times", "finance reconciles",
         "keep iterating",
     ),
+    target_facts=TARGET_FACTS,
     canary={
         "file": "src/ledger/adapters/adyen_uk.py",
         "const": "API_KEY_PREFIX",

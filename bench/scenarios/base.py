@@ -28,6 +28,7 @@ back as its reasoning. A lint is cheaper than another invalidated run.
 from __future__ import annotations
 
 import dataclasses
+import hashlib
 import json
 import os
 import pathlib
@@ -43,6 +44,14 @@ REPO_ROOT = BENCH.parent
 
 sys.path.insert(0, str(BENCH / "fixture"))
 import noise  # noqa: E402  (path set above)
+
+if __package__ in (None, ""):
+    sys.path.insert(0, str(HERE.parent))
+    from scenarios import leaks
+    from scenarios.targets import TargetFact
+else:
+    from . import leaks
+    from .targets import TargetFact
 
 NL = "\n"
 
@@ -446,6 +455,9 @@ class Scenario:
     leak_terms: Sequence[str]
     canary: dict
     score: Callable[..., dict]
+    #: What this scenario claims compaction destroys. Empty means the scenario
+    #: makes no causal claim and can only ever be descriptive.
+    target_facts: Sequence[TargetFact] = ()
     # What the suite must do on the fixture as generated. Most scenarios plant
     # a failing test; s3's task is not expressed as one, and its suite staying
     # green throughout is itself a check.
@@ -474,16 +486,65 @@ class Scenario:
             "measured_turn_index": self.measured_index,
             "turn_count": len(self.turns),
         })
+        manifest["target_facts"] = [
+            {
+                "id": t.id,
+                "what": t.what,
+                "probe": t.probe,
+                "recalled_markers": list(t.recalled_markers),
+                "ledger_table": t.ledger_table,
+                "ledger_sql": t.ledger_sql,
+                "capsule_markers": list(t.capsule_markers),
+                "necessary_because": t.necessary_because,
+            }
+            for t in self.target_facts
+        ]
+        manifest["fixture_seed"] = self.fixture_seed()
         if verify:
             manifest["ground_truth"] = self.verify(repo)
+            # The narrow scan is kept for continuity with the v0.1.1 artifacts;
+            # the wide one is what gates a live run.
             manifest["leak_scan"] = lint_tree(repo, self.leak_terms)
-            if not manifest["leak_scan"]["clean"]:
+            manifest["leak_scan_wide"] = leaks.scan(
+                repo, self.turns, self.measured_index, self.leak_terms)
+            if not manifest["leak_scan_wide"]["clean"]:
                 raise SystemExit(
-                    f"{self.name}: the fixture names its own answer:\n"
-                    + json.dumps(manifest["leak_scan"]["hits"], indent=2))
+                    f"{self.name}: " + leaks.format_report(manifest["leak_scan_wide"]))
         write(repo.parent / (repo.name + ".manifest.json"),
               json.dumps(manifest, indent=2) + NL)
         return manifest
+
+    def fixture_seed(self) -> str:
+        """Identity of the fixture *generator*, not of one generated tree.
+
+        Two arms of a pair must be built from the same generator at the same
+        revision or they are not a matched pair, and "same revision" is not a
+        thing a trial can check by comparing file mtimes. This hashes the turn
+        script, the declared ground truth and the source of every module that
+        writes the tree, so any change to what a fixture *is* changes the seed
+        and the analysis can refuse to pair across it.
+        """
+        h = hashlib.sha256()
+        h.update(self.name.encode("utf-8"))
+        for turn in self.turns:
+            h.update(b"\x00turn\x00")
+            h.update(turn.encode("utf-8"))
+        for variant in self.variants:
+            h.update(b"\x00variant\x00")
+            h.update(variant.name.encode("utf-8"))
+            h.update(variant.expect.encode("utf-8"))
+            for rel, text in sorted(variant.files.items()):
+                h.update(rel.encode("utf-8"))
+                h.update(text.encode("utf-8"))
+        for fact in self.target_facts:
+            h.update(b"\x00fact\x00")
+            h.update(fact.id.encode("utf-8"))
+            h.update(fact.probe.encode("utf-8"))
+        for module in (HERE / "base.py", HERE / f"{self.name.replace('-', '_')}.py",
+                       BENCH / "fixture" / "noise.py"):
+            if module.exists():
+                h.update(module.read_bytes())
+        return h.hexdigest()[:16]
 
     def verify(self, repo: pathlib.Path) -> dict:
         """Run the suite as generated and against every declared variant.
