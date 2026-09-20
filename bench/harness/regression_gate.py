@@ -53,7 +53,7 @@ HISTORICAL_DEFECTS = [
      "file": "crates/velra/tests/capsule.rs"},
     {"id": "D2", "found": "v0.1 benchmark §8",
      "defect": "a late git_pre row was read as proof a discarded change had "
-               "come back, so [DEAD_ENDS] was filtered out of a delivered "
+               "come back, so [REVERTED_EDITS] was filtered out of a delivered "
                "capsule entirely",
      "test": "f5c_a_late_git_pre_row_does_not_resurrect_a_dead_end",
      "file": "crates/velra/tests/tracking.rs"},
@@ -74,7 +74,7 @@ HISTORICAL_DEFECTS = [
      "test": "f2b_a_restore_chained_with_a_failing_command_is_still_attributed",
      "file": "crates/velra/tests/tracking.rs"},
     {"id": "D5", "found": "v0.1 benchmark §11",
-     "defect": "[WORKING_FILES] ranked ties by most-recent touch, so an audit "
+     "defect": "[FILE_ACTIVITY] ranked ties by most-recent touch, so an audit "
                "sweep across 84 modules evicted the files the task ran through",
      "test": "an_unrelated_read_sweep_does_not_evict_the_files_the_task_is_about",
      "file": "crates/velra/tests/capsule.rs"},

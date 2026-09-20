@@ -8,9 +8,9 @@ per-scenario information-loss control.
 A scenario exists to test *one* mechanism the continuation capsule claims to
 carry, and to be unanswerable without it:
 
-  s1-dead-end-pair    [DEAD_ENDS]            two eliminated approaches
-  s2-hidden-constraint [ROOT_TASK_OBJECTIVE] a constraint stated only in chat
-  s3-dynamic-caller   [WORKING_FILES]        a relevant file grep cannot find
+  s1-dead-end-pair    [REVERTED_EDITS]            two eliminated approaches
+  s2-hidden-constraint [FIRST_MESSAGE] a constraint stated only in chat
+  s3-dynamic-caller   [FILE_ACTIVITY]        a relevant file grep cannot find
 
 See ``registry.py`` for the lookup used by the harness.
 """

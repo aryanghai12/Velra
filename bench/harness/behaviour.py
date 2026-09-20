@@ -23,9 +23,9 @@ import sys
 HERE = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
-from analyze import (BASH_READ_RE, EDIT_TOOLS, READ_TOOLS, SEARCH_TOOLS,  # noqa: E402
-                     analyse_db, analyse_hooks, classify, load_stream,
-                     tool_target)
+from analyze import (BASH_READ_RE, EDIT_TOOLS, READ_TOOLS, SECTION_ALIASES,  # noqa: E402
+                     SEARCH_TOOLS, analyse_db, analyse_hooks, canonical_sections,
+                     classify, load_stream, tool_target)
 
 # Language an agent uses when it decides the injected block is not to be
 # trusted. Matched against the agent's own prose on the measured turn, and
@@ -37,12 +37,40 @@ REJECTION_RE = re.compile(
     r"|untrusted\s+(?:content|context|input)"
     r"|(?:ignore|disregard|discount)\s+(?:the\s+)?(?:above|preceding|injected|VELRA)"
     r"|not\s+(?:from|written\s+by)\s+the\s+user"
-    r"|VELRA_CONTINUATION)",
+    r"|VELRA_WORKSPACE_STATE|VELRA_CONTINUATION)",
     re.I)
 
 # The capsule's own opening tag, so a rejection scan can tell "the agent quoted
 # the block" apart from "the agent refused it".
-CAPSULE_TAG = "<VELRA_CONTINUATION"
+CAPSULE_TAG = "<VELRA_WORKSPACE_STATE"
+
+# v0.1.1 renamed the capsule's wrapper tag and every section label, so this
+# module has to read two vocabularies at once: the block a current binary
+# delivers, and the blocks recorded in the trial captures already on disk,
+# which the unit tests replay as regression fixtures. `SECTION_ALIASES` and
+# `canonical_sections` come from analyze.py so there is one map, not two; old
+# names are mapped onto the new ones at the point of extraction, so every
+# function downstream of `delivered_capsule` sees one vocabulary and stays
+# unaware there was ever another.
+CAPSULE_TAGS = ("<VELRA_WORKSPACE_STATE", "<VELRA_CONTINUATION")
+TAG_NAMES = ("VELRA_WORKSPACE_STATE", "VELRA_CONTINUATION")
+
+
+def section_lines(text: str, section: str) -> list[str]:
+    """The body lines under `section`, accepting either vocabulary."""
+    names = [section] + [old for old, new in SECTION_ALIASES.items() if new == section]
+    heads = tuple(f"[{name}]" for name in names)
+    out: list[str] = []
+    inside = False
+    for line in text.splitlines():
+        if line.startswith(heads):
+            inside = True
+            continue
+        if inside:
+            if line.startswith("["):
+                break
+            out.append(line)
+    return out
 
 
 def norm(path: str) -> str:
@@ -124,7 +152,7 @@ def delivered_capsule(stream_path: pathlib.Path) -> dict:
         if obj.get("subtype") != "hook_response":
             continue
         out = obj.get("stdout") or obj.get("output") or ""
-        if "VELRA_CONTINUATION" not in out:
+        if not any(name in out for name in TAG_NAMES):
             continue
         try:
             delivered = json.loads(out)["hookSpecificOutput"]["additionalContext"]
@@ -137,7 +165,7 @@ def delivered_capsule(stream_path: pathlib.Path) -> dict:
     if delivered is None:
         return {"delivered": False}
 
-    sections = re.findall(r"^\[([A-Z_]+)\]", delivered, re.M)
+    sections = canonical_sections(delivered)
     return {
         "delivered": True,
         "hook_name": hook_name,
@@ -145,11 +173,11 @@ def delivered_capsule(stream_path: pathlib.Path) -> dict:
         "chars": len(delivered),
         "sections": sections,
         "text": delivered,
-        "has_dead_ends_section": "DEAD_ENDS" in sections,
-        "has_working_files_section": "WORKING_FILES" in sections,
-        "has_recent_attempts_section": "RECENT_ATTEMPTS" in sections,
-        "has_active_failure_section": "ACTIVE_FAILURE" in sections,
-        "has_root_objective_section": "ROOT_TASK_OBJECTIVE" in sections,
+        "has_dead_ends_section": "REVERTED_EDITS" in sections,
+        "has_working_files_section": "FILE_ACTIVITY" in sections,
+        "has_recent_attempts_section": "RECENT_EDITS" in sections,
+        "has_active_failure_section": "TEST_RESULT" in sections,
+        "has_root_objective_section": "FIRST_MESSAGE" in sections,
     }
 
 
@@ -207,7 +235,7 @@ def capsule_carries_constraint(capsule: dict, manifest: dict) -> dict:
 
 
 def working_file_relevance(capsule: dict, manifest: dict) -> dict:
-    """Precision and recall of `[WORKING_FILES]` against the files that matter.
+    """Precision and recall of `[FILE_ACTIVITY]` against the files that matter.
 
     The relevant set is whatever the scenario declares its task runs through:
     the true fix file, the files burned as dead ends, and the failing test.
@@ -226,17 +254,9 @@ def working_file_relevance(capsule: dict, manifest: dict) -> dict:
                 "relevant": sorted(relevant), "listed": [],
                 "precision": None, "recall": 0.0 if relevant else None}
 
-    listed = []
-    inside = False
-    for line in capsule["text"].splitlines():
-        if line.startswith("[WORKING_FILES]"):
-            inside = True
-            continue
-        if inside:
-            if line.startswith("["):
-                break
-            if line.startswith("- "):
-                listed.append(norm(line[2:].split(" | ", 1)[0]))
+    listed = [norm(line[2:].split(" | ", 1)[0])
+              for line in section_lines(capsule["text"], "FILE_ACTIVITY")
+              if line.startswith("- ")]
     hits = [p for p in listed if any(p.endswith(r) or r.endswith(p) for r in relevant)]
     return {
         "delivered": True,

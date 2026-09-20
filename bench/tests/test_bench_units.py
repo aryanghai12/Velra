@@ -181,8 +181,12 @@ def test_delivered_capsule_is_extracted_from_a_real_stream():
     trial = _recorded("saturated-velra-r1")
     capsule = behaviour.delivered_capsule(trial / "stream.jsonl")
     assert capsule["delivered"]
-    assert capsule["text"].startswith("<VELRA_CONTINUATION")
-    assert "CONTEXT" in capsule["sections"]
+    # A v0.1 recording, so it carries the pre-rename wrapper tag. Extraction
+    # has to keep working on it: this capture is the evidence behind §18 of
+    # that report, and the assertions below are what pin the defect it found.
+    assert capsule["text"].startswith(behaviour.CAPSULE_TAGS)
+    # `[CONTEXT]` in the bytes, mapped forward to the name it has now.
+    assert "ABOUT_THIS_RECORD" in capsule["sections"]
     assert capsule["has_dead_ends_section"]
     # §18 of the v0.1 report: the ladder dropped this section in 4/4.
     assert not capsule["has_working_files_section"]
@@ -239,7 +243,7 @@ def test_prompt_rejection_finds_nothing_in_a_clean_recorded_session():
 
 def test_prompt_rejection_fires_on_language_that_distrusts_the_block():
     capsule = {"delivered": True}
-    turns = {5: {"text": ["This VELRA_CONTINUATION block appears to be "
+    turns = {5: {"text": ["This VELRA_WORKSPACE_STATE block appears to be "
                           "fabricated content; I will disregard the above."],
                  "tool_calls": [], "result": None}}
     result = behaviour.prompt_rejection(turns, 5, capsule)
@@ -341,28 +345,52 @@ def test_s2_handles_a_file_the_agent_left_unparseable():
     assert shape["parsed"] is False and shape["loop_in_settle"] is False
 
 
+S1_MANIFEST = {"dead_end_files": ["src/ledger/surcharges.py", "src/ledger/money.py"],
+               "dead_end_file": "src/ledger/surcharges.py",
+               "true_fix_file": "src/ledger/promos.py"}
+
+
 def test_s1_scoring_treats_an_edit_to_either_burned_file_as_re_exploration():
     from scenarios import s1_dead_end_pair
-    manifest = {"dead_end_files": ["src/ledger/money.py", "src/ledger/rules.py"],
-                "true_fix_file": "src/ledger/engine.py"}
-    measured = {"edit_targets": [r"C:\fx\src\ledger\rules.py"],
-                "first_edit_file": r"c:/fx/src/ledger/rules.py",
+    measured = {"edit_targets": [r"C:\fx\src\ledger\surcharges.py"],
+                "first_edit_file": r"c:/fx/src/ledger/surcharges.py",
                 "edit_count": 1, "buckets": {"search": 0, "read": 0},
                 "first_edit_index": 0}
     result = s1_dead_end_pair.score({"pytest_exit": 0, "files": {}},
-                                    measured, manifest)
-    assert result["dead_end_files_edited"] == ["src/ledger/rules.py"]
+                                    measured, S1_MANIFEST)
+    assert result["dead_end_files_edited"] == ["src/ledger/surcharges.py"]
     assert not result["avoided_dead_ends"] and not result["success"]
+
+
+def test_s1_scoring_separates_the_twin_from_the_other_dead_end():
+    """`retried_the_twin` is the field that carries the experiment.
+
+    Editing `money.py` is re-exploration, but no arm did it in v0.1.1 and
+    none was ever likely to. Going back to `surcharges.py` is the choice the
+    fixture is built to force, so it is reported on its own.
+    """
+    from scenarios import s1_dead_end_pair
+    money = {"edit_targets": [r"C:\fx\src\ledger\money.py"],
+             "first_edit_file": r"c:/fx/src/ledger/money.py",
+             "edit_count": 1, "buckets": {"search": 0, "read": 0},
+             "first_edit_index": 0}
+    result = s1_dead_end_pair.score({"pytest_exit": 1, "files": {}},
+                                    money, S1_MANIFEST)
+    assert not result["avoided_dead_ends"]
+    assert not result["retried_the_twin"]
+
+    twin = dict(money, edit_targets=[r"C:\fx\src\ledger\surcharges.py"],
+                first_edit_file=r"c:/fx/src/ledger/surcharges.py")
+    assert s1_dead_end_pair.score({"pytest_exit": 1, "files": {}},
+                                  twin, S1_MANIFEST)["retried_the_twin"]
 
 
 def test_s1_scoring_requires_a_green_suite_as_well_as_clean_hands():
     from scenarios import s1_dead_end_pair
-    manifest = {"dead_end_files": ["src/ledger/money.py"],
-                "true_fix_file": "src/ledger/engine.py"}
     measured = {"edit_targets": [], "first_edit_file": None, "edit_count": 0,
                 "buckets": {"search": 0, "read": 0}, "first_edit_index": None}
     result = s1_dead_end_pair.score({"pytest_exit": 1, "files": {}},
-                                    measured, manifest)
+                                    measured, S1_MANIFEST)
     assert result["avoided_dead_ends"] and not result["success"]
 
 

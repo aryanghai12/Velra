@@ -60,7 +60,23 @@ def decide_behavioural(hid: str, spec: dict, agg: dict, control: dict | None) ->
            "primary_metric": spec["primary_metric"]}
 
     if not cmp or not velra or not base:
-        out.update(verdict=INCONCLUSIVE, why="no paired trials for this scenario")
+        out.update(verdict=INCONCLUSIVE, why="no trials on disk for this scenario")
+        return out
+
+    # The comparison is matched pairs, so a scenario can have trials on both
+    # arms and still have nothing to compare: every replicate that lost one of
+    # its two arms is dropped whole. Say which ones, rather than reporting an
+    # empty comparison as though the arms had simply tied.
+    pairing = cmp.get("pairing") or {}
+    out["pairing"] = pairing
+    if not pairing.get("n_pairs"):
+        dropped = ", ".join(
+            f"r{d['replicate']} ({'; '.join(r['arm'] + ': ' + r['reason'] for r in d['because'])})"
+            for d in pairing.get("dropped_replicates", []))
+        out.update(verdict=INCONCLUSIVE,
+                   why="no replicate has a usable trial on both arms, so there "
+                       "is no matched pair to compare"
+                       + (f"; dropped: {dropped}" if dropped else ""))
         return out
 
     primary = cmp["primary"]

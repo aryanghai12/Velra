@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """s2 — a constraint that exists only in the conversation.
 
-**The mechanism under test: `[ROOT_TASK_OBJECTIVE]`.** The capsule carries the
+**The mechanism under test: `[FIRST_MESSAGE]`.** The capsule carries the
 first user prompt of the task verbatim, truncated to 160 characters once the
 truncation ladder has run. This scenario asks whether that is worth anything.
 
@@ -200,6 +200,8 @@ def score(final_tree: dict, measured: dict, manifest: dict) -> dict:
 SCENARIO = Scenario(
     name=NAME,
     title="A constraint that exists only in the conversation",
+    # The hypothesis id, held stable against the hash-locked preregistration.
+    # The capsule section itself is now rendered as `[FIRST_MESSAGE]`.
     mechanism="[ROOT_TASK_OBJECTIVE]",
     hypothesis=(
         "After compaction, an agent carrying the capsule honours a constraint "

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """s3 — the file we agreed on, after eighty-four others.
 
-**The mechanism under test: `[WORKING_FILES]`.** The capsule is supposed to
+**The mechanism under test: `[FILE_ACTIVITY]`.** The capsule is supposed to
 carry the files the task is actually about, ranked so that a late sweep across
 an unrelated part of the codebase cannot evict them. That ranking was one of
 the five defects the v0.1 benchmark found and §15 fixed, and it has never been
@@ -21,7 +21,7 @@ because there is no failing test pointing anywhere — the suite is green
 throughout, and stays green, which is itself a check.
 
 **This scenario is expected to be hard for Velra as it stands.** §18 of the
-v0.1 report records `[WORKING_FILES]` absent from 4 of 4 delivered capsules:
+v0.1 report records `[FILE_ACTIVITY]` absent from 4 of 4 delivered capsules:
 the ladder steps from four files to zero with nothing in between. If that
 holds, s3 measures a miss rather than a win. That is the point of running it —
 an inferred defect becomes a measured one, and the v0.2 `working_max = 2` rung
@@ -173,6 +173,8 @@ def score(final_tree: dict, measured: dict, manifest: dict) -> dict:
 SCENARIO = Scenario(
     name=NAME,
     title="The file we agreed on, after eighty-four others",
+    # The hypothesis id, held stable against the hash-locked preregistration.
+    # The capsule section itself is now rendered as `[FILE_ACTIVITY]`.
     mechanism="[WORKING_FILES]",
     hypothesis=(
         "After compaction and a sweep across 84 unrelated modules, an agent "

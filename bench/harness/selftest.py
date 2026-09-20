@@ -45,19 +45,19 @@ import prereg  # noqa: E402
 from scenarios import base, registry, s2_hidden_constraint, s3_working_set  # noqa: E402
 
 CAPSULE = (
-    '<VELRA_CONTINUATION v="1" checkpoint="ckpt_01SELFTEST00000000000000" '
+    '<VELRA_WORKSPACE_STATE v="1" checkpoint="ckpt_01SELFTEST00000000000000" '
     'captured="2026-09-15T10:00:00Z" trigger="manual">\n'
-    "[CONTEXT]\nVelra is a local tool that recorded this task state.\n"
-    "[ROOT_TASK_OBJECTIVE] (OBSERVED | user prompt | 10:00)\n"
+    "[ABOUT_THIS_RECORD]\nVelra is a local tool that recorded this task state.\n"
+    "[FIRST_MESSAGE] (OBSERVED | user prompt | 10:00)\n"
     "{root}\n"
-    "[STATUS]\nmain | 2 edits this task | last test run: FAIL\n"
-    "[DEAD_ENDS] (OBSERVED)\n"
+    "[WORKSPACE_STATE]\nmain | 2 edits this task | last test run: FAIL\n"
+    "[REVERTED_EDITS] (OBSERVED)\n"
     "- src/ledger/money.py | 2 edit(s) | reverted via `git restore "
     "src/ledger/money.py` at 10:14\n"
     "- src/ledger/rules.py | 1 edit(s) | reverted via `git restore "
     "src/ledger/rules.py` at 10:20\n"
-    "[RECOVERY]\nFull detail for any section: `velra inspect`\n"
-    "</VELRA_CONTINUATION>"
+    "[RECORD_DETAIL]\nFull detail for any section: `velra inspect`\n"
+    "</VELRA_WORKSPACE_STATE>"
 )
 
 

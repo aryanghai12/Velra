@@ -72,7 +72,7 @@ def trial_section(d: pathlib.Path) -> str:
                 if block.get("type") == "tool_use":
                     measured_tool_lines.append(json.dumps(block))
         if obj.get("subtype") == "hook_response" and \
-                "VELRA_CONTINUATION" in (obj.get("stdout") or ""):
+                any(t in (obj.get("stdout") or "") for t in ("VELRA_WORKSPACE_STATE", "VELRA_CONTINUATION")):
             capsule_line = raw
 
     if compact_lines:

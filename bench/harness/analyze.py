@@ -30,8 +30,14 @@ EDIT_TOOLS = {"Edit", "MultiEdit", "Write", "NotebookEdit", "EditFile"}
 BASH_READ_RE = re.compile(
     r"\b(cat|head|tail|sed\s+-n|less|more|type|Get-Content|nl)\b", re.I)
 
+# The stricter, reported-but-not-gated check: did the capsule or the agent
+# name the abandoned *idea*, not merely the file it lived in? Two ideas are in
+# play in s1 -- banker's rounding in `money.py`, and collapsing the per-line
+# loop in `surcharges.handling_total` -- and only the second discriminates, so
+# both are matched here.
 DEAD_END_MARKERS = re.compile(
-    r"ROUND_HALF_EVEN|banker'?s?\s+rounding|half[-_ ]?even", re.I)
+    r"ROUND_HALF_EVEN|banker'?s?\s+rounding|half[-_ ]?even"
+    r"|handling_total|surcharges\.py", re.I)
 
 
 def load_stream(path: pathlib.Path):
@@ -300,6 +306,32 @@ def analyse_native_summary(transcript: pathlib.Path, manifest: dict) -> dict:
     }
 
 
+# v0.1.1 renamed the capsule's wrapper tag and every section label. Trial
+# captures recorded before that rename are still read by this module -- they are
+# the evidence the earlier reports were built from -- so old labels are mapped
+# forward here, once, and every caller downstream sees only the new vocabulary.
+# `behaviour.py` imports both of these rather than keeping a second copy.
+SECTION_ALIASES = {
+    "CONTEXT": "ABOUT_THIS_RECORD",
+    "ROOT_TASK_OBJECTIVE": "FIRST_MESSAGE",
+    "ACTIVE_SUBTASK": "SUBTASK_MESSAGE",
+    "LATEST_REQUEST": "LATEST_MESSAGE",
+    "STATUS": "WORKSPACE_STATE",
+    "ACTIVE_FAILURE": "TEST_RESULT",
+    "DEAD_ENDS": "REVERTED_EDITS",
+    "RECENT_ATTEMPTS": "RECENT_EDITS",
+    "WORKING_FILES": "FILE_ACTIVITY",
+    "NEXT_KNOWN_TARGET": "FAILURE_LOCATION",
+    "RECOVERY": "RECORD_DETAIL",
+}
+
+
+def canonical_sections(text: str) -> list[str]:
+    """Section labels of a capsule, with pre-v0.1.1 names mapped forward."""
+    return [SECTION_ALIASES.get(name, name)
+            for name in re.findall(r"^\[([A-Z_]+)\]", text, re.M)]
+
+
 def analyse_delivered_capsule(stream_path: pathlib.Path, manifest: dict) -> dict:
     """What the capsule that was actually delivered contained.
 
@@ -309,7 +341,7 @@ def analyse_delivered_capsule(stream_path: pathlib.Path, manifest: dict) -> dict
     section is checked in the delivered bytes.
 
     What counts as "the dead end reached the capsule" is the abandoned work
-    being *identified* there: a `[DEAD_ENDS]` section that names the reverted
+    being *identified* there: a `[REVERTED_EDITS]` section that names the reverted
     file. Velra derives the capsule from tool events, so it can say which file
     was edited and then reverted, but never which idea was being tried -- the
     string `ROUND_HALF_EVEN` exists only inside an edit it deliberately does
@@ -331,7 +363,7 @@ def analyse_delivered_capsule(stream_path: pathlib.Path, manifest: dict) -> dict
         if obj.get("subtype") != "hook_response":
             continue
         out = obj.get("stdout") or obj.get("output") or ""
-        if "VELRA_CONTINUATION" not in out:
+        if not any(t in out for t in ("VELRA_WORKSPACE_STATE", "VELRA_CONTINUATION")):
             continue
         try:
             delivered = json.loads(out)["hookSpecificOutput"]["additionalContext"]
@@ -344,15 +376,15 @@ def analyse_delivered_capsule(stream_path: pathlib.Path, manifest: dict) -> dict
         return {"delivered": False}
 
     dead_file = manifest["dead_end_file"].replace("\\", "/")
-    sections = re.findall(r"^\[([A-Z_]+)\]", delivered, re.M)
-    has_dead_ends = "DEAD_ENDS" in sections
+    sections = canonical_sections(delivered)
+    has_dead_ends = "REVERTED_EDITS" in sections
     return {
         "delivered": True,
         "hook_name": hook_name,
         "chars": len(delivered),
         "sections": sections,
         "has_dead_ends_section": has_dead_ends,
-        "has_recent_attempts_section": "RECENT_ATTEMPTS" in sections,
+        "has_recent_attempts_section": "RECENT_EDITS" in sections,
         # the thing H2 actually claims: the reverted approach is in front of the agent
         "dead_end_file_in_capsule": dead_file in delivered.replace("\\", "/"),
         "dead_end_approach_in_capsule": has_dead_ends
@@ -361,7 +393,7 @@ def analyse_delivered_capsule(stream_path: pathlib.Path, manifest: dict) -> dict
         # out the hypothesis that was abandoned, not just where it lived.
         "dead_end_approach_named_verbatim": bool(DEAD_END_MARKERS.search(delivered)),
         "names_failing_line": str(manifest.get("failing_assertion_line", "")) in delivered,
-        "names_objective": "ROOT_TASK_OBJECTIVE" in sections,
+        "names_objective": "FIRST_MESSAGE" in sections,
     }
 
 
@@ -557,7 +589,7 @@ def main() -> int:
     if dc.get("delivered"):
         print(f"  capsule delivered:     {dc['chars']} chars via {dc['hook_name']}")
         print(f"    sections:            {dc['sections']}")
-        print(f"    DEAD_ENDS present:   {dc['has_dead_ends_section']}   "
+        print(f"    REVERTED_EDITS present: {dc['has_dead_ends_section']}   "
               f"names the reverted file: {dc['dead_end_file_in_capsule']}   "
               f"identifies the dead end: {dc['dead_end_approach_in_capsule']}   "
               f"(names it verbatim: "

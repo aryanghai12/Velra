@@ -58,7 +58,7 @@ def extract_injected(stream_path: pathlib.Path) -> list[dict]:
         if obj.get("subtype") != "hook_response":
             continue
         raw = obj.get("stdout") or obj.get("output") or ""
-        if "VELRA_CONTINUATION" not in raw:
+        if not any(t in raw for t in ("VELRA_WORKSPACE_STATE", "VELRA_CONTINUATION")):
             continue
         try:
             payload = json.loads(raw)
