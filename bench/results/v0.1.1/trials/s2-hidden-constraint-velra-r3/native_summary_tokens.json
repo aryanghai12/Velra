@@ -1,0 +1,16 @@
+{
+  "present": true,
+  "measured": true,
+  "model": "sonnet",
+  "control": {
+    "a": 3103,
+    "b": 3103,
+    "delta": 0
+  },
+  "control_valid": true,
+  "chars": 9611,
+  "measured_tokens": 3713,
+  "with_sentinel_total": 6816,
+  "baseline_total": 3103,
+  "chars_per_token": 2.588
+}

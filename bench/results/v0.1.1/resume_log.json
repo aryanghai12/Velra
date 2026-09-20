@@ -1,0 +1,865 @@
+{
+  "purpose": "Every trial this resume moved out of trials/, and why. Quarantined folders are kept under quarantine/ for audit.",
+  "events": [
+    {
+      "at": "2026-09-16T10:52:30+00:00",
+      "action": "resume_started",
+      "pinned": {
+        "claude_binary": "C:\\Users\\aryan\\.vscode\\extensions\\anthropic.claude-code-2.1.272-win32-x64\\resources\\native-binary\\claude.exe",
+        "claude_version": "2.1.272",
+        "commit": "ab47aefe6",
+        "prereg_sha256": "4658a1a538411e0f15bf9c5d57ee50ede85bcd2d7929b8c7045262732c2eb1ad",
+        "model": "sonnet"
+      },
+      "plan": [
+        "s1-dead-end-pair-baseline-r2",
+        "s1-dead-end-pair-velra-r2",
+        "s1-dead-end-pair-baseline-r3",
+        "s1-dead-end-pair-velra-r3",
+        "s1-dead-end-pair-baseline-r4",
+        "s1-dead-end-pair-velra-r4",
+        "s2-hidden-constraint-baseline-r1",
+        "s2-hidden-constraint-velra-r1",
+        "s2-hidden-constraint-baseline-r2",
+        "s2-hidden-constraint-velra-r2",
+        "s2-hidden-constraint-baseline-r3",
+        "s2-hidden-constraint-velra-r3",
+        "s2-hidden-constraint-baseline-r4",
+        "s2-hidden-constraint-velra-r4"
+      ]
+    },
+    {
+      "at": "2026-09-16T10:52:30+00:00",
+      "action": "quarantined",
+      "trial": "s1-dead-end-pair-baseline-r2",
+      "moved_to": "bench\\results\\v0.1.1\\quarantine\\20260916T162230\\s1-dead-end-pair-baseline-r2",
+      "evidence": {
+        "state": "poisoned",
+        "synthetic_turns": [
+          16
+        ],
+        "is_error_turns": [
+          16
+        ],
+        "compact_error": null,
+        "measured_turn_index": 16,
+        "turns_sent": 17,
+        "turns_expected": 17,
+        "claude_version": "2.1.272",
+        "prior_validity": [],
+        "measured_turn_poisoned": true
+      }
+    },
+    {
+      "at": "2026-09-16T10:52:30+00:00",
+      "action": "quarantined",
+      "trial": "s1-dead-end-pair-velra-r2",
+      "moved_to": "bench\\results\\v0.1.1\\quarantine\\20260916T162230\\s1-dead-end-pair-velra-r2",
+      "evidence": {
+        "state": "poisoned",
+        "synthetic_turns": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "is_error_turns": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          16
+        ],
+        "compact_error": "Error during compaction: You've hit your session limit \u00b7 resets 3:50pm (Asia/Kolkata)",
+        "measured_turn_index": 16,
+        "turns_sent": 17,
+        "turns_expected": 17,
+        "claude_version": "2.1.272",
+        "prior_validity": [
+          "compaction_occurred",
+          "compaction_summary_present"
+        ],
+        "measured_turn_poisoned": true
+      }
+    },
+    {
+      "at": "2026-09-16T10:52:30+00:00",
+      "action": "quarantined",
+      "trial": "s1-dead-end-pair-baseline-r3",
+      "moved_to": "bench\\results\\v0.1.1\\quarantine\\20260916T162230\\s1-dead-end-pair-baseline-r3",
+      "evidence": {
+        "state": "poisoned",
+        "synthetic_turns": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "is_error_turns": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          16
+        ],
+        "compact_error": "Error during compaction: You've hit your session limit \u00b7 resets 3:50pm (Asia/Kolkata)",
+        "measured_turn_index": 16,
+        "turns_sent": 17,
+        "turns_expected": 17,
+        "claude_version": "2.1.272",
+        "prior_validity": [
+          "compaction_occurred",
+          "compaction_summary_present"
+        ],
+        "measured_turn_poisoned": true
+      }
+    },
+    {
+      "at": "2026-09-16T10:52:30+00:00",
+      "action": "quarantined",
+      "trial": "s1-dead-end-pair-velra-r3",
+      "moved_to": "bench\\results\\v0.1.1\\quarantine\\20260916T162230\\s1-dead-end-pair-velra-r3",
+      "evidence": {
+        "state": "poisoned",
+        "synthetic_turns": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "is_error_turns": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          16
+        ],
+        "compact_error": "Error during compaction: You've hit your session limit \u00b7 resets 3:50pm (Asia/Kolkata)",
+        "measured_turn_index": 16,
+        "turns_sent": 17,
+        "turns_expected": 17,
+        "claude_version": "2.1.272",
+        "prior_validity": [
+          "compaction_occurred",
+          "compaction_summary_present"
+        ],
+        "measured_turn_poisoned": true
+      }
+    },
+    {
+      "at": "2026-09-16T10:52:30+00:00",
+      "action": "quarantined",
+      "trial": "s1-dead-end-pair-baseline-r4",
+      "moved_to": "bench\\results\\v0.1.1\\quarantine\\20260916T162230\\s1-dead-end-pair-baseline-r4",
+      "evidence": {
+        "state": "poisoned",
+        "synthetic_turns": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "is_error_turns": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          16
+        ],
+        "compact_error": "Error during compaction: You've hit your session limit \u00b7 resets 3:50pm (Asia/Kolkata)",
+        "measured_turn_index": 16,
+        "turns_sent": 17,
+        "turns_expected": 17,
+        "claude_version": "2.1.272",
+        "prior_validity": [
+          "compaction_occurred",
+          "compaction_summary_present"
+        ],
+        "measured_turn_poisoned": true
+      }
+    },
+    {
+      "at": "2026-09-16T10:52:30+00:00",
+      "action": "quarantined",
+      "trial": "s1-dead-end-pair-velra-r4",
+      "moved_to": "bench\\results\\v0.1.1\\quarantine\\20260916T162230\\s1-dead-end-pair-velra-r4",
+      "evidence": {
+        "state": "poisoned",
+        "synthetic_turns": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "is_error_turns": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          16
+        ],
+        "compact_error": "Error during compaction: You've hit your session limit \u00b7 resets 3:50pm (Asia/Kolkata)",
+        "measured_turn_index": 16,
+        "turns_sent": 17,
+        "turns_expected": 17,
+        "claude_version": "2.1.272",
+        "prior_validity": [
+          "compaction_occurred",
+          "compaction_summary_present"
+        ],
+        "measured_turn_poisoned": true
+      }
+    },
+    {
+      "at": "2026-09-16T10:52:30+00:00",
+      "action": "quarantined",
+      "trial": "s2-hidden-constraint-baseline-r1",
+      "moved_to": "bench\\results\\v0.1.1\\quarantine\\20260916T162230\\s2-hidden-constraint-baseline-r1",
+      "evidence": {
+        "state": "poisoned",
+        "synthetic_turns": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13
+        ],
+        "is_error_turns": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          13
+        ],
+        "compact_error": "Error during compaction: You've hit your session limit \u00b7 resets 3:50pm (Asia/Kolkata)",
+        "measured_turn_index": 13,
+        "turns_sent": 14,
+        "turns_expected": 14,
+        "claude_version": "2.1.272",
+        "prior_validity": [
+          "compaction_occurred",
+          "compaction_summary_present"
+        ],
+        "measured_turn_poisoned": true
+      }
+    },
+    {
+      "at": "2026-09-16T10:52:30+00:00",
+      "action": "quarantined",
+      "trial": "s2-hidden-constraint-velra-r1",
+      "moved_to": "bench\\results\\v0.1.1\\quarantine\\20260916T162230\\s2-hidden-constraint-velra-r1",
+      "evidence": {
+        "state": "poisoned",
+        "synthetic_turns": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13
+        ],
+        "is_error_turns": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          13
+        ],
+        "compact_error": "Error during compaction: You've hit your session limit \u00b7 resets 3:50pm (Asia/Kolkata)",
+        "measured_turn_index": 13,
+        "turns_sent": 14,
+        "turns_expected": 14,
+        "claude_version": "2.1.272",
+        "prior_validity": [
+          "compaction_occurred",
+          "compaction_summary_present"
+        ],
+        "measured_turn_poisoned": true
+      }
+    },
+    {
+      "at": "2026-09-16T10:52:30+00:00",
+      "action": "quarantined",
+      "trial": "s2-hidden-constraint-baseline-r2",
+      "moved_to": "bench\\results\\v0.1.1\\quarantine\\20260916T162230\\s2-hidden-constraint-baseline-r2",
+      "evidence": {
+        "state": "poisoned",
+        "synthetic_turns": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13
+        ],
+        "is_error_turns": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          13
+        ],
+        "compact_error": "Error during compaction: You've hit your session limit \u00b7 resets 3:50pm (Asia/Kolkata)",
+        "measured_turn_index": 13,
+        "turns_sent": 14,
+        "turns_expected": 14,
+        "claude_version": "2.1.272",
+        "prior_validity": [
+          "compaction_occurred",
+          "compaction_summary_present"
+        ],
+        "measured_turn_poisoned": true
+      }
+    },
+    {
+      "at": "2026-09-16T10:52:30+00:00",
+      "action": "quarantined",
+      "trial": "s2-hidden-constraint-velra-r2",
+      "moved_to": "bench\\results\\v0.1.1\\quarantine\\20260916T162230\\s2-hidden-constraint-velra-r2",
+      "evidence": {
+        "state": "poisoned",
+        "synthetic_turns": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13
+        ],
+        "is_error_turns": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          13
+        ],
+        "compact_error": "Error during compaction: You've hit your session limit \u00b7 resets 3:50pm (Asia/Kolkata)",
+        "measured_turn_index": 13,
+        "turns_sent": 14,
+        "turns_expected": 14,
+        "claude_version": "2.1.272",
+        "prior_validity": [
+          "compaction_occurred",
+          "compaction_summary_present"
+        ],
+        "measured_turn_poisoned": true
+      }
+    },
+    {
+      "at": "2026-09-16T10:52:30+00:00",
+      "action": "quarantined",
+      "trial": "s2-hidden-constraint-baseline-r3",
+      "moved_to": "bench\\results\\v0.1.1\\quarantine\\20260916T162230\\s2-hidden-constraint-baseline-r3",
+      "evidence": {
+        "state": "poisoned",
+        "synthetic_turns": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13
+        ],
+        "is_error_turns": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          13
+        ],
+        "compact_error": "Error during compaction: You've hit your session limit \u00b7 resets 3:50pm (Asia/Kolkata)",
+        "measured_turn_index": 13,
+        "turns_sent": 14,
+        "turns_expected": 14,
+        "claude_version": "2.1.272",
+        "prior_validity": [
+          "compaction_occurred",
+          "compaction_summary_present"
+        ],
+        "measured_turn_poisoned": true
+      }
+    },
+    {
+      "at": "2026-09-16T10:52:30+00:00",
+      "action": "quarantined",
+      "trial": "s2-hidden-constraint-velra-r3",
+      "moved_to": "bench\\results\\v0.1.1\\quarantine\\20260916T162230\\s2-hidden-constraint-velra-r3",
+      "evidence": {
+        "state": "poisoned",
+        "synthetic_turns": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13
+        ],
+        "is_error_turns": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          13
+        ],
+        "compact_error": "Error during compaction: You've hit your session limit \u00b7 resets 3:50pm (Asia/Kolkata)",
+        "measured_turn_index": 13,
+        "turns_sent": 14,
+        "turns_expected": 14,
+        "claude_version": "2.1.272",
+        "prior_validity": [
+          "compaction_occurred",
+          "compaction_summary_present"
+        ],
+        "measured_turn_poisoned": true
+      }
+    },
+    {
+      "at": "2026-09-16T10:52:30+00:00",
+      "action": "quarantined",
+      "trial": "s2-hidden-constraint-baseline-r4",
+      "moved_to": "bench\\results\\v0.1.1\\quarantine\\20260916T162230\\s2-hidden-constraint-baseline-r4",
+      "evidence": {
+        "state": "poisoned",
+        "synthetic_turns": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13
+        ],
+        "is_error_turns": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          13
+        ],
+        "compact_error": "Error during compaction: You've hit your session limit \u00b7 resets 3:50pm (Asia/Kolkata)",
+        "measured_turn_index": 13,
+        "turns_sent": 14,
+        "turns_expected": 14,
+        "claude_version": "2.1.272",
+        "prior_validity": [
+          "compaction_occurred",
+          "compaction_summary_present"
+        ],
+        "measured_turn_poisoned": true
+      }
+    },
+    {
+      "at": "2026-09-16T10:52:30+00:00",
+      "action": "quarantined",
+      "trial": "s2-hidden-constraint-velra-r4",
+      "moved_to": "bench\\results\\v0.1.1\\quarantine\\20260916T162230\\s2-hidden-constraint-velra-r4",
+      "evidence": {
+        "state": "poisoned",
+        "synthetic_turns": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13
+        ],
+        "is_error_turns": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          13
+        ],
+        "compact_error": "Error during compaction: You've hit your session limit \u00b7 resets 3:50pm (Asia/Kolkata)",
+        "measured_turn_index": 13,
+        "turns_sent": 14,
+        "turns_expected": 14,
+        "claude_version": "2.1.272",
+        "prior_validity": [
+          "compaction_occurred",
+          "compaction_summary_present"
+        ],
+        "measured_turn_poisoned": true
+      }
+    },
+    {
+      "at": "2026-09-16T10:57:43+00:00",
+      "action": "trial_completed",
+      "trial": "s1-dead-end-pair-baseline-r2",
+      "claude_version": "2.1.272"
+    },
+    {
+      "at": "2026-09-16T11:02:11+00:00",
+      "action": "trial_completed",
+      "trial": "s1-dead-end-pair-velra-r2",
+      "claude_version": "2.1.272"
+    },
+    {
+      "at": "2026-09-16T11:07:52+00:00",
+      "action": "trial_completed",
+      "trial": "s1-dead-end-pair-baseline-r3",
+      "claude_version": "2.1.272"
+    },
+    {
+      "at": "2026-09-16T11:12:20+00:00",
+      "action": "trial_completed",
+      "trial": "s1-dead-end-pair-velra-r3",
+      "claude_version": "2.1.272"
+    },
+    {
+      "at": "2026-09-16T11:16:58+00:00",
+      "action": "trial_completed",
+      "trial": "s1-dead-end-pair-baseline-r4",
+      "claude_version": "2.1.272"
+    },
+    {
+      "at": "2026-09-16T11:22:06+00:00",
+      "action": "trial_completed",
+      "trial": "s1-dead-end-pair-velra-r4",
+      "claude_version": "2.1.272"
+    },
+    {
+      "at": "2026-09-16T11:27:37+00:00",
+      "action": "trial_completed",
+      "trial": "s2-hidden-constraint-baseline-r1",
+      "claude_version": "2.1.272"
+    },
+    {
+      "at": "2026-09-16T11:32:27+00:00",
+      "action": "trial_completed",
+      "trial": "s2-hidden-constraint-velra-r1",
+      "claude_version": "2.1.272"
+    },
+    {
+      "at": "2026-09-16T11:37:23+00:00",
+      "action": "trial_completed",
+      "trial": "s2-hidden-constraint-baseline-r2",
+      "claude_version": "2.1.272"
+    },
+    {
+      "at": "2026-09-16T11:41:10+00:00",
+      "action": "quarantined",
+      "trial": "s2-hidden-constraint-velra-r2",
+      "moved_to": "bench\\results\\v0.1.1\\quarantine\\20260916T162230-resume\\s2-hidden-constraint-velra-r2",
+      "evidence": {
+        "exit_code": 0,
+        "state": "poisoned",
+        "synthetic_turns": [
+          13
+        ],
+        "is_error_turns": [
+          13
+        ],
+        "compact_error": null,
+        "measured_turn_index": 13,
+        "turns_sent": 14,
+        "turns_expected": 14,
+        "claude_version": "2.1.272",
+        "prior_validity": null,
+        "measured_turn_poisoned": true
+      }
+    },
+    {
+      "at": "2026-09-20T08:35:32+00:00",
+      "action": "resume_started",
+      "pinned": {
+        "claude_binary": "C:\\Users\\aryan\\.vscode\\extensions\\anthropic.claude-code-2.1.272-win32-x64\\resources\\native-binary\\claude.exe",
+        "claude_version": "2.1.272",
+        "commit": "ab47aefe6",
+        "prereg_sha256": "4658a1a538411e0f15bf9c5d57ee50ede85bcd2d7929b8c7045262732c2eb1ad",
+        "model": "sonnet"
+      },
+      "plan": [
+        "s2-hidden-constraint-velra-r2",
+        "s2-hidden-constraint-baseline-r3",
+        "s2-hidden-constraint-velra-r3",
+        "s2-hidden-constraint-baseline-r4",
+        "s2-hidden-constraint-velra-r4"
+      ]
+    },
+    {
+      "at": "2026-09-20T08:39:40+00:00",
+      "action": "trial_completed",
+      "trial": "s2-hidden-constraint-velra-r2",
+      "claude_version": "2.1.272"
+    },
+    {
+      "at": "2026-09-20T08:43:37+00:00",
+      "action": "trial_completed",
+      "trial": "s2-hidden-constraint-baseline-r3",
+      "claude_version": "2.1.272"
+    },
+    {
+      "at": "2026-09-20T08:47:59+00:00",
+      "action": "trial_completed",
+      "trial": "s2-hidden-constraint-velra-r3",
+      "claude_version": "2.1.272"
+    },
+    {
+      "at": "2026-09-20T08:51:54+00:00",
+      "action": "trial_completed",
+      "trial": "s2-hidden-constraint-baseline-r4",
+      "claude_version": "2.1.272"
+    },
+    {
+      "at": "2026-09-20T08:56:24+00:00",
+      "action": "trial_completed",
+      "trial": "s2-hidden-constraint-velra-r4",
+      "claude_version": "2.1.272"
+    },
+    {
+      "at": "2026-09-20T09:02:30+00:00",
+      "action": "phase4_finished",
+      "verdict_exit": 1,
+      "failures": []
+    }
+  ]
+}

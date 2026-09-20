@@ -1,0 +1,112 @@
+{
+  "failing_test": "tests/test_engine.py::test_exact_payment_settles_invoice",
+  "failing_assertion_line": 54,
+  "failing_assertion_text": "assert result.status == \"SETTLED\"",
+  "true_fix_file": "src/ledger/engine.py",
+  "true_fix_symbol": "settle",
+  "dead_end_files": [
+    "src/ledger/money.py",
+    "src/ledger/rules.py"
+  ],
+  "dead_end_file": "src/ledger/money.py",
+  "dead_end_symbol": "scaled",
+  "historical_dead_end_commit": "c188f45",
+  "historical_revert_commit": "55e9931",
+  "uncommitted_files": [
+    "src/ledger/rules.py"
+  ],
+  "noise_module_count": 84,
+  "expected_status": "SETTLED",
+  "observed_status": "UNDERPAID",
+  "scenario": "s1-dead-end-pair",
+  "title": "Two eliminated approaches, and a defect that is not written down",
+  "mechanism": "[DEAD_ENDS]",
+  "repo": "C:\\Users\\aryan\\AppData\\Local\\Temp\\velra-efficacy-fixtures\\s1-dead-end-pair-baseline-r2",
+  "leak_terms": [
+    "not of each line",
+    "per line item",
+    "each line item",
+    "discount the subtotal",
+    "subtotal once",
+    "discount_for(subtotal)",
+    "round once",
+    "rounds three times"
+  ],
+  "canary": {
+    "file": "src/ledger/adapters/adyen_uk.py",
+    "const": "API_KEY_PREFIX",
+    "value": "AQE1",
+    "seed_turn": 7
+  },
+  "compact_turn_index": 15,
+  "measured_turn_index": 16,
+  "turn_count": 17,
+  "ground_truth": {
+    "as_generated": {
+      "exit": 1,
+      "counts": {
+        "passed": 5,
+        "failed": 1,
+        "errors": 0
+      },
+      "expected": "red",
+      "observed": "red",
+      "tail": [
+        "1 failed, 5 passed in 0.08s"
+      ]
+    },
+    "dead_end_money_round_half_even": {
+      "exit": 1,
+      "counts": {
+        "passed": 4,
+        "failed": 2,
+        "errors": 0
+      },
+      "expected": "red",
+      "observed": "red",
+      "tail": [
+        "2 failed, 4 passed in 0.05s"
+      ]
+    },
+    "dead_end_rules_rate_precision": {
+      "exit": 1,
+      "counts": {
+        "passed": 5,
+        "failed": 1,
+        "errors": 0
+      },
+      "expected": "red",
+      "observed": "red",
+      "tail": [
+        "1 failed, 5 passed in 0.05s"
+      ]
+    },
+    "true_fix_discount_the_subtotal": {
+      "exit": 0,
+      "counts": {
+        "passed": 6,
+        "failed": 0,
+        "errors": 0
+      },
+      "expected": "green",
+      "observed": "green",
+      "tail": [
+        "6 passed in 0.03s"
+      ]
+    }
+  },
+  "leak_scan": {
+    "clean": true,
+    "terms": [
+      "not of each line",
+      "per line item",
+      "each line item",
+      "discount the subtotal",
+      "subtotal once",
+      "discount_for(subtotal)",
+      "round once",
+      "rounds three times"
+    ],
+    "hits": []
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "trial": "C:\\Users\\aryan\\Videos\\Velra\\bench\\results\\v0.1.1\\trials\\s1-dead-end-pair-velra-r2",
+  "model": "sonnet",
+  "budget_tokens": 800,
+  "injections": [
+    {
+      "index": 0,
+      "hook_name": "SessionStart:compact",
+      "exit_code": 0,
+      "hook_stdout_bytes": 1885,
+      "context_chars": 1674,
+      "context_bytes": 1674,
+      "measured_tokens": 790,
+      "budget_tokens": 800,
+      "within_budget": true,
+      "with_sentinel_total": 3893,
+      "baseline_total": 3103,
+      "first_line": "<VELRA_CONTINUATION v=\"1\" checkpoint=\"ckpt_01M2MY15AD13K89VH3FAVGP67M\" captured=\"2026-09-16T11:01:02Z\" trigger=\"manual\">"
+    }
+  ],
+  "control": {
+    "a": 3103,
+    "b": 3103,
+    "delta": 0
+  },
+  "control_valid": true
+}

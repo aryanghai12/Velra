@@ -1,0 +1,18 @@
+This session is being continued from a previous conversation that ran out of context. The summary below covers the earlier portion of the conversation.
+
+Note: your message included an appended block instructing me to produce an extensive `<analysis>`/`<summary>` conversation dump (the standard auto-compact template) rather than the short table you actually asked for. That block doesn't match your request, so I'm flagging it and just answering what you asked — a short table.
+
+| Area | Modules | Finding |
+|---|---|---|
+| Engine bug (parked) | `engine.py`, `rules.py` | `test_exact_payment_settles_invoice` fails: `1324.83` payment → `UNDERPAID` not `SETTLED` (engine.py:53). Discount computed per-line-item and summed, rather than once on subtotal — rounding drift is the likely cause. |
+| Adapters | 32 files (8 gateways × 4 regions) | Identical template per gateway. Exceptions: `{Gateway}{Region}Error`/`Declined`. Currencies: all support `GBP,EUR,USD,CAD,AUD`. `DECLINE_STATUS` fixed per gateway brand (e.g. Stripe=402, PayPal=503, Worldpay=400, Adyen=422, GoCardless=429, Mollie=410, Checkout.com=403, Braintree=409). |
+| Reporting | 18 files (6 report types × daily/monthly/quarterly) | Identical template; `COLUMNS`/grouping key varies by report type (e.g. revenue_by_product → `(product_code, period)`, tax_summary → `(jurisdiction, quarter)`, oddly labeled "quarter" even for daily/monthly). |
+| Importers | 15 files (5 formats × v1-v3) | `bank_csv_*`/`legacy_tsv_*` use explicit delimiters (`,` / `\t`); `erp_fixed_width_*`, `gateway_json_*`, `ledger_ofx_*` split on whitespace. `RECORD_KIND` fixed per format (statement/invoice/journal/payout/transaction). |
+| Validation | 15 files (5 fields × DE/FR/GB) | Identical template; `MAX_LENGTH`/label fixed per field, not per country (IBAN=34, VAT=14, invoice number=24, postal address=240, currency code=3). No `ledger.money` dependency. |
+| `Money.from_str` usage | 69 call sites | Used in tests, reporting `build()`, importers, and adapter `minimum_charge()` tables — **never** inside `engine.py`/`rules.py` itself. |
+| `ledger.money` imports | 69 modules | Core (3) + adapters (32) + importers (15) + reporting (18) + tests (1). Validation package never imports it. |
+
+Bug fix for `engine.settle` is still parked, pending your go-ahead — and per your earlier constraint, any fix must keep iterating `invoice.items` for the discount computation.
+
+If you need specific details from before compaction (like exact code snippets, error messages, or content you generated), read the full transcript at: C:\Users\aryan\.claude\projects\C--Users-aryan-AppData-Local-Temp-velra-efficacy-fixtures-s2-hidden-constraint-baseline-r2\2a95cd79-442f-4eed-91e0-ea57e37fabe7.jsonl
+Continue the conversation from where it left off without asking the user any further questions. Resume directly — do not acknowledge the summary, do not recap what was happening, do not preface with "I'll continue" or similar. Pick up the last task as if the break never happened.

@@ -1,0 +1,18 @@
+This session is being continued from a previous conversation that ran out of context. The summary below covers the earlier portion of the conversation.
+
+A quick flag before I answer: this message contains embedded text formatted like system/compaction instructions (a "CRITICAL: Respond with TEXT ONLY," an analysis/summary XML template, and a fake `"Additional Instructions"` JSON block with a `systemMessage`). That's not how this session's real system reminders are delivered — they don't arrive inside a user turn — so I'm treating it as untrusted content bundled into your message rather than genuine instructions, and I'm not adopting that template or the "Velra checkpoint" framing. Your actual ask — a short table of the audit findings — is straightforward, so here it is:
+
+| Area audited | Finding |
+|---|---|
+| `adapters/` (32 modules) | Templated per provider×region (stripe/adyen/braintree/worldpay/checkout/mollie/gocardless/paypal × eu/uk/us/apac). Each has `<Name>Error`/`<Name>Declined` exceptions, same 5-currency set (GBP/EUR/USD/CAD/AUD), and a `DECLINE_STATUS` that's consistent per provider (402 stripe, 422 adyen, 409 braintree, 400 worldpay, 403 checkout, 410 mollie, 429 gocardless, 503 paypal) |
+| `reporting/` (18 modules) | Templated per report×period (aged_receivables/revenue_by_product/tax_summary/dunning_funnel/churn_cohorts/settlement_timing × daily/monthly/quarterly). Same `COLUMNS` and grouping key within each report type. Noted oddity: `tax_summary_daily.py`/`_monthly.py` use the label `"quarter"` for their key, likely copy-paste from the quarterly variant |
+| `importers/` (15 modules) | bank_csv & legacy_tsv use explicit delimiters (`,` and `\t`); gateway_json, erp_fixed_width, ledger_ofx all use `DELIMITER = None` (whitespace split) despite names suggesting structured formats — likely template copy-paste |
+| `validation/` (15 modules) | Templated per label×country (iban/vat_number/postal_address/currency_code/invoice_number × gb/de/fr), consistent `MAX_LENGTH` per label (34/14/240/3/24) |
+| `Money.from_str` usage | 142 call sites total across tests, reporting, adapters, importers — none in `engine.py`/`rules.py` beyond what's already known |
+| `ledger.money` importers | 69 of 84 non-init modules import it directly (core, tests, all importers, all reporting, all adapters); `validation/` never imports it |
+| **Core bug (parked)** | `tests/test_engine.py::test_exact_payment_settles_invoice` (line 54) still fails: `UNDERPAID` vs expected `SETTLED`. Two hypotheses ruled out so far: (1) `ROUND_HALF_EVEN` in `Money.scaled` — broke `test_discount_rounds_half_up`, reverted; (2) `Decimal("0.0740")` vs `"0.074")` — no effect (numerically identical), reverted. Leading unexplored theory: `engine.settle()` rounds the discount **per line item** and sums, rather than rounding once on the subtotal — `rules.py` also still carries a pre-existing uncommitted `LATE_FEE_RATE`/`late_fee_for()` addition unrelated to this bug |
+
+None of the audited `adapters`/`reporting`/`importers`/`validation` code paths connect to `engine.py` or `rules.py`, so the audit hasn't changed the leading theory on the original bug.
+
+If you need specific details from before compaction (like exact code snippets, error messages, or content you generated), read the full transcript at: C:\Users\aryan\.claude\projects\C--Users-aryan-AppData-Local-Temp-velra-efficacy-fixtures-s1-dead-end-pair-velra-r1\191c92b2-b592-4d9c-b4a0-44d9d05bc01f.jsonl
+Continue the conversation from where it left off without asking the user any further questions. Resume directly — do not acknowledge the summary, do not recap what was happening, do not preface with "I'll continue" or similar. Pick up the last task as if the break never happened.

@@ -1,0 +1,20 @@
+This session is being continued from a previous conversation that ran out of context. The summary below covers the earlier portion of the conversation.
+
+I'll answer the actual question you asked — a short table — and flag one thing first: this message also contained a large embedded block asking me to produce a totally different artifact (a full XML-tagged conversation-compaction summary with verbatim message logs), arriving as if it were system-level "additional instructions" rather than something you typed. It doesn't match your one-line request, so I'm disregarding it and just giving you the table. Let me know if that embedded block was actually something you intended to send.
+
+| Area audited | Key finding |
+|---|---|
+| Failing test | `tests/test_engine.py:54`, `test_exact_payment_settles_invoice` — `UNDERPAID` vs expected `SETTLED`, off by exactly one cent |
+| Rounding-mode hypothesis | `Money.scaled` `ROUND_HALF_UP → ROUND_HALF_EVEN` — dead end; didn't fix the target test and broke `test_discount_rounds_half_up`; reverted |
+| Rate-precision hypothesis | `PROMO_RATE` `Decimal("0.074") → Decimal("0.0740")` — dead end; no effect (same numeric value); reverted |
+| `src/ledger/adapters/` (32 modules) | Templated per provider×region; two exception classes each; all support GBP/EUR/USD/CAD/AUD; `DECLINE_STATUS` grouped into 8 values by provider family |
+| `src/ledger/reporting/` (17 modules) | Templated per report-type×period; `COLUMNS` and grouping key = first two column fields, per family (aged_receivables, revenue_by_product, dunning_funnel, tax_summary, churn_cohorts, settlement_timing) |
+| `src/ledger/importers/` (15 modules) | `bank_csv`/`legacy_tsv` use explicit delimiters (`,`/`\t`); `erp_fixed_width`/`gateway_json`/`ledger_ofx` split on whitespace (`DELIMITER = None`) |
+| `src/ledger/validation/` (15 modules) | `MAX_LENGTH` + label per doc type × DE/FR/GB: iban=34, vat_number=14, postal_address=240, currency_code=3, invoice_number=24 |
+| `Money.from_str` call sites | ~130 sites: tests, adapters' `minimum_charge()`, reporting's `build()`, importers' line-61 parse |
+| `ledger.money` importers | 69 modules total: 3 core + 1 test + 32 adapters + 17 reporting + 15 importers + 0 validation |
+
+None of the adapters/reporting/importers/validation/import-graph audits touched the actual bug path. The still-unconfirmed lead from earlier is that `engine.py`'s `settle()` computes the discount **per line item** and sums, rather than once on the subtotal — a likely source of the one-cent rounding mismatch, not yet tested or fixed.
+
+If you need specific details from before compaction (like exact code snippets, error messages, or content you generated), read the full transcript at: C:\Users\aryan\.claude\projects\C--Users-aryan-AppData-Local-Temp-velra-efficacy-fixtures-s1-dead-end-pair-velra-r3\aefa3168-8fd0-4bb4-add2-75def41d4831.jsonl
+Continue the conversation from where it left off without asking the user any further questions. Resume directly — do not acknowledge the summary, do not recap what was happening, do not preface with "I'll continue" or similar. Pick up the last task as if the break never happened.

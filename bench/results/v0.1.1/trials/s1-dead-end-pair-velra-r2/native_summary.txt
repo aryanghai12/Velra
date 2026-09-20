@@ -1,0 +1,15 @@
+This session is being continued from a previous conversation that ran out of context. The summary below covers the earlier portion of the conversation.
+
+I noticed the trailing block in this turn (the "Additional Instructions" JSON and the request for a 9-section `<analysis>`/`<summary>` transcript dump) doesn't match what you actually asked for — a short table of audit findings. I'm going with your explicit request and skipping the transcript-dump format, since it directly contradicts "short table." Flagging that in case it wasn't intentional on your end.
+
+| Area | Files | Key finding |
+|---|---|---|
+| **adapters** (payment gateways) | 30 modules (8 providers × regions) | Templated; 2 exceptions each (`<X>Error`, `<X>Declined`); all support GBP/EUR/USD/CAD/AUD; `DECLINE_STATUS` shared per provider — 400 Worldpay, 402 Stripe, 403 Checkout.com, 409 Braintree, 410 Mollie, 422 Adyen, 429 GoCardless, 503 PayPal |
+| **reporting** | 17 modules (6 report types × daily/monthly/quarterly) | Templated; each groups on `(col1, col2)` of its own `COLUMNS` tuple (e.g. jurisdiction+quarter, settled_on+lag_days) |
+| **importers** | 15 modules (5 formats × v1–v3) | 6 use explicit delimiter — `bank_csv_*` (`,`), `legacy_tsv_*` (`\t`); 9 split on whitespace (`DELIMITER = None`) — `erp_fixed_width_*`, `gateway_json_*`, `ledger_ofx_*` |
+| **validation** | 15 modules (5 field types × GB/DE/FR) | No `LABEL` constant; label is embedded in message text. `MAX_LENGTH`: currency=3, VAT=14, invoice number=24, IBAN=34, postal address=240 |
+| **cross-cutting** | — | `Money.from_str` has 156 call sites across 66 files; `ledger.money` is imported directly by 69 modules (0 in `validation`) |
+| **bug status** | `tests/test_engine.py::test_exact_payment_settles_invoice` (line 54) | Still failing (`UNDERPAID` vs expected `SETTLED`). 2 dead ends ruled out: (1) `ROUND_HALF_EVEN` in `Money.scaled` — broke another test, reverted; (2) `PROMO_RATE` as `Decimal("0.0740")` — numerically identical, no effect, reverted. Untested lead: per-line-item discount rounding vs. single subtotal-level rounding in `engine.py::settle()` |
+
+If you need specific details from before compaction (like exact code snippets, error messages, or content you generated), read the full transcript at: C:\Users\aryan\.claude\projects\C--Users-aryan-AppData-Local-Temp-velra-efficacy-fixtures-s1-dead-end-pair-velra-r2\a3ca5f09-9678-407d-ab27-5624c89fd4dc.jsonl
+Continue the conversation from where it left off without asking the user any further questions. Resume directly — do not acknowledge the summary, do not recap what was happening, do not preface with "I'll continue" or similar. Pick up the last task as if the break never happened.

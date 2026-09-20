@@ -1,0 +1,81 @@
+This session is being continued from a previous conversation that ran out of context. The summary below covers the earlier portion of the conversation.
+
+Summary:
+1. Primary Request and Intent:
+   - Standing constraint for the whole task, verbatim: "engine.settle must keep iterating invoice.items when it computes the discount; finance reconciles the per-line figures."
+   - Original task: run `python -m pytest -q` and report which test fails, at which line, and what the assertion says, with "Do not change any code yet."
+   - The user then said "Park the bug, I need an audit first." They asked read-only audit questions about the whole `src/ledger` codebase.
+   - The latest request is "Summarise the audit findings so far in a short table." It came with an instruction to answer as text only, with an `<analysis>` block and a `<summary>` block, and no tool calls.
+
+2. Key Technical Concepts:
+   - `Money` is integer cents; `Money.from_str` and `Money.scaled` round half up using `Decimal`.
+   - Settlement: `subtotal` is the sum of the line items; the discount is computed per line and summed (`rules.discount_for(item.amount)` per item); `total_due = subtotal - discount + fee_for(subtotal)`; `balance = payment - total_due` maps to UNDERPAID, OVERPAID or SETTLED.
+   - The per-line versus aggregate rounding discrepancy is the root cause of the failing test.
+   - Modules are templated: the same structure repeats across the 8 providers × 4 regions (32 adapters), the 6 reports × 3 periods (18 reporting modules), the 5 formats × 3 versions (15 importers), and the 5 fields × 3 countries (15 validators).
+   - Imports inside the package are relative (`from ..money import Money`).
+
+3. Files and Code Sections:
+   - `src/ledger/money.py`: `Money(cents)`, `from_str`, `scaled(rate)`, `__add__`, `__sub__`, `ZERO`. Not modified.
+   - `src/ledger/rules.py`: `PROMO_RATE = Decimal("0.074")`, `FLAT_FEE = Money(250)`, `discount_for(amount)` returning `amount.scaled(PROMO_RATE)`, `fee_for` (flat), and an unused `late_fee_for` (`LATE_FEE_RATE = 0.015`). It has uncommitted changes (`git status` shows `M`), and I have not run `git diff` on it. Not modified by me.
+   - `src/ledger/engine.py`: `settle` at lines 38-60, with the per-line discount loop at lines 46-48:
+     ```python
+     discount = ZERO
+     for item in invoice.items:
+         discount = discount + rules.discount_for(item.amount)
+     total_due = subtotal - discount + rules.fee_for(subtotal)
+     ```
+     This loop must stay. Not modified.
+   - `tests/test_engine.py`: six tests over `build_invoice()` (126.00 + 476.00 + 826.00 = 1428.00). The failing test is `test_exact_payment_settles_invoice`, which pays `Money.from_str("1324.83")` and asserts `result.status == "SETTLED"` at line 54.
+   - `src/ledger/adapters/*.py` (32 modules), `reporting/*.py` (18), `importers/*.py` (15), `validation/*.py` (15): audited read-only. Full reads of `adyen_apac.py`, `aged_receivables_daily.py`, `bank_csv_v1.py` and `iban_de.py`; the rest were checked by grep.
+   - Git: a single commit, `b8baad0 Ledger core with the March promotional discount` (91 files, 7,329 insertions).
+
+4. Errors and fixes:
+   - No errors were encountered and no fixes were made.
+   - Correction of my own earlier hypothesis: I first suspected that `PROMO_RATE` had been edited. The arithmetic showed that per-line rounding produces 1324.84 while the test's 1324.83 corresponds to a discount on the subtotal.
+
+5. Problem Solving:
+   - Solved: identified the failing test, line and assertion, and diagnosed the cause. Per-line discounts are 932 + 3522 + 6112 = 10566 cents, giving a total due of 132484 (1324.84). A discount on the subtotal is 142800 × 0.074 = 10567.2, rounded to 10567, giving 132483 (1324.83). The 1324.83 payment is 1 cent short, so the status is UNDERPAID.
+   - Unresolved and parked: the test's expectation conflicts with the per-line constraint at this rate. The user must decide whether the test's 1324.83 is wrong or whether the discount should be distributed so the per-line figures sum to the aggregate-rounded total.
+
+6. All user messages:
+   - "Constraint for this whole task: engine.settle must keep iterating invoice.items when it computes the discount; finance reconciles the per-line figures. Now run `python -m pytest -q` and tell me exactly which test fails, at which line, and what the assertion says. Do not change any code yet."
+   - "Read src/ledger/money.py, src/ledger/rules.py and src/ledger/engine.py, then summarise in a few lines how a settlement total is computed. Still no code changes."
+   - "Read tests/test_engine.py and list every test in it and what each one asserts."
+   - "Check `git log --oneline` and tell me what the most recent commit changed."
+   - "Park the bug, I need an audit first. Read every module under src/ledger/adapters and list, for each one, the exception classes it defines and the currencies it supports."
+   - "Now read every module under src/ledger/reporting and list, for each one, its COLUMNS tuple and its grouping key."
+   - "Now read every module under src/ledger/importers and tell me which ones use an explicit delimiter and which split on whitespace, with the RECORD_KIND of each."
+   - "Now read every module under src/ledger/validation and list each one's MAX_LENGTH and the label it validates."
+   - "Across all the adapter modules, group them by their DECLINE_STATUS value and tell me which ones share each status."
+   - "List every call site of Money.from_str across the whole codebase, with the file and the line number for each."
+   - "Which modules import ledger.money directly? Give me the complete list, grouped by package."
+   - "Summarise the audit findings so far in a short table." (plus the text-only, `<analysis>`/`<summary>` format instruction)
+
+7. Pending Tasks:
+   - The settlement bug is parked. It needs a user decision on the per-line versus aggregate rounding conflict before any fix. No code changes are permitted until then.
+   - Not yet examined: `git diff src/ledger/rules.py` (the uncommitted change).
+   - Not verified across all 32 adapters: whether `parse_error` behaves the same as in `adyen_apac.py`.
+   - Not searched for: `from ledger import Money`.
+
+8. Current Work:
+   The audit is finished, and the latest request is a short table of the findings so far, which I am delivering as text only. The audit results are:
+
+   | Area | Modules | Finding |
+   |---|---|---|
+   | Failing test | `tests/test_engine.py:54` | `test_exact_payment_settles_invoice`: `assert 'UNDERPAID' == 'SETTLED'`. Per-line discount gives 1324.84, but the test expects 1324.83, which needs a subtotal-level discount. This conflicts with the per-line constraint. Parked. |
+   | Git | `b8baad0` | One initial commit (91 files, 7,329 insertions). `rules.py` has an uncommitted, undiffed modification. |
+   | Adapters | 32 (8 providers × apac/eu/uk/us) | Each defines `<Name>Error(RuntimeError)` and `<Name>Declined(<Name>Error)`. All support GBP, EUR, USD, CAD and AUD. Minimum charges are identical: GBP 0.30, others 0.50. |
+   | Adapter decline status | 8 providers | worldpay 400, stripe 402, checkout 403, braintree 409, mollie 410, adyen 422, gocardless 429, paypal 503. The 4 regions of a provider share a value, and no two providers share one. |
+   | Reporting | 18 (6 reports × daily/monthly/quarterly) | `COLUMNS` and the grouping key depend only on the report type. The key is the first two columns. `tax_summary_daily` and `_monthly` use a `quarter` column. |
+   | Importers | 15 (5 formats × v1-v3) | Delimiter `","`: `bank_csv` (statement). Delimiter `"\t"`: `legacy_tsv` (invoice). Whitespace split: `erp_fixed_width` (journal), `gateway_json` (payout) and `ledger_ofx` (transaction). The JSON and OFX importers splitting on whitespace is odd. |
+   | Validation | 15 (5 fields × DE/FR/GB) | `MAX_LENGTH`: currency_code 3, iban 34, invoice_number 24, postal_address 240, vat_number 14. Country variants are identical. All use one permissive pattern. |
+   | `Money.from_str` calls | 220 | 9 in tests, 160 in adapters (lines 103-105), 36 in reporting (lines 83-84), 15 in importers (line 61). None in `engine.py`, `rules.py` or `validation/`. |
+   | `ledger.money` importers | 69 files | The top-level `__init__.py`, `engine.py` and `rules.py`, plus 32 adapters, 15 importers, 18 reporting modules and `tests/test_engine.py`. `validation/` does not import it. |
+
+   No code has been changed.
+
+9. Optional Next Step:
+   None is required. Once the user is ready, resume the parked bug. The last thing I said was "I haven't changed any code, and the settlement bug is still parked." I would first ask the user to choose between the two options I laid out. Those were correcting the test's expected 1324.83, or spreading the discount so the per-line figures sum to the aggregate-rounded total, with `settle` still iterating `invoice.items`. I could also offer to run `git diff src/ledger/rules.py` to check the uncommitted change. I will not start on either without the user's go-ahead.
+
+If you need specific details from before compaction (like exact code snippets, error messages, or content you generated), read the full transcript at: C:\Users\aryan\.claude\projects\C--Users-aryan-AppData-Local-Temp-velra-efficacy-fixtures-s2-hidden-constraint-velra-r3\1992f625-4570-428f-8359-05ecf14a44aa.jsonl
+Continue the conversation from where it left off without asking the user any further questions. Resume directly — do not acknowledge the summary, do not recap what was happening, do not preface with "I'll continue" or similar. Pick up the last task as if the break never happened.

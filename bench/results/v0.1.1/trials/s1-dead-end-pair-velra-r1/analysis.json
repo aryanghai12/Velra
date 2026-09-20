@@ -1,0 +1,695 @@
+{
+  "trial": "s1-dead-end-pair-velra-r1",
+  "scenario": "s1-dead-end-pair",
+  "mechanism": "[DEAD_ENDS]",
+  "arm": "velra",
+  "replicate": 1,
+  "model": "sonnet",
+  "session_id": "191c92b2-b592-4d9c-b4a0-44d9d05bc01f",
+  "wall_seconds": 236.842,
+  "compact_status": {
+    "compact_result": "success",
+    "compact_error": null,
+    "at_turn": 15
+  },
+  "turns_observed": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16
+  ],
+  "validity": {
+    "criteria": {
+      "all_turns_completed": true,
+      "no_budget_abort": true,
+      "compaction_occurred": true,
+      "compaction_summary_present": true,
+      "measured_turn_present": true,
+      "arm_integrity": true
+    },
+    "failed_criteria": [],
+    "valid": true,
+    "excluded_from": [],
+    "detail": {
+      "turns_sent": 17,
+      "turns_expected": 17,
+      "result_subtypes": [
+        "success",
+        "success",
+        "success",
+        "success",
+        "success",
+        "success",
+        "success",
+        "success",
+        "success",
+        "success",
+        "success",
+        "success",
+        "success",
+        "success",
+        "success",
+        "success",
+        "success"
+      ],
+      "aborted_subtypes": [],
+      "compact_status": {
+        "compact_result": "success",
+        "compact_error": null,
+        "at_turn": 15
+      },
+      "hook_invocations_observed": 121,
+      "arm": "velra"
+    }
+  },
+  "measured_turn": {
+    "prompt": "Fix the remaining test failure.",
+    "tool_call_count": 2,
+    "buckets": {
+      "read": 0,
+      "search": 0,
+      "edit": 1,
+      "bash": 1,
+      "other": 0
+    },
+    "by_tool": {
+      "Edit": 1,
+      "Bash": 1
+    },
+    "tool_sequence": [
+      {
+        "name": "Edit",
+        "bucket": "edit",
+        "target": "C:\\Users\\aryan\\AppData\\Local\\Temp\\velra-efficacy-fixtures\\s1-dead-end-pair-velra-r1\\src\\ledger\\engine.py"
+      },
+      {
+        "name": "Bash",
+        "bucket": "bash",
+        "target": "cd \"C:\\Users\\aryan\\AppData\\Local\\Temp\\velra-efficacy-fixtures\\s1-dead-end-pair-velra-r1\" && python -m pytest -q"
+      }
+    ],
+    "reads_before_first_edit": 0,
+    "read_targets_before_first_edit": [],
+    "first_edit_index": 0,
+    "first_edit_file": "c:/users/aryan/appdata/local/temp/velra-efficacy-fixtures/s1-dead-end-pair-velra-r1/src/ledger/engine.py",
+    "edit_count": 1,
+    "edit_targets": [
+      "C:\\Users\\aryan\\AppData\\Local\\Temp\\velra-efficacy-fixtures\\s1-dead-end-pair-velra-r1\\src\\ledger\\engine.py"
+    ],
+    "assistant_text": "Confirming: computing the discount per-line-item and summing gives 105.66 (932+3522+6112 cents), producing a total due of 1324.84 \u2014 one cent off from the test's 1324.83. Computing the discount once on the subtotal gives 105.67, producing 1324.83 exactly, which matches what the test expects. So the bug is in `engine.settle()`: it should round the discount once on the subtotal, not per line item.\nNow let me run the test suite to confirm.\nAll 6 tests pass. The fix: `engine.settle()` was rounding the promotional discount per line item and summing the rounded results, which accumulates rounding drift (three separate half-up roundings instead of one). Computing the discount once on the invoice subtotal fixes the one-cent gap.\n\nNote `src/ledger/rules.py` still has an uncommitted, unrelated `LATE_FEE_RATE`/`late_fee_for()` addition (not wired into settlement) \u2014 leaving that as-is since it wasn't part of this bug.",
+    "result_cost_usd": 0.9964484000000001,
+    "result_duration_ms": 16679,
+    "source_rereads_before_first_edit": 0
+  },
+  "behaviour": {
+    "primary": "avoided_dead_ends",
+    "avoided_dead_ends": true,
+    "dead_end_files_edited": [],
+    "first_edit_on_dead_end": false,
+    "first_edit_on_true_file": true,
+    "suite_green": true,
+    "success": true
+  },
+  "hooks": {
+    "observed": 121,
+    "paired": 120,
+    "sync_n": 61,
+    "sync_p50_ms": 27.606,
+    "sync_p95_ms": 208.981,
+    "sync_p99_ms": 1026.624,
+    "sync_max_ms": 2223.399,
+    "all_p50_ms": 42.137,
+    "all_p99_ms": 21417.153,
+    "all_max_ms": 26746.775,
+    "nonzero_exit": 0,
+    "responses_with_stderr": 0,
+    "responses_with_stdout": 1,
+    "per_event_p99_ms": {
+      "PostToolBatch": 21417.153,
+      "PostToolUse": 2223.399,
+      "PostToolUseFailure": 32.94,
+      "PreToolUse": 48.084,
+      "SessionStart": 62.851,
+      "Stop": 26746.775,
+      "UserPromptSubmit": 977.628
+    },
+    "per_event_p50_ms": {
+      "PostToolBatch": 3343.057,
+      "PostToolUse": 27.999,
+      "PostToolUseFailure": 22.938,
+      "PreToolUse": 29.996,
+      "SessionStart": 39.254,
+      "Stop": 43.829,
+      "UserPromptSubmit": 27.606
+    },
+    "per_event_count": {
+      "PostToolBatch": 28,
+      "PostToolUse": 28,
+      "PostToolUseFailure": 4,
+      "PreToolUse": 11,
+      "SessionStart": 2,
+      "Stop": 31,
+      "UserPromptSubmit": 16
+    },
+    "per_event_kind": {
+      "PostToolBatch": "async",
+      "PostToolUse": "sync",
+      "PostToolUseFailure": "sync",
+      "PreToolUse": "sync",
+      "SessionStart": "sync",
+      "Stop": "mixed",
+      "UserPromptSubmit": "sync"
+    }
+  },
+  "delivered_capsule": {
+    "delivered": true,
+    "hook_name": "SessionStart:compact",
+    "exit_code": 0,
+    "chars": 1605,
+    "sections": [
+      "CONTEXT",
+      "ROOT_TASK_OBJECTIVE",
+      "LATEST_REQUEST",
+      "STATUS",
+      "ACTIVE_FAILURE",
+      "DEAD_ENDS",
+      "RECENT_ATTEMPTS",
+      "NEXT_KNOWN_TARGET",
+      "RECOVERY"
+    ],
+    "has_dead_ends_section": true,
+    "has_working_files_section": false,
+    "has_recent_attempts_section": true,
+    "has_active_failure_section": true,
+    "has_root_objective_section": true
+  },
+  "capsule_dead_ends": {
+    "applicable": true,
+    "section_present": true,
+    "dead_end_files_expected": [
+      "src/ledger/money.py",
+      "src/ledger/rules.py"
+    ],
+    "dead_end_files_named": [
+      "src/ledger/money.py",
+      "src/ledger/rules.py"
+    ],
+    "all_named": true,
+    "any_named": true,
+    "attribution": [
+      "git restore src/ledger/money.py"
+    ],
+    "attributed_to_git_command": true,
+    "attributed_as_external": false,
+    "approach_named_verbatim": false
+  },
+  "capsule_constraint": {
+    "applicable": false
+  },
+  "working_file_relevance": {
+    "delivered": true,
+    "section_present": false,
+    "relevant": [
+      "src/ledger/engine.py",
+      "src/ledger/money.py",
+      "src/ledger/rules.py",
+      "tests/test_engine.py"
+    ],
+    "listed": [],
+    "precision": null,
+    "recall": 0.0
+  },
+  "prompt_rejection": {
+    "applicable": true,
+    "rejected": false,
+    "hits": [],
+    "scanned_turns": [
+      16
+    ]
+  },
+  "native_compaction_summary": {
+    "present": true,
+    "chars": 3750,
+    "bytes": 3776
+  },
+  "velra_db": {
+    "present": true,
+    "checkpoints": [
+      {
+        "checkpoint_id": "ckpt_01M2MGRAM3MEXCBYENMDY93GZ0",
+        "session_id": "191c92b2-b592-4d9c-b4a0-44d9d05bc01f",
+        "trigger": "manual",
+        "created_ms": 1789542541952,
+        "head_commit": "196a11f22520ea8d5de53974ae8ac12d0214c6ff",
+        "branch": "main",
+        "event_watermark": 65,
+        "partial": 0,
+        "capsule_tokens_est": 728,
+        "capsule_chars": 1605
+      }
+    ],
+    "continuations": [
+      {
+        "checkpoint_id": "ckpt_01M2MGRAM3MEXCBYENMDY93GZ0",
+        "session_id": "191c92b2-b592-4d9c-b4a0-44d9d05bc01f",
+        "state": "CONFIRMED",
+        "attach_count": 1,
+        "attached_ms": 1789542568567,
+        "attached_channel": "session_start",
+        "confirmed_ms": 1789542579876,
+        "confirm_event_id": 70
+      }
+    ],
+    "injections": [
+      {
+        "injection_id": "ckpt_01M2MGRAM3MEXCBYENMDY93GZ0:inj:1",
+        "checkpoint_id": "ckpt_01M2MGRAM3MEXCBYENMDY93GZ0",
+        "channel": "session_start",
+        "ts_ms": 1789542568567
+      }
+    ],
+    "dead_ends": [
+      {
+        "id": 1,
+        "path": "src/ledger/money.py",
+        "mechanism": "git_command",
+        "command_text": "git restore src/ledger/money.py",
+        "resolved_ms": 1789542384184,
+        "reapplied": 0
+      }
+    ],
+    "edits": [
+      {
+        "id": 1,
+        "path": "src/ledger/money.py",
+        "tool_name": "Edit",
+        "status": "DISCARDED",
+        "mechanism": "git_command",
+        "lines_added": 1,
+        "lines_removed": 1,
+        "ts_ms": 1789542366853
+      },
+      {
+        "id": 2,
+        "path": "src/ledger/money.py",
+        "tool_name": "Edit",
+        "status": "DISCARDED",
+        "mechanism": "git_command",
+        "lines_added": 4,
+        "lines_removed": 4,
+        "ts_ms": 1789542369949
+      },
+      {
+        "id": 3,
+        "path": "src/ledger/rules.py",
+        "tool_name": "Edit",
+        "status": "ACTIVE",
+        "mechanism": null,
+        "lines_added": 1,
+        "lines_removed": 1,
+        "ts_ms": 1789542392172
+      },
+      {
+        "id": 4,
+        "path": "src/ledger/engine.py",
+        "tool_name": "Edit",
+        "status": "ACTIVE",
+        "mechanism": null,
+        "lines_added": 5,
+        "lines_removed": 7,
+        "ts_ms": 1789542579876
+      }
+    ],
+    "commands": [
+      {
+        "id": 1,
+        "kind": "test",
+        "command_text": "cd \"C:\\Users\\aryan\\AppData\\Local\\Temp\\velra-efficacy-fixtures\\s1-dead-end-pair-velra-r1\" && python -m pytest -q",
+        "outcome": "FAIL",
+        "exit_code": 1,
+        "ts_ms": 1789542354023
+      },
+      {
+        "id": 2,
+        "kind": "test",
+        "command_text": "cd \"C:\\Users\\aryan\\AppData\\Local\\Temp\\velra-efficacy-fixtures\\s1-dead-end-pair-velra-r1\" && python -m pytest -q",
+        "outcome": "FAIL",
+        "exit_code": 1,
+        "ts_ms": 1789542373214
+      },
+      {
+        "id": 3,
+        "kind": "git",
+        "command_text": "cd \"C:\\Users\\aryan\\AppData\\Local\\Temp\\velra-efficacy-fixtures\\s1-dead-end-pair-velra-r1\" && git status",
+        "outcome": "UNKNOWN",
+        "exit_code": null,
+        "ts_ms": 1789542381479
+      },
+      {
+        "id": 4,
+        "kind": "test",
+        "command_text": "cd \"C:\\Users\\aryan\\AppData\\Local\\Temp\\velra-efficacy-fixtures\\s1-dead-end-pair-velra-r1\" && git restore src/ledger/money.py && python -m pytest -q",
+        "outcome": "FAIL",
+        "exit_code": 1,
+        "ts_ms": 1789542384184
+      },
+      {
+        "id": 5,
+        "kind": "test",
+        "command_text": "cd \"C:\\Users\\aryan\\AppData\\Local\\Temp\\velra-efficacy-fixtures\\s1-dead-end-pair-velra-r1\" && python -m pytest -q",
+        "outcome": "FAIL",
+        "exit_code": 1,
+        "ts_ms": 1789542394495
+      },
+      {
+        "id": 6,
+        "kind": "git",
+        "command_text": "cd \"C:\\Users\\aryan\\AppData\\Local\\Temp\\velra-efficacy-fixtures\\s1-dead-end-pair-velra-r1\" && git diff src/ledger/rules.py",
+        "outcome": "UNKNOWN",
+        "exit_code": null,
+        "ts_ms": 1789542402435
+      },
+      {
+        "id": 7,
+        "kind": "test",
+        "command_text": "cd \"C:\\Users\\aryan\\AppData\\Local\\Temp\\velra-efficacy-fixtures\\s1-dead-end-pair-velra-r1\" && python -m pytest -q",
+        "outcome": "PASS",
+        "exit_code": null,
+        "ts_ms": 1789542582674
+      }
+    ],
+    "compactions": [
+      {
+        "id": 1,
+        "session_id": "191c92b2-b592-4d9c-b4a0-44d9d05bc01f",
+        "checkpoint_id": "ckpt_01M2MGRAM3MEXCBYENMDY93GZ0",
+        "trigger": "manual",
+        "pre_ms": 1789542541952,
+        "post_ms": 1789542568609
+      }
+    ],
+    "event_count": 72,
+    "capsules": [
+      {
+        "checkpoint_id": "ckpt_01M2MGRAM3MEXCBYENMDY93GZ0",
+        "capsule": "<VELRA_CONTINUATION v=\"1\" checkpoint=\"ckpt_01M2MGRAM3MEXCBYENMDY93GZ0\" captured=\"2026-09-16T07:09:01Z\" trigger=\"manual\">\n[CONTEXT]\nVelra is a local tool that recorded this task state from Claude Code tool events before the conversation was compacted. Entries are observations of tool activity. Links between an edit and a later test result are unconfirmed unless stated. Files on disk are the current source of truth for code.\n[ROOT_TASK_OBJECTIVE] (OBSERVED | user prompt | 12:35)\nThis repository has a failing test. Run the test suite with `python -m pytest -q` and tell me exactly which test fails, at which line, and what the assertion...\n[LATEST_REQUEST] (OBSERVED | user prompt | 12:38)\nSummarise the audit findings so far in a short table.\n[STATUS]\nmain @ 196a11f | 3 edits this task | last test run: FAIL\n[ACTIVE_FAILURE] (OBSERVED | test run | 12:36)\nCommand: python -m pytest -q\nResult: FAIL (exit 1)\n  E         + UNDERPAID\n  tests\\test_engine.py:54: AssertionError\n  FAILED tests/test_engine.py::test_exact_payment_settles_invoice - AssertionEr...\n[DEAD_ENDS] (OBSERVED)\n- src/ledger/money.py | 2 edit(s) | reverted via `git restore src/ledger/money.py` at 12:36\n  Observed afterward: `python -m pytest -q` FAIL. Causal link: UNCONFIRMED.\n[RECENT_ATTEMPTS] (OBSERVED)\n- src/ledger/rules.py | +1/-1 lines | 12:36 | afterward: `python -m pytest -q` FAIL\n[NEXT_KNOWN_TARGET] (INFERRED | failure-location)\ntests/test_engine.py:54\n[RECOVERY]\nFull detail for any section: `velra inspect --checkpoint ckpt_01M2MGRAM3MEXCBYENMDY93GZ0 --section <dead-ends|failure|files|attempts>`\n</VELRA_CONTINUATION>"
+      }
+    ]
+  },
+  "final_state": {
+    "pytest_exit": 0,
+    "pytest_tail": [
+      "......                                                                   [100%]",
+      "6 passed in 0.02s"
+    ],
+    "pytest_output": "......                                                                   [100%]\n6 passed in 0.02s\n",
+    "git_diff": "diff --git a/src/ledger/engine.py b/src/ledger/engine.py\nindex fda9334..fba626a 100644\n--- a/src/ledger/engine.py\n+++ b/src/ledger/engine.py\n@@ -43,9 +43,7 @@ def settle(invoice: Invoice, payment: Money) -> SettlementResult:\n     \"\"\"\n     subtotal = invoice.subtotal()\n \n-    discount = ZERO\n-    for item in invoice.items:\n-        discount = discount + rules.discount_for(item.amount)\n+    discount = rules.discount_for(subtotal)\n \n     total_due = subtotal - discount + rules.fee_for(subtotal)\n     balance = payment - total_due\ndiff --git a/src/ledger/rules.py b/src/ledger/rules.py\nindex 650c7e2..badde8c 100644\n--- a/src/ledger/rules.py\n+++ b/src/ledger/rules.py\n@@ -7,7 +7,7 @@ from decimal import Decimal\n from .money import Money\n \n # Promotional rate for the current billing period.\n-PROMO_RATE = Decimal(\"0.074\")\n+PROMO_RATE = Decimal(\"0.0740\")\n \n # Flat processing fee charged once per invoice.\n FLAT_FEE = Money(250)\n@@ -21,3 +21,15 @@ def discount_for(amount: Money) -> Money:\n def fee_for(amount: Money) -> Money:\n     \"\"\"The processing fee for an invoice of ``amount``.\"\"\"\n     return FLAT_FEE\n+\n+\n+# Late-payment surcharge. Not wired into settlement yet.\n+LATE_FEE_RATE = Decimal(\"0.015\")\n+\n+\n+def late_fee_for(amount: Money) -> Money:\n+    \"\"\"Surcharge for an invoice that is past its due date.\n+\n+    TODO(billing): the dunning job should call this; nothing does yet.\n+    \"\"\"\n+    return amount.scaled(LATE_FEE_RATE)\n",
+    "git_status": " M src/ledger/engine.py\n M src/ledger/rules.py\n",
+    "git_log": "196a11f Revert \"Try banker's rounding in Money.scaled to fix the one-cent gap\"\n71b72f4 Try banker's rounding in Money.scaled to fix the one-cent gap\nf56b255 Apply the March promotional discount at settlement\necc4311 Ledger core: money, flat fee, settlement engine\n",
+    "present": true
+  },
+  "total_cost_usd": 8.273639800000002,
+  "per_turn": {
+    "0": {
+      "prompt": "This repository has a failing test. Run the test suite with `python -m",
+      "tools": 1,
+      "names": [
+        "Bash"
+      ]
+    },
+    "1": {
+      "prompt": "Read src/ledger/money.py, src/ledger/rules.py and src/ledger/engine.py",
+      "tools": 3,
+      "names": [
+        "Read"
+      ]
+    },
+    "2": {
+      "prompt": "The gap is exactly one cent, so let's start with the rounding hypothes",
+      "tools": 3,
+      "names": [
+        "Bash",
+        "Edit"
+      ]
+    },
+    "3": {
+      "prompt": "That made things worse. Discard that change with `git restore src/ledg",
+      "tools": 2,
+      "names": [
+        "Bash"
+      ]
+    },
+    "4": {
+      "prompt": "Second idea: the rate may be losing precision. Edit src/ledger/rules.p",
+      "tools": 3,
+      "names": [
+        "Bash",
+        "Edit",
+        "Read"
+      ]
+    },
+    "5": {
+      "prompt": "No change, so that is not it either. Discard it with `git restore src/",
+      "tools": 1,
+      "names": [
+        "Bash"
+      ]
+    },
+    "6": {
+      "prompt": "Read tests/test_engine.py and list every test in it and what each one ",
+      "tools": 1,
+      "names": [
+        "Read"
+      ]
+    },
+    "7": {
+      "prompt": "Park the bug for a moment, I need an audit first. Read every module un",
+      "tools": 3,
+      "names": [
+        "Glob",
+        "Grep"
+      ]
+    },
+    "8": {
+      "prompt": "Now read every module under src/ledger/reporting and list, for each on",
+      "tools": 3,
+      "names": [
+        "Glob",
+        "Grep",
+        "Read"
+      ]
+    },
+    "9": {
+      "prompt": "Now read every module under src/ledger/importers and tell me which one",
+      "tools": 4,
+      "names": [
+        "Glob",
+        "Grep",
+        "Read"
+      ]
+    },
+    "10": {
+      "prompt": "Now read every module under src/ledger/validation and list each one's ",
+      "tools": 3,
+      "names": [
+        "Glob",
+        "Grep",
+        "Read"
+      ]
+    },
+    "11": {
+      "prompt": "Across all the adapter modules, group them by their DECLINE_STATUS val",
+      "tools": 1,
+      "names": [
+        "Grep"
+      ]
+    },
+    "12": {
+      "prompt": "List every call site of Money.from_str across the whole codebase, with",
+      "tools": 1,
+      "names": [
+        "Grep"
+      ]
+    },
+    "13": {
+      "prompt": "Which modules import ledger.money directly? Give me the complete list,",
+      "tools": 1,
+      "names": [
+        "Grep"
+      ]
+    },
+    "14": {
+      "prompt": "Summarise the audit findings so far in a short table.",
+      "tools": 0,
+      "names": []
+    },
+    "15": {
+      "prompt": "/compact",
+      "tools": 0,
+      "names": []
+    },
+    "16": {
+      "prompt": "Fix the remaining test failure.",
+      "tools": 2,
+      "names": [
+        "Bash",
+        "Edit"
+      ]
+    }
+  },
+  "provenance": {
+    "binary": "C:\\Users\\aryan\\Videos\\Velra\\target\\release\\velra.exe",
+    "binary_bytes": 5385728,
+    "reported_version": "velra 0.1.1 (ab47aefe6, x86_64-pc-windows-gnu)",
+    "embedded_commit": "ab47aefe6",
+    "git_head": "ab47aefe6e76033da0e3d2632667143ef74b299e",
+    "git_head_short9": "ab47aefe6",
+    "git_branch": "main",
+    "git_describe": "v0.1.1-2-gab47aef",
+    "working_tree_clean": false,
+    "working_tree_changes": [
+      "?? bench/results/v0.1.1/"
+    ],
+    "commit_matches_binary": true,
+    "host": {
+      "platform": "Windows-11-10.0.26200-SP0",
+      "machine": "AMD64",
+      "python": "3.14.0",
+      "processor": "Intel64 Family 6 Model 183 Stepping 1, GenuineIntel",
+      "cpu_count": 20
+    },
+    "agent": {
+      "binary": "C:\\Users\\aryan\\.vscode\\extensions\\anthropic.claude-code-2.1.272-win32-x64\\resources\\native-binary\\claude.exe",
+      "version": "2.1.272"
+    },
+    "warnings": [
+      "the working tree is dirty: results cannot be attributed to a commit"
+    ]
+  },
+  "preregistration_sha256": "4658a1a538411e0f15bf9c5d57ee50ede85bcd2d7929b8c7045262732c2eb1ad",
+  "manifest": {
+    "failing_test": "tests/test_engine.py::test_exact_payment_settles_invoice",
+    "failing_assertion_line": 54,
+    "failing_assertion_text": "assert result.status == \"SETTLED\"",
+    "true_fix_file": "src/ledger/engine.py",
+    "true_fix_symbol": "settle",
+    "dead_end_files": [
+      "src/ledger/money.py",
+      "src/ledger/rules.py"
+    ],
+    "dead_end_file": "src/ledger/money.py",
+    "dead_end_symbol": "scaled",
+    "historical_dead_end_commit": "71b72f4",
+    "historical_revert_commit": "196a11f",
+    "uncommitted_files": [
+      "src/ledger/rules.py"
+    ],
+    "noise_module_count": 84,
+    "expected_status": "SETTLED",
+    "observed_status": "UNDERPAID",
+    "scenario": "s1-dead-end-pair",
+    "title": "Two eliminated approaches, and a defect that is not written down",
+    "mechanism": "[DEAD_ENDS]",
+    "repo": "C:\\Users\\aryan\\AppData\\Local\\Temp\\velra-efficacy-fixtures\\s1-dead-end-pair-velra-r1",
+    "leak_terms": [
+      "not of each line",
+      "per line item",
+      "each line item",
+      "discount the subtotal",
+      "subtotal once",
+      "discount_for(subtotal)",
+      "round once",
+      "rounds three times"
+    ],
+    "canary": {
+      "file": "src/ledger/adapters/adyen_uk.py",
+      "const": "API_KEY_PREFIX",
+      "value": "AQE1",
+      "seed_turn": 7
+    },
+    "compact_turn_index": 15,
+    "measured_turn_index": 16,
+    "turn_count": 17,
+    "ground_truth": {
+      "as_generated": {
+        "exit": 1,
+        "counts": {
+          "passed": 5,
+          "failed": 1,
+          "errors": 0
+        },
+        "expected": "red",
+        "observed": "red",
+        "tail": [
+          "1 failed, 5 passed in 0.06s"
+        ]
+      },
+      "dead_end_money_round_half_even": {
+        "exit": 1,
+        "counts": {
+          "passed": 4,
+          "failed": 2,
+          "errors": 0
+        },
+        "expected": "red",
+        "observed": "red",
+        "tail": [
+          "2 failed, 4 passed in 0.05s"
+        ]
+      },
+      "dead_end_rules_rate_precision": {
+        "exit": 1,
+        "counts": {
+          "passed": 5,
+          "failed": 1,
+          "errors": 0
+        },
+        "expected": "red",
+        "observed": "red",
+        "tail": [
+          "1 failed, 5 passed in 0.05s"
+        ]
+      },
+      "true_fix_discount_the_subtotal": {
+        "exit": 0,
+        "counts": {
+          "passed": 6,
+          "failed": 0,
+          "errors": 0
+        },
+        "expected": "green",
+        "observed": "green",
+        "tail": [
+          "6 passed in 0.02s"
+        ]
+      }
+    },
+    "leak_scan": {
+      "clean": true,
+      "terms": [
+        "not of each line",
+        "per line item",
+        "each line item",
+        "discount the subtotal",
+        "subtotal once",
+        "discount_for(subtotal)",
+        "round once",
+        "rounds three times"
+      ],
+      "hits": []
+    }
+  }
+}

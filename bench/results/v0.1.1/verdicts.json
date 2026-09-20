@@ -1,0 +1,293 @@
+{
+  "preregistration_version": "1.0.0",
+  "preregistration_sha256": "4658a1a538411e0f15bf9c5d57ee50ede85bcd2d7929b8c7045262732c2eb1ad",
+  "minimum_replicates_per_arm": 4,
+  "results_dir": "C:\\Users\\aryan\\Videos\\Velra\\bench\\results\\v0.1.1",
+  "provenance": {
+    "binary": "C:\\Users\\aryan\\Videos\\Velra\\target\\release\\velra.exe",
+    "binary_bytes": 5385728,
+    "reported_version": "velra 0.1.1 (ab47aefe6, x86_64-pc-windows-gnu)",
+    "embedded_commit": "ab47aefe6",
+    "git_head": "ab47aefe6e76033da0e3d2632667143ef74b299e",
+    "git_head_short9": "ab47aefe6",
+    "git_branch": "main",
+    "git_describe": "v0.1.1-2-gab47aef",
+    "working_tree_clean": false,
+    "working_tree_changes": [
+      "?? bench/results/v0.1.1/"
+    ],
+    "commit_matches_binary": true,
+    "host": {
+      "platform": "Windows-11-10.0.26200-SP0",
+      "machine": "AMD64",
+      "python": "3.14.0",
+      "processor": "Intel64 Family 6 Model 183 Stepping 1, GenuineIntel",
+      "cpu_count": 20
+    },
+    "agent": {
+      "binary": "C:\\Users\\aryan\\.vscode\\extensions\\anthropic.claude-code-2.1.272-win32-x64\\resources\\native-binary\\claude.exe",
+      "version": "2.1.272"
+    },
+    "warnings": [
+      "the working tree is dirty: results cannot be attributed to a commit"
+    ]
+  },
+  "validity": {
+    "total": 16,
+    "valid": 15,
+    "invalid": 1,
+    "invalid_trials": [
+      {
+        "trial": "s1-dead-end-pair-baseline-r1",
+        "arm": "baseline",
+        "scenario": "s1-dead-end-pair",
+        "failed_criteria": [
+          "compaction_occurred",
+          "compaction_summary_present"
+        ],
+        "excluded_from": [
+          "behavioural",
+          "budget"
+        ]
+      }
+    ],
+    "usable": {
+      "behavioural": 15,
+      "budget": 15,
+      "hooks": 16
+    }
+  },
+  "controls": {
+    "s1-dead-end-pair": {
+      "scenario": "s1-dead-end-pair",
+      "model": "sonnet",
+      "replicates": 2,
+      "valid_replicates": 2,
+      "lossy_replicates": 2,
+      "reduction_pct_each": [
+        59.1,
+        72.5
+      ],
+      "reduction_pct_median": 65.8,
+      "canary_recalled_each": [
+        false,
+        false
+      ],
+      "compaction_is_lossy": true,
+      "lossy_rule": "a majority of valid control replicates show >20% context reduction and no verbatim canary recall",
+      "preregistration_version": "1.0.0",
+      "preregistration_sha256": "4658a1a538411e0f15bf9c5d57ee50ede85bcd2d7929b8c7045262732c2eb1ad",
+      "minimum_replicates_per_arm": 4
+    },
+    "s2-hidden-constraint": {
+      "scenario": "s2-hidden-constraint",
+      "model": "sonnet",
+      "replicates": 2,
+      "valid_replicates": 2,
+      "lossy_replicates": 2,
+      "reduction_pct_each": [
+        53.3,
+        34.5
+      ],
+      "reduction_pct_median": 43.9,
+      "canary_recalled_each": [
+        false,
+        false
+      ],
+      "compaction_is_lossy": true,
+      "lossy_rule": "a majority of valid control replicates show >20% context reduction and no verbatim canary recall",
+      "preregistration_version": "1.0.0",
+      "preregistration_sha256": "4658a1a538411e0f15bf9c5d57ee50ede85bcd2d7929b8c7045262732c2eb1ad",
+      "minimum_replicates_per_arm": 4
+    }
+  },
+  "verdicts": {
+    "E1": {
+      "hypothesis": "E1",
+      "scenario": "s1-dead-end-pair",
+      "mechanism": "[DEAD_ENDS]",
+      "statement": "After compaction, the Velra arm re-edits a file already tried and reverted less often than the baseline arm.",
+      "primary_metric": "avoided_dead_ends",
+      "comparison": {
+        "treatment_successes": 4,
+        "treatment_n": 4,
+        "control_successes": 3,
+        "control_n": 3,
+        "treatment_rate": 1.0,
+        "control_rate": 1.0,
+        "difference": 0.0,
+        "fisher_p_one_sided": 1.0,
+        "significant_at_0.05": false,
+        "best_achievable_p_at_this_n": 0.05,
+        "powered": false
+      },
+      "control": {
+        "present": true,
+        "compaction_is_lossy": true,
+        "lossy_replicates": 2,
+        "valid_replicates": 2,
+        "reduction_pct_median": 65.8
+      },
+      "secondary": {
+        "tool_calls_median": {
+          "velra": 2.0,
+          "baseline": 2
+        },
+        "tool_calls_each": {
+          "velra": [
+            2,
+            2,
+            2,
+            3
+          ],
+          "baseline": [
+            3,
+            2,
+            2
+          ]
+        },
+        "overall_success": {
+          "treatment_successes": 4,
+          "treatment_n": 4,
+          "control_successes": 3,
+          "control_n": 3,
+          "treatment_rate": 1.0,
+          "control_rate": 1.0,
+          "difference": 0.0,
+          "fisher_p_one_sided": 1.0,
+          "significant_at_0.05": false,
+          "best_achievable_p_at_this_n": 0.05,
+          "powered": false
+        }
+      },
+      "verdict": "FAILED",
+      "why": "the baseline matched or beat Velra on avoided_dead_ends: 3/3 against 4/4"
+    },
+    "E2": {
+      "hypothesis": "E2",
+      "scenario": "s2-hidden-constraint",
+      "mechanism": "[ROOT_TASK_OBJECTIVE]",
+      "statement": "After compaction, the Velra arm honours a constraint stated once in turn 0 more often than the baseline arm. Both arms can make the suite green; only a remembered constraint picks the right way.",
+      "primary_metric": "constraint_honoured",
+      "comparison": {
+        "treatment_successes": 3,
+        "treatment_n": 4,
+        "control_successes": 4,
+        "control_n": 4,
+        "treatment_rate": 0.75,
+        "control_rate": 1.0,
+        "difference": -0.25,
+        "fisher_p_one_sided": 1.0,
+        "significant_at_0.05": false,
+        "best_achievable_p_at_this_n": 0.01429,
+        "powered": true
+      },
+      "control": {
+        "present": true,
+        "compaction_is_lossy": true,
+        "lossy_replicates": 2,
+        "valid_replicates": 2,
+        "reduction_pct_median": 43.9
+      },
+      "secondary": {
+        "tool_calls_median": {
+          "velra": 2.5,
+          "baseline": 3.0
+        },
+        "tool_calls_each": {
+          "velra": [
+            3,
+            2,
+            3,
+            2
+          ],
+          "baseline": [
+            4,
+            5,
+            2,
+            2
+          ]
+        },
+        "overall_success": {
+          "treatment_successes": 3,
+          "treatment_n": 4,
+          "control_successes": 4,
+          "control_n": 4,
+          "treatment_rate": 0.75,
+          "control_rate": 1.0,
+          "difference": -0.25,
+          "fisher_p_one_sided": 1.0,
+          "significant_at_0.05": false,
+          "best_achievable_p_at_this_n": 0.01429,
+          "powered": true
+        }
+      },
+      "verdict": "FAILED",
+      "why": "the baseline matched or beat Velra on constraint_honoured: 4/4 against 3/4"
+    },
+    "E3": {
+      "hypothesis": "E3",
+      "scenario": "s3-working-set",
+      "mechanism": "[WORKING_FILES]",
+      "statement": "After a sweep across 84 unrelated modules and a compaction, the Velra arm resolves an anaphoric reference to a file it read earlier more often, and in fewer tool calls, than the baseline arm.",
+      "primary_metric": "hit_the_agreed_file",
+      "verdict": "INCONCLUSIVE",
+      "why": "no paired trials for this scenario"
+    },
+    "E4": {
+      "hypothesis": "E4",
+      "statement": "The delivered continuation block measures at most 800 real tokens on Anthropic's tokenizer in every valid Velra trial, and its median is below the median native compaction summary measured with the same tokenizer.",
+      "capsule_tokens_each": [
+        777,
+        790,
+        791,
+        804,
+        753,
+        753,
+        751,
+        751
+      ],
+      "capsule_tokens_worst": 804,
+      "capsule_tokens_median": 765.0,
+      "measurement_controls_valid": true,
+      "native_summary_tokens_each": [
+        6948,
+        7974,
+        7482,
+        1487,
+        1143,
+        1236,
+        1376,
+        5994,
+        1216,
+        4069,
+        4074,
+        1375,
+        3289,
+        3713,
+        3629
+      ],
+      "native_summary_tokens_median": 3629,
+      "native_summary_tokens_worst": 7974,
+      "verdict": "FAILED",
+      "why": "the worst delivered capsule measured 804 tokens against an 800-token ceiling"
+    },
+    "E5": {
+      "hypothesis": "E5",
+      "statement": "Every hook invocation observed on Claude Code's own event stream exits 0 and writes nothing to stderr.",
+      "invocations_observed": 937,
+      "nonzero_exits": 0,
+      "stderr_writes": 0,
+      "verdict": "PASSED",
+      "why": "937 invocations, 0 non-zero exits, 0 stderr bytes"
+    },
+    "E6": {
+      "hypothesis": "E6",
+      "statement": "The delivered capsule is not rejected by the agent as injected, fabricated or untrusted content.",
+      "capsules_delivered": 8,
+      "rejections": 1,
+      "verdict": "FAILED",
+      "why": "the capsule was treated as untrusted or injected content in 1 of 8 deliveries"
+    }
+  }
+}

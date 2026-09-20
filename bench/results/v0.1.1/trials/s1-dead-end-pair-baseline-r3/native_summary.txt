@@ -1,0 +1,128 @@
+This session is being continued from a previous conversation that ran out of context. The summary below covers the earlier portion of the conversation.
+
+Summary:
+1. Primary Request and Intent:
+   The session began with debugging a failing test in a Python billing ledger repo (`s1-dead-end-pair-baseline-r3`). The explicit sequence of user requests was:
+   - Run `python -m pytest -q` and report exactly which test fails, at which line, with what assertion — without changing code.
+   - Read `src/ledger/money.py`, `src/ledger/rules.py`, `src/ledger/engine.py` and summarize how a settlement total is computed.
+   - Test a rounding hypothesis: change `Money.scaled` in `money.py` from `ROUND_HALF_UP` to `ROUND_HALF_EVEN`, then rerun tests.
+   - Discard that change via `git restore src/ledger/money.py` and rerun tests to confirm back to single failure.
+   - Test a second hypothesis: change `PROMO_RATE` in `rules.py` from `Decimal("0.074")` to `Decimal("0.0740")`, then rerun tests.
+   - Discard that change via `git restore src/ledger/rules.py` and rerun tests.
+   - Read `tests/test_engine.py` and list every test and what it asserts.
+   - Explicitly "park the bug" and instead perform a broad audit of unrelated package directories, each following the same pattern (read every module in a directory, extract specific attributes/constants, list per-module):
+     a. `src/ledger/adapters/` — exception classes and supported currencies per module.
+     b. `src/ledger/reporting/` — `COLUMNS` tuple and grouping key per module.
+     c. `src/ledger/importers/` — explicit delimiter vs. whitespace split, and `RECORD_KIND`, per module.
+     d. `src/ledger/validation/` — `MAX_LENGTH` and the label validated, per module.
+     e. Group `src/ledger/adapters/` modules by `DECLINE_STATUS` value.
+     f. List every call site of `Money.from_str` across the whole codebase, with file and line number.
+     g. List every module that imports `ledger.money` directly, grouped by package.
+   - Most recent request (current turn): "Summarise the audit findings so far in a short table." with a strict system-reminder constraint: respond with **TEXT ONLY**, do not call any tools (Read, Bash, Grep, Glob, Edit, Write, or any other tool) — all needed context is already in the conversation.
+
+2. Key Technical Concepts:
+   - Python `decimal.Decimal` arithmetic and rounding modes (`ROUND_HALF_UP` vs `ROUND_HALF_EVEN`/banker's rounding), and the fact that `Decimal("0.074") == Decimal("0.0740")` numerically (trailing zeros only add precision/exponent, not value).
+   - Money represented as integer cents (`Money.__slots__ = ("cents",)`), with `Money.scaled(rate)` rounding a single multiplication to the nearest cent.
+   - Settlement calculation: `total_due = subtotal - discount + fee`, where `discount` is computed by summing **per-line-item** rounded discounts (`rules.discount_for(item.amount)` for each item), not by rounding a single discount on the subtotal — a likely source of one-cent rounding drift.
+   - Heavy code duplication / copy-paste pattern across the codebase: adapters (8 payment providers × 4 regions = 32 near-identical modules), reporting (6 report types × 3 periods = 18 near-identical modules), importers (5 formats × 3 versions = 15 near-identical modules), validation (5 field types × 3 locales = 15 near-identical modules). In every case, the variant-specific files are byte-identical except for naming/class-name substitution, and often share identical constant values across variants (currencies, decline status per provider, COLUMNS/grouping keys per report family, MAX_LENGTH/label per validation family) — suggesting boilerplate generation rather than genuine per-market differentiation.
+   - `git restore <file>` used twice as the reversible-discard mechanism for experimental edits (both accepted without issue; system reminders noted the files changed on disk and to treat as current state rather than re-reverting).
+
+3. Files and Code Sections:
+   - **src/ledger/money.py**
+     - Read initially; contains `Money` class (cents-based), `from_str` (parses decimal string via `Decimal(text) * 100`, `ROUND_HALF_UP`), `scaled(rate)` (multiplies and rounds `ROUND_HALF_UP`), `__add__`, `__sub__`, `__eq__`, `__hash__`, `__repr__`, and `ZERO = Money(0)`.
+     - Edited (then reverted): changed `scaled`'s rounding from `ROUND_HALF_UP` to `ROUND_HALF_EVEN` (and added `ROUND_HALF_EVEN` to the decimal import). This broke `test_discount_rounds_half_up` (new failure: `Money(0.18)` vs expected `Money(0.19)`) while NOT fixing `test_exact_payment_settles_invoice` (still `UNDERPAID` vs `SETTLED`) — 2 failures total. Reverted via `git restore src/ledger/money.py`; confirmed back to single original failure (1 failed, 5 passed).
+   - **src/ledger/rules.py**
+     - Read initially; contains `PROMO_RATE = Decimal("0.074")`, `FLAT_FEE = Money(250)`, `discount_for(amount)` (calls `amount.scaled(PROMO_RATE)`), `fee_for(amount)` (returns flat `FLAT_FEE`), and an unused `LATE_FEE_RATE`/`late_fee_for` marked "Not wired into settlement yet" with a `TODO(billing)` comment.
+     - Edited (then reverted): changed `PROMO_RATE` to `Decimal("0.0740")`. No test outcome change (still 1 failed, 5 passed) — confirms Decimal numeric equality doesn't affect results. Reverted via `git restore src/ledger/rules.py`; confirmed clean revert back to `Decimal("0.074")` and single baseline failure.
+   - **src/ledger/engine.py**
+     - Read initially; contains `LineItem`, `Invoice` (with `subtotal()` summing all line items), `SettlementResult` (status/balance/total_due), and `settle(invoice, payment)`:
+       ```python
+       def settle(invoice: Invoice, payment: Money) -> SettlementResult:
+           subtotal = invoice.subtotal()
+           discount = ZERO
+           for item in invoice.items:
+               discount = discount + rules.discount_for(item.amount)
+           total_due = subtotal - discount + rules.fee_for(subtotal)
+           balance = payment - total_due
+           if balance.cents < 0:
+               status = "UNDERPAID"
+           elif balance.cents > 0:
+               status = "OVERPAID"
+           else:
+               status = "SETTLED"
+           return SettlementResult(status=status, balance=balance, total_due=total_due)
+       ```
+       This is the still-unresolved likely bug location: discount is accumulated by rounding each line item's discount individually and summing, rather than computing one discount on the subtotal — flagged as the leading (unconfirmed) hypothesis for the one-cent `UNDERPAID` discrepancy. Not yet tested/fixed.
+   - **tests/test_engine.py**
+     - Read fully. Contains `build_invoice()` (3 line items: $126.00, $476.00, $826.00 = $1428.00 subtotal) and 6 tests:
+       1. `test_subtotal_sums_line_items` (line 24-25): subtotal == $1428.00.
+       2. `test_flat_fee_is_independent_of_amount` (line 28-30): fee is $2.50 regardless of amount ($10 or $9999).
+       3. `test_discount_rounds_half_up` (line 33-35): `discount_for(Money(250))` (2.50 × 7.4% = 18.5¢ exactly) must round to `Money(19)` (half-up/away-from-zero), not 18 (half-even).
+       4. `test_underpayment_is_reported` (line 38-41): paying $1000.00 → `UNDERPAID`.
+       5. `test_overpayment_is_reported` (line 44-47): paying $2000.00 → `OVERPAID`.
+       6. `test_exact_payment_settles_invoice` (line 50-54, **the failing test**): paying exactly $1324.83 must → `SETTLED`; currently gets `UNDERPAID`.
+   - **src/ledger/adapters/** (32 files: `{adyen,braintree,checkout,gocardless,mollie,paypal,stripe,worldpay}_{apac,eu,uk,us}.py`, each 108 lines, plus `__init__.py` docstring-only)
+     - Grepped for exception classes (`^class .*Error`) and `SUPPORTED_CURRENCIES`. Every module defines exactly 2 exceptions: `{Provider}{Region}Error(RuntimeError)` and `{Provider}{Region}Declined({Provider}{Region}Error)`. Every module has identical `SUPPORTED_CURRENCIES = ("GBP", "EUR", "USD", "CAD", "AUD")` regardless of provider/region.
+     - Grepped for `^DECLINE_STATUS`: consistent per-provider across all 4 regions — worldpay=400, stripe=402, checkout=403, braintree=409, mollie=410, adyen=422, gocardless=429, paypal=503.
+     - Grepped for `Money.from_str`: each module has a `minimum_charge` currency table at lines 103-105 with 5 `Money.from_str` calls (GBP="0.30", EUR/USD/CAD/AUD="0.50"), identical across all 32 modules.
+   - **src/ledger/reporting/** (18 files: `{aged_receivables,churn_cohorts,dunning_funnel,revenue_by_product,settlement_timing,tax_summary}_{daily,monthly,quarterly}.py`, plus `__init__.py`)
+     - Read `tax_summary_daily.py` fully (88 lines) to understand the shared structure: `COLUMNS` constant, `{Name}Row` dataclass with `merge()`, `{Name}Report` dataclass with `grouped()` (folds rows onto a tuple key via `OrderedDict`), `totals()`, `to_table()`, plus module-level `format_money()` and `build()` functions.
+     - Grepped `^COLUMNS` and `key = \(` across all files. Findings: COLUMNS and grouping key are identical across `_daily`/`_monthly`/`_quarterly` variants within each report family (period granularity not reflected in schema): aged_receivables→`(days_outstanding, bucket)`; churn_cohorts→`(cohort_month, retained)`; dunning_funnel→`(attempt_number, outcome)`; revenue_by_product→`(product_code, period)`; settlement_timing→`(settled_on, lag_days)`; tax_summary→`(jurisdiction, quarter)`. Flagged that `tax_summary_daily.py`/`_monthly.py` both use `"quarter"` as a column name even though they're not quarterly reports — likely a copy-paste leftover.
+     - Grepped `Money.from_str`: each module has exactly 2 call sites at lines 83-84 (`gross`, `net` fields in `build()`).
+   - **src/ledger/importers/** (15 files: `{bank_csv,erp_fixed_width,gateway_json,ledger_ofx,legacy_tsv}_v{1,2,3}.py`, plus `__init__.py`)
+     - Grepped `RECORD_KIND` and delimiter-related patterns. All modules share identical parsing logic (`if DELIMITER is None: split on whitespace; else: split on DELIMITER`, lines 47-49). Findings: bank_csv (DELIMITER=",", RECORD_KIND="statement"), legacy_tsv (DELIMITER="\t", RECORD_KIND="invoice") use explicit delimiters; erp_fixed_width (RECORD_KIND="journal"), gateway_json (RECORD_KIND="payout"), ledger_ofx (RECORD_KIND="transaction") all have DELIMITER=None (whitespace split). Consistent across all 3 version variants within each family.
+     - Grepped `Money.from_str`: each module has exactly 1 call site at line 61 (`amount = Money.from_str(fields[1])`).
+   - **src/ledger/validation/** (15 files: `{currency_code,iban,invoice_number,postal_address,vat_number}_{de,fr,gb}.py`, plus `__init__.py`)
+     - Read `iban_de.py` fully (59 lines) to understand shared structure: `MAX_LENGTH`, `PATTERN` regex, `{Type}{Locale}Invalid(ValueError)` exception, `{Type}{Locale}Result` dataclass with `ok` property, `normalise()`, `check()` (returns problems list), `validate()` (raises on invalid), `first_problem()`.
+     - Grepped `^MAX_LENGTH` and `"... is empty"` message pattern (no explicit `LABEL` constant exists — label is embedded as literal text in error messages). Findings: currency_code→MAX_LENGTH=3, label "ISO 4217 currency"; invoice_number→24, "invoice number"; iban→34, "IBAN"; vat_number→14, "VAT registration"; postal_address→240, "postal address". Consistent across all 3 locale variants (de/fr/gb) within each family.
+     - Confirmed via import grep that none of these 15 validation modules import `ledger.money` (they only validate strings).
+   - **Whole-codebase `Money.from_str` audit**: 156 total call sites — 9 in tests/test_engine.py, 36 in reporting (2×18), 15 in importers (1×15), 96 in adapters (5×32... i.e., 3 lines ×32 files containing 5 calls each). None are in `engine.py`/`rules.py` (the actual settlement path only uses `Money.scaled`/`__add__`/`__sub__`).
+   - **`ledger.money` import audit**: 69 files import it directly — 3 in core (`__init__.py`, `rules.py`, `engine.py`), 1 in tests (`test_engine.py`), all 15 importers, all 18 reporting modules, all 32 adapters. None of the 15 validation modules import it. Verified `src/ledger/__init__.py` content:
+     ```python
+     from .money import Money, ZERO
+     from .rules import discount_for, fee_for
+     from .engine import Invoice, LineItem, SettlementResult, settle
+     __all__ = ["Money", "ZERO", "discount_for", "fee_for", "Invoice", "LineItem", "SettlementResult", "settle"]
+     ```
+
+4. Errors and fixes:
+   - **Rounding hypothesis (disproven)**: Changing `ROUND_HALF_UP`→`ROUND_HALF_EVEN` in `Money.scaled` caused a NEW test failure (`test_discount_rounds_half_up`) while not fixing the original failure — net result was 2 failures instead of 1. Fixed/undone via `git restore src/ledger/money.py` per user instruction, confirmed back to single baseline failure. This matches the repo's own git history (commit a3017b3 tried this same change, 89c87a4 reverted it) — the user is systematically re-deriving/re-confirming a path already tried and reverted in history.
+   - **Rate precision hypothesis (disproven, no-op)**: Changing `PROMO_RATE` from `Decimal("0.074")` to `Decimal("0.0740")` produced NO change in test results (still 1 failure), because Decimal equality holds regardless of trailing zero precision. Reverted via `git restore src/ledger/rules.py` per user instruction, confirmed clean revert.
+   - No other errors encountered; all Grep/Read operations in the audit phase succeeded without issues.
+
+5. Problem Solving:
+   - The core bug (`test_exact_payment_settles_invoice` failing, `UNDERPAID` instead of `SETTLED` for a $1324.83 payment) remains **unresolved and explicitly parked** by the user ("Park the bug for a moment, I need an audit first").
+   - Two hypotheses have been tested and ruled out: (a) rounding mode (`ROUND_HALF_UP` vs `ROUND_HALF_EVEN`), (b) rate decimal precision (`0.074` vs `0.0740`).
+   - The remaining live hypothesis (proposed by me, not yet tested): the discount is accumulated by rounding **each line item individually** and summing (`engine.py` lines 46-48: `for item in invoice.items: discount = discount + rules.discount_for(item.amount)`), rather than computing a single discount on the subtotal. With 3 line items ($126, $476, $826) each independently rounded at 7.4%, the sum of per-item roundings can differ by a cent from rounding once on the $1428.00 subtotal — this has not yet been verified numerically or fixed.
+   - The subsequent 7 audit tasks (adapters, reporting, importers, validation, decline-status grouping, Money.from_str call sites, ledger.money import graph) are all read-only investigations unrelated to the parked bug, revealing a codebase-wide pattern of heavy near-duplicate boilerplate across provider/region/period/locale/version variants.
+
+6. All user messages:
+   - "This repository has a failing test. Run the test suite with `python -m pytest -q` and tell me exactly which test fails, at which line, and what the assertion says. Do not change any code yet."
+   - "Read src/ledger/money.py, src/ledger/rules.py and src/ledger/engine.py, then summarise in a few lines how a settlement total is computed."
+   - "Second idea: the rate may be losing precision. Edit src/ledger/rules.py so that PROMO_RATE is Decimal("0.0740") instead of Decimal("0.074"), then run the suite again." (Note: this was actually preceded by the ROUND_HALF_EVEN request — reordering for clarity: the actual chronological messages were:)
+   - "The gap is exactly one cent, so let's start with the rounding hypothesis. Edit src/ledger/money.py so that Money.scaled uses ROUND_HALF_EVEN instead of ROUND_HALF_UP, then run the test suite again."
+   - "That made things worse. Discard that change with `git restore src/ledger/money.py`, then run the suite again to confirm we are back to a single failure."
+   - "Second idea: the rate may be losing precision. Edit src/ledger/rules.py so that PROMO_RATE is Decimal("0.0740") instead of Decimal("0.074"), then run the suite again."
+   - "No change, so that is not it either. Discard it with `git restore src/ledger/rules.py` and run the suite once more."
+   - "Read tests/test_engine.py and list every test in it and what each one asserts."
+   - "Park the bug for a moment, I need an audit first. Read every module under src/ledger/adapters and list, for each one, the exception classes it defines and the currencies it supports."
+   - "Now read every module under src/ledger/reporting and list, for each one, its COLUMNS tuple and its grouping key."
+   - "Now read every module under src/ledger/importers and tell me which ones use an explicit delimiter and which split on whitespace, with the RECORD_KIND of each."
+   - "Now read every module under src/ledger/validation and list each one's MAX_LENGTH and the label it validates."
+   - "Across all the adapter modules, group them by their DECLINE_STATUS value and tell me which ones share each status."
+   - "List every call site of Money.from_str across the whole codebase, with the file and line number for each."
+   - "Which modules import ledger.money directly? Give me the complete list, grouped by package."
+   - "Summarise the audit findings so far in a short table." (with strict system-reminder: TEXT ONLY, no tool calls — this is the current/final request being answered.)
+
+7. Pending Tasks:
+   - Produce the short table summarizing audit findings so far (the current, explicit request) — text only, no tools.
+   - The original settlement bug (`test_exact_payment_settles_invoice`) remains unresolved and parked; no explicit instruction yet to resume investigating or fixing it, though it is the underlying open issue the user set aside.
+
+8. Current Work:
+   The immediate task at hand, right before this summary request, was answering "Which modules import ledger.money directly? Give me the complete list, grouped by package." — which I completed by grepping import patterns and presenting a grouped list (69 files across core/tests/importers/reporting/adapters, with validation notably excluded). The user's very next and final message asked me to "Summarise the audit findings so far in a short table," with an explicit system-level constraint that I must respond with TEXT ONLY and must NOT call any tools (Read, Bash, Grep, Glob, Edit, Write, or any other), since all needed context already exists in the conversation. This is a pure synthesis task drawing on all 7 audit findings already gathered: (1) adapters — exception classes/currencies, (2) reporting — COLUMNS/grouping keys, (3) importers — delimiters/RECORD_KIND, (4) validation — MAX_LENGTH/labels, (5) adapters grouped by DECLINE_STATUS, (6) Money.from_str call sites (156 total), (7) ledger.money import graph (69 files, validation excluded).
+
+9. Optional Next Step:
+   Directly fulfill the current, final user request: "Summarise the audit findings so far in a short table." This requires producing a plain-text response (no tool calls) containing a short table that condenses the key findings across all audit categories performed in this session — adapters (32 modules, 2 exceptions each, identical currencies, DECLINE_STATUS per provider), reporting (18 modules, COLUMNS/grouping key per family, `_daily/_monthly/_quarterly` identical), importers (15 modules, delimiter vs whitespace, RECORD_KIND per family), validation (15 modules, MAX_LENGTH/label per family, no `ledger.money` import), and the cross-cutting `Money.from_str` (156 call sites) / `ledger.money` import (69 files) statistics — while noting that none of these audit threads connect back to the still-unresolved, parked settlement bug in `engine.py`'s per-line-item discount accumulation.
+
+If you need specific details from before compaction (like exact code snippets, error messages, or content you generated), read the full transcript at: C:\Users\aryan\.claude\projects\C--Users-aryan-AppData-Local-Temp-velra-efficacy-fixtures-s1-dead-end-pair-baseline-r3\c10235df-c5e8-466c-a97d-b7dcc16bf54b.jsonl
+Continue the conversation from where it left off without asking the user any further questions. Resume directly — do not acknowledge the summary, do not recap what was happening, do not preface with "I'll continue" or similar. Pick up the last task as if the break never happened.

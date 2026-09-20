@@ -1,0 +1,12 @@
+<VELRA_CONTINUATION v="1" checkpoint="ckpt_01M2MH9DTJ0FB6RXGM4YZWV0AF" captured="2026-09-16T07:18:22Z" trigger="manual">
+[CONTEXT]
+Velra is a local tool that recorded this task state from Claude Code tool events before the conversation was compacted. Entries are observations of tool activity. Links between an edit and a later test result are unconfirmed unless stated. Files on disk are the current source of truth for code.
+[ROOT_TASK_OBJECTIVE] (OBSERVED | user prompt | 12:48)
+This repository has a failing test. Run the test suite with `python -m pytest -q` and tell me exactly which test fails, at which line, and what the assertion says. Do not change any code yet.
+[LATEST_REQUEST] (OBSERVED | user prompt | 12:48)
+Summarise the audit findings so far in a short table.
+[STATUS]
+main @ 61351f2 | 0 edits this task | last test run: none
+[RECOVERY]
+Full detail for any section: `velra inspect --checkpoint ckpt_01M2MH9DTJ0FB6RXGM4YZWV0AF --section <dead-ends|failure|files|attempts>`
+</VELRA_CONTINUATION>

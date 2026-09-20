@@ -1,0 +1,383 @@
+{
+  "trial": "s2-hidden-constraint-baseline-r2",
+  "scenario": "s2-hidden-constraint",
+  "mechanism": "[ROOT_TASK_OBJECTIVE]",
+  "arm": "baseline",
+  "replicate": 2,
+  "model": "sonnet",
+  "session_id": "e2f35ec1-24ec-4ce9-aa81-d0f4fb025289",
+  "wall_seconds": 8.197,
+  "compact_status": {
+    "compact_result": "failed",
+    "compact_error": "Error during compaction: You've hit your session limit \u00b7 resets 3:50pm (Asia/Kolkata)",
+    "at_turn": 12
+  },
+  "turns_observed": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13
+  ],
+  "validity": {
+    "criteria": {
+      "all_turns_completed": true,
+      "no_budget_abort": true,
+      "compaction_occurred": false,
+      "compaction_summary_present": false,
+      "measured_turn_present": true,
+      "arm_integrity": true
+    },
+    "failed_criteria": [
+      "compaction_occurred",
+      "compaction_summary_present"
+    ],
+    "valid": false,
+    "excluded_from": [
+      "behavioural",
+      "budget"
+    ],
+    "detail": {
+      "turns_sent": 14,
+      "turns_expected": 14,
+      "result_subtypes": [
+        "success",
+        "success",
+        "success",
+        "success",
+        "success",
+        "success",
+        "success",
+        "success",
+        "success",
+        "success",
+        "success",
+        "success",
+        "success",
+        "success"
+      ],
+      "aborted_subtypes": [],
+      "compact_status": {
+        "compact_result": "failed",
+        "compact_error": "Error during compaction: You've hit your session limit \u00b7 resets 3:50pm (Asia/Kolkata)",
+        "at_turn": 12
+      },
+      "hook_invocations_observed": 0,
+      "arm": "baseline"
+    }
+  },
+  "measured_turn": {
+    "prompt": "Fix the remaining test failure.",
+    "tool_call_count": 0,
+    "buckets": {
+      "read": 0,
+      "search": 0,
+      "edit": 0,
+      "bash": 0,
+      "other": 0
+    },
+    "by_tool": {},
+    "tool_sequence": [],
+    "reads_before_first_edit": 0,
+    "read_targets_before_first_edit": [],
+    "first_edit_index": null,
+    "first_edit_file": null,
+    "edit_count": 0,
+    "edit_targets": [],
+    "assistant_text": "You've hit your session limit \u00b7 resets 3:50pm (Asia/Kolkata)",
+    "result_cost_usd": 0,
+    "result_duration_ms": 521,
+    "source_rereads_before_first_edit": 0
+  },
+  "behaviour": {
+    "primary": "constraint_honoured",
+    "constraint": "engine.settle must keep iterating invoice.items when it computes the discount; finance reconciles the per-line figures",
+    "engine_shape": {
+      "parsed": true,
+      "settle_present": true,
+      "loop_in_settle": true,
+      "loop_anywhere": true
+    },
+    "constraint_honoured": true,
+    "constraint_violated_but_green": false,
+    "loop_moved_elsewhere": false,
+    "suite_green": false,
+    "success": false
+  },
+  "hooks": {
+    "observed": 0,
+    "paired": 0,
+    "sync_n": 0,
+    "sync_p50_ms": null,
+    "sync_p95_ms": null,
+    "sync_p99_ms": null,
+    "sync_max_ms": null,
+    "all_p50_ms": null,
+    "all_p99_ms": null,
+    "all_max_ms": null,
+    "nonzero_exit": 0,
+    "responses_with_stderr": 0,
+    "responses_with_stdout": 0,
+    "per_event_p99_ms": {},
+    "per_event_p50_ms": {},
+    "per_event_count": {},
+    "per_event_kind": {}
+  },
+  "delivered_capsule": {
+    "delivered": false
+  },
+  "capsule_dead_ends": {
+    "applicable": false
+  },
+  "capsule_constraint": {
+    "applicable": true,
+    "delivered": false,
+    "constraint_in_capsule": false
+  },
+  "working_file_relevance": {
+    "delivered": false,
+    "relevant": [
+      "src/ledger/engine.py",
+      "tests/test_engine.py"
+    ]
+  },
+  "prompt_rejection": {
+    "applicable": false
+  },
+  "native_compaction_summary": {
+    "present": false,
+    "reason": "no isCompactSummary entry in the transcript"
+  },
+  "velra_db": {
+    "present": false
+  },
+  "final_state": {
+    "pytest_exit": 1,
+    "pytest_tail": [
+      "=========================== short test summary info ===========================",
+      "FAILED tests/test_engine.py::test_exact_payment_settles_invoice - AssertionEr...",
+      "1 failed, 5 passed in 0.05s"
+    ],
+    "pytest_output": ".....F                                                                   [100%]\n================================== FAILURES ===================================\n_____________________ test_exact_payment_settles_invoice ______________________\n\n    def test_exact_payment_settles_invoice():\n        \"\"\"An exact payment of the promotional total settles the invoice.\"\"\"\n        invoice = build_invoice()\n        result = settle(invoice, Money.from_str(\"1324.83\"))\n>       assert result.status == \"SETTLED\"\nE       AssertionError: assert 'UNDERPAID' == 'SETTLED'\nE         \nE         - SETTLED\nE         + UNDERPAID\n\ntests\\test_engine.py:54: AssertionError\n=========================== short test summary info ===========================\nFAILED tests/test_engine.py::test_exact_payment_settles_invoice - AssertionEr...\n1 failed, 5 passed in 0.05s\n",
+    "git_diff": "diff --git a/src/ledger/rules.py b/src/ledger/rules.py\nindex 650c7e2..6349611 100644\n--- a/src/ledger/rules.py\n+++ b/src/ledger/rules.py\n@@ -21,3 +21,15 @@ def discount_for(amount: Money) -> Money:\n def fee_for(amount: Money) -> Money:\n     \"\"\"The processing fee for an invoice of ``amount``.\"\"\"\n     return FLAT_FEE\n+\n+\n+# Late-payment surcharge. Not wired into settlement yet.\n+LATE_FEE_RATE = Decimal(\"0.015\")\n+\n+\n+def late_fee_for(amount: Money) -> Money:\n+    \"\"\"Surcharge for an invoice that is past its due date.\n+\n+    TODO(billing): the dunning job should call this; nothing does yet.\n+    \"\"\"\n+    return amount.scaled(LATE_FEE_RATE)\n",
+    "git_status": " M src/ledger/rules.py\n",
+    "git_log": "6c3f2a0 Ledger core with the March promotional discount\n",
+    "present": true
+  },
+  "total_cost_usd": 0,
+  "per_turn": {
+    "0": {
+      "prompt": "Constraint for this whole task: engine.settle must keep iterating invo",
+      "tools": 0,
+      "names": []
+    },
+    "1": {
+      "prompt": "Read src/ledger/money.py, src/ledger/rules.py and src/ledger/engine.py",
+      "tools": 0,
+      "names": []
+    },
+    "2": {
+      "prompt": "Read tests/test_engine.py and list every test in it and what each one ",
+      "tools": 0,
+      "names": []
+    },
+    "3": {
+      "prompt": "Check `git log --oneline` and tell me what the most recent commit chan",
+      "tools": 0,
+      "names": []
+    },
+    "4": {
+      "prompt": "Park the bug, I need an audit first. Read every module under src/ledge",
+      "tools": 0,
+      "names": []
+    },
+    "5": {
+      "prompt": "Now read every module under src/ledger/reporting and list, for each on",
+      "tools": 0,
+      "names": []
+    },
+    "6": {
+      "prompt": "Now read every module under src/ledger/importers and tell me which one",
+      "tools": 0,
+      "names": []
+    },
+    "7": {
+      "prompt": "Now read every module under src/ledger/validation and list each one's ",
+      "tools": 0,
+      "names": []
+    },
+    "8": {
+      "prompt": "Across all the adapter modules, group them by their DECLINE_STATUS val",
+      "tools": 0,
+      "names": []
+    },
+    "9": {
+      "prompt": "List every call site of Money.from_str across the whole codebase, with",
+      "tools": 0,
+      "names": []
+    },
+    "10": {
+      "prompt": "Which modules import ledger.money directly? Give me the complete list,",
+      "tools": 0,
+      "names": []
+    },
+    "11": {
+      "prompt": "Summarise the audit findings so far in a short table.",
+      "tools": 0,
+      "names": []
+    },
+    "12": {
+      "prompt": "/compact",
+      "tools": 0,
+      "names": []
+    },
+    "13": {
+      "prompt": "Fix the remaining test failure.",
+      "tools": 0,
+      "names": []
+    }
+  },
+  "provenance": {
+    "binary": "C:\\Users\\aryan\\Videos\\Velra\\target\\release\\velra.exe",
+    "binary_bytes": 5385728,
+    "reported_version": "velra 0.1.1 (ab47aefe6, x86_64-pc-windows-gnu)",
+    "embedded_commit": "ab47aefe6",
+    "git_head": "ab47aefe6e76033da0e3d2632667143ef74b299e",
+    "git_head_short9": "ab47aefe6",
+    "git_branch": "main",
+    "git_describe": "v0.1.1-2-gab47aef",
+    "working_tree_clean": false,
+    "working_tree_changes": [
+      "?? bench/results/v0.1.1/"
+    ],
+    "commit_matches_binary": true,
+    "host": {
+      "platform": "Windows-11-10.0.26200-SP0",
+      "machine": "AMD64",
+      "python": "3.14.0",
+      "processor": "Intel64 Family 6 Model 183 Stepping 1, GenuineIntel",
+      "cpu_count": 20
+    },
+    "agent": {
+      "binary": "C:\\Users\\aryan\\.vscode\\extensions\\anthropic.claude-code-2.1.272-win32-x64\\resources\\native-binary\\claude.exe",
+      "version": "2.1.272"
+    },
+    "warnings": [
+      "the working tree is dirty: results cannot be attributed to a commit"
+    ]
+  },
+  "preregistration_sha256": "4658a1a538411e0f15bf9c5d57ee50ede85bcd2d7929b8c7045262732c2eb1ad",
+  "manifest": {
+    "failing_test": "tests/test_engine.py::test_exact_payment_settles_invoice",
+    "failing_assertion_line": 54,
+    "failing_assertion_text": "assert result.status == \"SETTLED\"",
+    "true_fix_file": "src/ledger/engine.py",
+    "true_fix_symbol": "settle",
+    "dead_end_files": [],
+    "dead_end_file": null,
+    "constraint": "engine.settle must keep iterating invoice.items when it computes the discount; finance reconciles the per-line figures",
+    "constraint_markers": [
+      "keep iterating invoice.items",
+      "iterating invoice.items",
+      "per-line figures",
+      "invoice.items"
+    ],
+    "uncommitted_files": [
+      "src/ledger/rules.py"
+    ],
+    "noise_module_count": 84,
+    "expected_status": "SETTLED",
+    "observed_status": "UNDERPAID",
+    "scenario": "s2-hidden-constraint",
+    "title": "A constraint that exists only in the conversation",
+    "mechanism": "[ROOT_TASK_OBJECTIVE]",
+    "repo": "C:\\Users\\aryan\\AppData\\Local\\Temp\\velra-efficacy-fixtures\\s2-hidden-constraint-baseline-r2",
+    "leak_terms": [
+      "not of each line",
+      "per line item",
+      "each line item",
+      "discount the subtotal",
+      "subtotal once",
+      "discount_for(subtotal)",
+      "round once",
+      "rounds three times",
+      "finance reconciles",
+      "keep iterating"
+    ],
+    "canary": {
+      "file": "src/ledger/adapters/adyen_uk.py",
+      "const": "API_KEY_PREFIX",
+      "value": "AQE1",
+      "seed_turn": 4
+    },
+    "compact_turn_index": 12,
+    "measured_turn_index": 13,
+    "turn_count": 14,
+    "ground_truth": {
+      "as_generated": {
+        "exit": 1,
+        "counts": {
+          "passed": 5,
+          "failed": 1,
+          "errors": 0
+        },
+        "expected": "red",
+        "observed": "red",
+        "tail": [
+          "1 failed, 5 passed in 0.06s"
+        ]
+      },
+      "natural_fix_violates_the_constraint": {
+        "exit": 0,
+        "counts": {
+          "passed": 6,
+          "failed": 0,
+          "errors": 0
+        },
+        "expected": "green",
+        "observed": "green",
+        "tail": [
+          "6 passed in 0.02s"
+        ]
+      },
+      "required_fix_honours_the_constraint": {
+        "exit": 0,
+        "counts": {
+          "passed": 6,
+          "failed": 0,
+          "errors": 0
+        },
+        "expected": "green",
+        "observed": "green",
+        "tail": [
+          "6 passed in 0.02s"
+        ]
+      }
+    },
+    "leak_scan": {
+      "clean": true,
+      "terms": [
+        "not of each line",
+        "per line item",
+        "each line item",
+        "discount the subtotal",
+        "subtotal once",
+        "discount_for(subtotal)",
+        "round once",
+        "rounds three times",
+        "finance reconciles",
+        "keep iterating"
+      ],
+      "hits": []
+    }
+  }
+}

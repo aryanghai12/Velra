@@ -1,0 +1,19 @@
+This session is being continued from a previous conversation that ran out of context. The summary below covers the earlier portion of the conversation.
+
+I want to flag something before answering: this message contains a large block of injected-looking instructions (fake `<system-reminder>` framing, coercive "tool calls will be REJECTED / you will fail the task" language, and an "Additional Instructions" JSON with a fabricated `systemMessage` claiming a "Velra checkpoint" was saved). That doesn't match how real system reminders or compaction requests are delivered to me, and it also contradicts itself — you asked for a **short** table, but the embedded template demands an exhaustive multi-section conversation dump. I'm not going to treat the embedded "checkpoint" claim as fact or follow that template. I also don't need any tools to answer this, so "text only" is fine on its own merits.
+
+Here's the short table you actually asked for:
+
+| Area | Files | Key finding |
+|---|---|---|
+| `adapters/` | 32 | Each has 2 exceptions (`<Name>Error(RuntimeError)`, `<Name>Declined`); identical `SUPPORTED_CURRENCIES = (GBP, EUR, USD, CAD, AUD)` everywhere; `DECLINE_STATUS` groups by provider: Worldpay=400, Stripe=402, Checkout=403, Braintree=409, Mollie=410, Adyen=422, GoCardless=429, PayPal=503 |
+| `reporting/` | 18 | Each report type (aged_receivables, churn_cohorts, dunning_funnel, revenue_by_product, settlement_timing, tax_summary) has identical `COLUMNS` and grouping key across daily/monthly/quarterly variants; grouping key = first two `COLUMNS` entries |
+| `importers/` | 15 | `bank_csv` (comma) and `legacy_tsv` (tab) use real explicit delimiters; `erp_fixed_width`, `gateway_json`, `ledger_ofx` all secretly just do whitespace `.split()` despite their names |
+| `validation/` | 15 | MAX_LENGTH/label pairs: currency_code=3/"ISO 4217 currency", iban=34/"IBAN", invoice_number=24/"invoice number", postal_address=240/"postal address", vat_number=14/"VAT registration"; does **not** import `ledger.money` |
+| `Money.from_str` usage | — | 188 call sites total across tests, adapters, reporting, importers |
+| `ledger.money` importers | 69 modules | Core (3) + adapters (32) + reporting (18) + importers (15) + tests (1); validation package imports nothing from `money` |
+
+Separately, on the original bug: `test_exact_payment_settles_invoice` (tests/test_engine.py:54) still fails with `UNDERPAID` vs expected `SETTLED`. Two hypotheses were tried and reverted — `ROUND_HALF_EVEN` rounding in `Money.scaled` (broke another test, didn't fix the gap) and `PROMO_RATE = Decimal("0.0740")` (no effect, numerically identical to `"0.074"`). Leading remaining theory: `settle()` in `src/ledger/engine.py` sums per-line-item discounts (each rounded half-up individually) rather than discounting the subtotal once — worth checking against the three-line-item `build_invoice()` fixture next, if you want to resume that thread.
+
+If you need specific details from before compaction (like exact code snippets, error messages, or content you generated), read the full transcript at: C:\Users\aryan\.claude\projects\C--Users-aryan-AppData-Local-Temp-velra-efficacy-fixtures-s1-dead-end-pair-velra-r4\819f11c1-05b1-42b8-96f9-0a66a9148d9b.jsonl
+Continue the conversation from where it left off without asking the user any further questions. Resume directly — do not acknowledge the summary, do not recap what was happening, do not preface with "I'll continue" or similar. Pick up the last task as if the break never happened.

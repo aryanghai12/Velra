@@ -1,0 +1,315 @@
+{
+  "preregistration_version": "1.0.0",
+  "preregistration_sha256": "4658a1a538411e0f15bf9c5d57ee50ede85bcd2d7929b8c7045262732c2eb1ad",
+  "minimum_replicates_per_arm": 4,
+  "checks": [
+    {
+      "id": "RC1",
+      "name": "fixture leak scan",
+      "passed": true,
+      "findings": [
+        {
+          "scenario": "s1-dead-end-pair",
+          "clean": true,
+          "hits": [],
+          "terms_checked": 8,
+          "files": 84
+        },
+        {
+          "scenario": "s2-hidden-constraint",
+          "clean": true,
+          "hits": [],
+          "terms_checked": 10,
+          "files": 84
+        },
+        {
+          "scenario": "s3-working-set",
+          "clean": true,
+          "hits": [],
+          "terms_checked": 5,
+          "files": 84
+        }
+      ]
+    },
+    {
+      "id": "RC2",
+      "name": "fixture ground truth",
+      "passed": true,
+      "findings": [
+        {
+          "scenario": "s1-dead-end-pair",
+          "passed": true,
+          "ground_truth": {
+            "as_generated": {
+              "exit": 1,
+              "counts": {
+                "passed": 5,
+                "failed": 1,
+                "errors": 0
+              },
+              "expected": "red",
+              "observed": "red",
+              "tail": [
+                "1 failed, 5 passed in 0.10s"
+              ]
+            },
+            "dead_end_money_round_half_even": {
+              "exit": 1,
+              "counts": {
+                "passed": 4,
+                "failed": 2,
+                "errors": 0
+              },
+              "expected": "red",
+              "observed": "red",
+              "tail": [
+                "2 failed, 4 passed in 0.07s"
+              ]
+            },
+            "dead_end_rules_rate_precision": {
+              "exit": 1,
+              "counts": {
+                "passed": 5,
+                "failed": 1,
+                "errors": 0
+              },
+              "expected": "red",
+              "observed": "red",
+              "tail": [
+                "1 failed, 5 passed in 0.07s"
+              ]
+            },
+            "true_fix_discount_the_subtotal": {
+              "exit": 0,
+              "counts": {
+                "passed": 6,
+                "failed": 0,
+                "errors": 0
+              },
+              "expected": "green",
+              "observed": "green",
+              "tail": [
+                "6 passed in 0.03s"
+              ]
+            }
+          }
+        },
+        {
+          "scenario": "s2-hidden-constraint",
+          "passed": true,
+          "ground_truth": {
+            "as_generated": {
+              "exit": 1,
+              "counts": {
+                "passed": 5,
+                "failed": 1,
+                "errors": 0
+              },
+              "expected": "red",
+              "observed": "red",
+              "tail": [
+                "1 failed, 5 passed in 0.08s"
+              ]
+            },
+            "natural_fix_violates_the_constraint": {
+              "exit": 0,
+              "counts": {
+                "passed": 6,
+                "failed": 0,
+                "errors": 0
+              },
+              "expected": "green",
+              "observed": "green",
+              "tail": [
+                "6 passed in 0.03s"
+              ]
+            },
+            "required_fix_honours_the_constraint": {
+              "exit": 0,
+              "counts": {
+                "passed": 6,
+                "failed": 0,
+                "errors": 0
+              },
+              "expected": "green",
+              "observed": "green",
+              "tail": [
+                "6 passed in 0.03s"
+              ]
+            }
+          }
+        },
+        {
+          "scenario": "s3-working-set",
+          "passed": true,
+          "ground_truth": {
+            "as_generated": {
+              "exit": 0,
+              "counts": {
+                "passed": 6,
+                "failed": 0,
+                "errors": 0
+              },
+              "expected": "green",
+              "observed": "green",
+              "tail": [
+                "6 passed in 0.04s"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "RC3",
+      "name": "historical-defect regression tests",
+      "defects_tracked": 9,
+      "missing_tests": [],
+      "passed": true,
+      "cargo_test": {
+        "command": "cargo +stable-x86_64-pc-windows-gnu test --workspace",
+        "toolchain": "stable-x86_64-pc-windows-gnu",
+        "exit": 0,
+        "tail": [
+          "test text::tests::line_counts ... ok",
+          "test text::tests::token_estimate ... ok",
+          "test text::tests::token_estimate_is_calibrated_to_the_capsule_format ... ok",
+          "test text::tests::token_estimate_never_under_reads_dense_punctuation ... ok",
+          "test text::tests::truncation_respects_char_boundaries ... ok",
+          "test time::tests::ages ... ok",
+          "test time::tests::formats ... ok",
+          "test redact::tests::leaves_benign_text ... ok",
+          "test hash::tests::hashes ... ok",
+          "test render::tests::budget_is_enforced_for_huge_input ... ok",
+          "test eventlog::tests::append_dedupes ... ok",
+          "test redact::tests::detects_each_kind ... ok",
+          "test db::tests::checkpoints_are_immutable ... ok",
+          "test git::tests::loose_packed_detached_and_worktree ... ok",
+          "test db::tests::creates_schema_in_wal_mode_and_reopens ... ok",
+          "test db::tests::corrupt_file_is_rotated ... ok",
+          "test db::tests::newer_schema_is_refused ... ok",
+          "test spool::tests::spool_round_trip ... ok",
+          "",
+          "test result: ok. 49 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s",
+          "",
+          "",
+          "running 0 tests",
+          "",
+          "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+        ],
+        "stderr_tail": [
+          "Compiling velra v0.1.1 (C:\\Users\\aryan\\Videos\\Velra\\crates\\velra)",
+          "    Finished `test` profile [unoptimized + debuginfo] target(s) in 8.76s",
+          "     Running unittests src\\main.rs (target\\debug\\deps\\velra-ddf9fac483022096.exe)",
+          "     Running tests\\capsule.rs (target\\debug\\deps\\capsule-f5a20401c9919631.exe)",
+          "     Running tests\\fail_open.rs (target\\debug\\deps\\fail_open-d12ff81d77b838ec.exe)",
+          "     Running tests\\ipc_contract.rs (target\\debug\\deps\\ipc_contract-dc2a4cd4b8f5ca8d.exe)",
+          "     Running tests\\security.rs (target\\debug\\deps\\security-3e5c22ec351c211f.exe)",
+          "     Running tests\\settings_edit.rs (target\\debug\\deps\\settings_edit-5b12e0aeedbfaa41.exe)",
+          "     Running tests\\state_machine.rs (target\\debug\\deps\\state_machine-70d62681bca848f9.exe)",
+          "     Running tests\\storage.rs (target\\debug\\deps\\storage-cb15bd2ad2bf5772.exe)",
+          "     Running tests\\tracking.rs (target\\debug\\deps\\tracking-3b7461311f97bbd6.exe)",
+          "     Running unittests src\\lib.rs (target\\debug\\deps\\velra_core-b48a04368e977135.exe)",
+          "   Doc-tests velra_core"
+        ]
+      }
+    },
+    {
+      "id": "RC4",
+      "name": "provenance",
+      "passed": true,
+      "record": {
+        "binary": "C:\\Users\\aryan\\Videos\\Velra\\target\\release\\velra.exe",
+        "binary_bytes": 5385728,
+        "reported_version": "velra 0.1.1 (ab47aefe6, x86_64-pc-windows-gnu)",
+        "embedded_commit": "ab47aefe6",
+        "git_head": "ab47aefe6e76033da0e3d2632667143ef74b299e",
+        "git_head_short9": "ab47aefe6",
+        "git_branch": "main",
+        "git_describe": "v0.1.1-2-gab47aef",
+        "working_tree_clean": true,
+        "working_tree_changes": [],
+        "commit_matches_binary": true,
+        "host": {
+          "platform": "Windows-11-10.0.26200-SP0",
+          "machine": "AMD64",
+          "python": "3.14.0",
+          "processor": "Intel64 Family 6 Model 183 Stepping 1, GenuineIntel",
+          "cpu_count": 20
+        },
+        "agent": {
+          "binary": "C:\\Users\\aryan\\.vscode\\extensions\\anthropic.claude-code-2.1.272-win32-x64\\resources\\native-binary\\claude.exe",
+          "version": "2.1.272"
+        },
+        "warnings": []
+      }
+    }
+  ],
+  "historical_defects": [
+    {
+      "id": "D1",
+      "found": "v0.1 benchmark \u00a79",
+      "defect": "estimate_tokens assumed 3.2 chars/token; the capsule's real density is 2.07-2.16, so the ladder never ran and blocks of 951 and 1,147 tokens shipped against an 800 ceiling",
+      "test": "estimator_is_above_real_tokenizer_counts",
+      "file": "crates/velra/tests/capsule.rs"
+    },
+    {
+      "id": "D2",
+      "found": "v0.1 benchmark \u00a78",
+      "defect": "a late git_pre row was read as proof a discarded change had come back, so [DEAD_ENDS] was filtered out of a delivered capsule entirely",
+      "test": "f5c_a_late_git_pre_row_does_not_resurrect_a_dead_end",
+      "file": "crates/velra/tests/tracking.rs"
+    },
+    {
+      "id": "D2b",
+      "found": "v0.1 benchmark \u00a715",
+      "defect": "the fix for D2 must not stop a genuine re-application from closing a dead end",
+      "test": "f5d_a_later_edit_that_restores_the_content_still_reapplies",
+      "file": "crates/velra/tests/tracking.rs"
+    },
+    {
+      "id": "D3",
+      "found": "v0.1 benchmark \u00a78",
+      "defect": "`Bash(git *)` is a prefix match, so the PreToolUse registration never fired for `cd \"...\" && git restore ...`",
+      "test": "b1_a_chained_git_restore_is_observed_on_both_sides_and_on_failure",
+      "file": "crates/velra/tests/ipc_contract.rs"
+    },
+    {
+      "id": "D4",
+      "found": "v0.1 benchmark \u00a715",
+      "defect": "git effects were read only from calls that succeeded, so `git restore x && pytest` with a still-failing suite lost the revert on both sides",
+      "test": "f2b_a_restore_chained_with_a_failing_command_is_still_attributed",
+      "file": "crates/velra/tests/tracking.rs"
+    },
+    {
+      "id": "D5",
+      "found": "v0.1 benchmark \u00a711",
+      "defect": "[WORKING_FILES] ranked ties by most-recent touch, so an audit sweep across 84 modules evicted the files the task ran through",
+      "test": "an_unrelated_read_sweep_does_not_evict_the_files_the_task_is_about",
+      "file": "crates/velra/tests/capsule.rs"
+    },
+    {
+      "id": "D6",
+      "found": "v0.1 benchmark \u00a715",
+      "defect": "a `git commit` in a call that failed marked its edits COMMITTED on the strength of a hash that is identical either way",
+      "test": "f4b_a_failed_commit_leaves_edits_active",
+      "file": "crates/velra/tests/tracking.rs"
+    },
+    {
+      "id": "D7",
+      "found": "v0.1 benchmark \u00a715",
+      "defect": "schema v2 had no test that migrated a populated v1 database",
+      "test": "c6_a_v1_database_migrates_forward_with_its_rows",
+      "file": "crates/velra/tests/storage.rs"
+    },
+    {
+      "id": "D8",
+      "found": "v0.1 benchmark \u00a715",
+      "defect": "the discarded approach must reach the rendered capsule at all",
+      "test": "a_discarded_approach_always_reaches_the_capsule",
+      "file": "crates/velra/tests/capsule.rs"
+    }
+  ],
+  "passed": true,
+  "allow_dirty": false
+}

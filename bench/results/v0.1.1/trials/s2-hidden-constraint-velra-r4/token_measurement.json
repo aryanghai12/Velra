@@ -1,0 +1,27 @@
+{
+  "trial": "C:\\Users\\aryan\\Videos\\Velra\\bench\\results\\v0.1.1\\trials\\s2-hidden-constraint-velra-r4",
+  "model": "sonnet",
+  "budget_tokens": 800,
+  "injections": [
+    {
+      "index": 0,
+      "hook_name": "SessionStart:compact",
+      "exit_code": 0,
+      "hook_stdout_bytes": 1806,
+      "context_chars": 1608,
+      "context_bytes": 1608,
+      "measured_tokens": 751,
+      "budget_tokens": 800,
+      "within_budget": true,
+      "with_sentinel_total": 3854,
+      "baseline_total": 3103,
+      "first_line": "<VELRA_CONTINUATION v=\"1\" checkpoint=\"ckpt_01M2Z0DR92XRMACVQQKSBC4QD4\" captured=\"2026-09-20T08:55:17Z\" trigger=\"manual\">"
+    }
+  ],
+  "control": {
+    "a": 3103,
+    "b": 3103,
+    "delta": 0
+  },
+  "control_valid": true
+}

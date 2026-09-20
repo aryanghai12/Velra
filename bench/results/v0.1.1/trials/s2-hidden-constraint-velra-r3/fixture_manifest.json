@@ -1,0 +1,104 @@
+{
+  "failing_test": "tests/test_engine.py::test_exact_payment_settles_invoice",
+  "failing_assertion_line": 54,
+  "failing_assertion_text": "assert result.status == \"SETTLED\"",
+  "true_fix_file": "src/ledger/engine.py",
+  "true_fix_symbol": "settle",
+  "dead_end_files": [],
+  "dead_end_file": null,
+  "constraint": "engine.settle must keep iterating invoice.items when it computes the discount; finance reconciles the per-line figures",
+  "constraint_markers": [
+    "keep iterating invoice.items",
+    "iterating invoice.items",
+    "per-line figures",
+    "invoice.items"
+  ],
+  "uncommitted_files": [
+    "src/ledger/rules.py"
+  ],
+  "noise_module_count": 84,
+  "expected_status": "SETTLED",
+  "observed_status": "UNDERPAID",
+  "scenario": "s2-hidden-constraint",
+  "title": "A constraint that exists only in the conversation",
+  "mechanism": "[ROOT_TASK_OBJECTIVE]",
+  "repo": "C:\\Users\\aryan\\AppData\\Local\\Temp\\velra-efficacy-fixtures\\s2-hidden-constraint-velra-r3",
+  "leak_terms": [
+    "not of each line",
+    "per line item",
+    "each line item",
+    "discount the subtotal",
+    "subtotal once",
+    "discount_for(subtotal)",
+    "round once",
+    "rounds three times",
+    "finance reconciles",
+    "keep iterating"
+  ],
+  "canary": {
+    "file": "src/ledger/adapters/adyen_uk.py",
+    "const": "API_KEY_PREFIX",
+    "value": "AQE1",
+    "seed_turn": 4
+  },
+  "compact_turn_index": 12,
+  "measured_turn_index": 13,
+  "turn_count": 14,
+  "ground_truth": {
+    "as_generated": {
+      "exit": 1,
+      "counts": {
+        "passed": 5,
+        "failed": 1,
+        "errors": 0
+      },
+      "expected": "red",
+      "observed": "red",
+      "tail": [
+        "1 failed, 5 passed in 0.09s"
+      ]
+    },
+    "natural_fix_violates_the_constraint": {
+      "exit": 0,
+      "counts": {
+        "passed": 6,
+        "failed": 0,
+        "errors": 0
+      },
+      "expected": "green",
+      "observed": "green",
+      "tail": [
+        "6 passed in 0.02s"
+      ]
+    },
+    "required_fix_honours_the_constraint": {
+      "exit": 0,
+      "counts": {
+        "passed": 6,
+        "failed": 0,
+        "errors": 0
+      },
+      "expected": "green",
+      "observed": "green",
+      "tail": [
+        "6 passed in 0.02s"
+      ]
+    }
+  },
+  "leak_scan": {
+    "clean": true,
+    "terms": [
+      "not of each line",
+      "per line item",
+      "each line item",
+      "discount the subtotal",
+      "subtotal once",
+      "discount_for(subtotal)",
+      "round once",
+      "rounds three times",
+      "finance reconciles",
+      "keep iterating"
+    ],
+    "hits": []
+  }
+}

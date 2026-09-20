@@ -23,6 +23,19 @@
 /bench/results/v0.1.1/trials/*/transcript.jsonl
 /bench/results/v0.1.1/trials/*/velra_home/
 /bench/results/v0.1.1/fixtures/
+# Trials the resume moved aside are still trials: same rule for their raw
+# captures, which is where most of the run's megabytes ended up.
+/bench/results/v0.1.1/quarantine/*/*/stream.jsonl
+/bench/results/v0.1.1/quarantine/*/*/transcript.jsonl
+/bench/results/v0.1.1/quarantine/*/*/velra_home/
+# The v0.1.2 re-run writes into its own tree on the same terms.
+/bench/results/v0.1.2/trials/*/stream.jsonl
+/bench/results/v0.1.2/trials/*/transcript.jsonl
+/bench/results/v0.1.2/trials/*/velra_home/
+/bench/results/v0.1.2/quarantine/*/*/stream.jsonl
+/bench/results/v0.1.2/quarantine/*/*/transcript.jsonl
+/bench/results/v0.1.2/quarantine/*/*/velra_home/
+/bench/results/v0.1.2/fixtures/
 /bench/results/post-tool-use-*.json
 /bench/results/pre-tool-use-*.json
 /bench/results/pre-compact.json
@@ -55,6 +68,7 @@
 *.log
 !/bench/results/trials/*/velra_debug.log
 !/bench/results/v0.1.1/trials/*/velra_debug.log
+!/bench/results/v0.1.2/trials/*/velra_debug.log
 
 # Credentials and key material. Nothing here is tracked and nothing should be:
 # Velra's redaction treats these paths as sensitive at runtime too (§J2).

@@ -1,0 +1,9 @@
+$ velra enable
+exit=0
+✓ Velra enabled for Claude Code.
+  Settings: C:\Users\aryan\.claude\settings.json  (backup: C:\Users\aryan\Videos\Velra\bench\results\v0.1.1\trials\s1-dead-end-pair-velra-r2\velra_home\backups\settings.json.20260916T105747Z.bak)
+
+Nothing else required. Keep coding normally.
+Tip: run `velra inspect` any time to see what would survive a /compact.
+
+
