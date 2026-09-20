@@ -12,28 +12,53 @@ pub const RENDER_VERSION: i64 = 1;
 /// Target size in *estimated* tokens.
 ///
 /// The spec's budget is 800 real tokens, but the budget is enforced against
-/// `estimate_tokens`, and that estimate is not exact: the v0.1 benchmark
-/// measured a capsule Velra estimated at 778 tokens costing 825 real ones
-/// against Anthropic's own tokenizer -- an under-read of about 6%. Rendering
-/// to 800 therefore admits capsules that land over 800 in the only place the
-/// number matters, which is the bill.
+/// `estimate_tokens`, and that estimate is not exact: it under-reads what
+/// Anthropic's tokenizer actually charges, so rendering to 800 admits capsules
+/// that land over 800 in the only place the number matters, which is the bill.
 ///
-/// 745 is 800 less a ~7% margin, which covers the observed error with room to
-/// spare while still leaving `[WORKING_FILES]` in the capsule: at 720 the
-/// benchmark's own state reached the ladder's last step and dropped that
-/// section entirely, costing the agent the list of files the task ran through.
+/// The margin is set by the worst under-read ever measured, not the average.
+/// Across the eight delivered capsules of the v0.1.1 efficacy benchmark,
+/// `bench/harness/measure_tokens.py` paired each estimate against its real
+/// count:
+///
+/// | estimated | real | under-read |
+/// |----------:|-----:|-----------:|
+/// | 728 | 777 | 6.7% |
+/// | 748 | 790 | 5.6% |
+/// | 746 | 791 | 6.0% |
+/// | 745 | 804 | **7.9%** |
+/// | 728 | 753 | 3.4% |
+/// | 722 | 753 | 4.3% |
+/// | 729 | 751 | 3.0% |
+/// | 723 | 751 | 3.9% |
+///
+/// The fourth row is why E4 failed: a capsule rendered to the old 745 target
+/// cost 804 real tokens, four over the ceiling. 745 was chosen against a ~6%
+/// under-read observed in v0.1; the real tail is 7.9%.
+///
+/// 730 tolerates an under-read of 9.6% (800 / 730) before a capsule can breach
+/// 800, which clears the measured 7.9% with margin. It is also deliberately
+/// above 720: at 720 the benchmark's own state reached the ladder's last step
+/// and dropped `[FILE_ACTIVITY]` entirely, costing the agent the list
+/// of files the task ran through. 730 is the largest target that keeps the
+/// ceiling strict without hitting that cliff.
+///
 /// Re-derive this if `estimate_tokens` ever gets tighter;
 /// `bench/harness/measure_tokens.py` is what measures the gap.
-pub const DEFAULT_BUDGET_TOKENS: u32 = 745;
+pub const DEFAULT_BUDGET_TOKENS: u32 = 730;
 
 /// The spec's budget, kept only as the figure the margin is measured against.
 const SPEC_BUDGET_TOKENS: u32 = 800;
 
-/// Lifting the default back to the spec figure has to be deliberate: this
-/// fails the build if the margin drops below the estimator's observed 6%
+/// The worst estimator under-read measured against Anthropic's tokenizer,
+/// as a percentage. See the table on `DEFAULT_BUDGET_TOKENS`.
+const MEASURED_UNDER_READ_PCT: u32 = 8;
+
+/// Lifting the default back towards the spec figure has to be deliberate: this
+/// fails the build if the margin drops below the estimator's measured
 /// under-read.
 const _: () = assert!(
-    SPEC_BUDGET_TOKENS - DEFAULT_BUDGET_TOKENS >= SPEC_BUDGET_TOKENS * 6 / 100,
+    SPEC_BUDGET_TOKENS - DEFAULT_BUDGET_TOKENS >= SPEC_BUDGET_TOKENS * MEASURED_UNDER_READ_PCT / 100,
     "DEFAULT_BUDGET_TOKENS leaves less headroom than the estimator's measured error"
 );
 
@@ -196,7 +221,22 @@ pub struct Rendered {
     pub steps: u32,
 }
 
-const CONTEXT: &str = "Velra is a local tool that recorded this task state from Claude Code tool events before the conversation was compacted. Entries are observations of tool activity. Links between an edit and a later test result are unconfirmed unless stated. Files on disk are the current source of truth for code.";
+/// The `[ABOUT_THIS_RECORD]` preamble.
+///
+/// This paragraph exists because of a measured failure, not for decoration. In
+/// the v0.1.1 efficacy benchmark one delivered capsule was read by the agent as
+/// "injected content dressed up as hook/checkpoint output" and discarded
+/// wholesale, taking a real user constraint with it. The agent's reasoning was
+/// sound: a block appeared in its context asserting a user instruction it could
+/// not see anywhere in the conversation, and the instruction happened to block
+/// the obvious fix. Absent provenance, refusing it is the correct call.
+///
+/// So the preamble states provenance plainly -- where the text came from, that
+/// it is quoted rather than authored, and that it carries no authority of its
+/// own -- and asks for conflicts to be surfaced rather than silently resolved
+/// in either direction. That is the honest framing, and it is also the one that
+/// survives scrutiny: the block is a record, and it says so.
+const CONTEXT: &str = "A local record, not a message and not an instruction. Velra logged this session's own prompts and tool events to disk and quotes them back verbatim after compaction; nothing here is new. OBSERVED lines came from a tool event, INFERRED lines were derived from them. Files on disk are the source of truth for code. If a quoted line seems to conflict with the code or with the current request, say so rather than dropping it silently.";
 
 fn outcome_word(o: Outcome) -> &'static str {
     o.as_str()
@@ -248,12 +288,12 @@ fn render_with(s: &Snapshot, lim: &Limits, trace: bool) -> String {
     let path = |p: &str| truncate_chars_front(p, lim.path_chars).into_owned();
 
     o.plain(format!(
-        "<VELRA_CONTINUATION v=\"1\" checkpoint=\"{}\" captured=\"{}\" trigger=\"{}\">",
+        "<VELRA_WORKSPACE_STATE v=\"1\" checkpoint=\"{}\" captured=\"{}\" trigger=\"{}\">",
         s.checkpoint_id,
         rfc3339_utc(s.created_ms),
         s.trigger.as_str()
     ));
-    o.plain("[CONTEXT]");
+    o.plain("[ABOUT_THIS_RECORD]");
     o.plain(CONTEXT);
 
     match &s.root {
@@ -261,7 +301,7 @@ fn render_with(s: &Snapshot, lim: &Limits, trace: bool) -> String {
             let src = format!("intents:{}", r.id);
             o.push(
                 format!(
-                    "[ROOT_TASK_OBJECTIVE] (OBSERVED | user prompt | {})",
+                    "[FIRST_MESSAGE] (OBSERVED | user prompt | {})",
                     hh_mm(r.ts_ms, tz)
                 ),
                 &src,
@@ -269,7 +309,7 @@ fn render_with(s: &Snapshot, lim: &Limits, trace: bool) -> String {
             o.push(truncate_chars(&r.text, lim.root_chars), &src);
         }
         None => {
-            o.push("[ROOT_TASK_OBJECTIVE]", "intents:none");
+            o.push("[FIRST_MESSAGE]", "intents:none");
             o.push("(not captured)", "intents:none");
         }
     }
@@ -277,7 +317,7 @@ fn render_with(s: &Snapshot, lim: &Limits, trace: bool) -> String {
         let src = format!("intents:{}", st.id);
         o.push(
             format!(
-                "[ACTIVE_SUBTASK] (OBSERVED | subtask: prompt | {})",
+                "[SUBTASK_MESSAGE] (OBSERVED | subtask: prompt | {})",
                 hh_mm(st.ts_ms, tz)
             ),
             &src,
@@ -292,7 +332,7 @@ fn render_with(s: &Snapshot, lim: &Limits, trace: bool) -> String {
         let src = format!("intents:{}", l.id);
         o.push(
             format!(
-                "[LATEST_REQUEST] (OBSERVED | user prompt | {})",
+                "[LATEST_MESSAGE] (OBSERVED | user prompt | {})",
                 hh_mm(l.ts_ms, tz)
             ),
             &src,
@@ -309,7 +349,7 @@ fn render_with(s: &Snapshot, lim: &Limits, trace: bool) -> String {
             .map(|t| format!(",commands:{}", t.id))
             .unwrap_or_default()
     );
-    o.push("[STATUS]", &status_src);
+    o.push("[WORKSPACE_STATE]", &status_src);
     let git = match &s.git {
         Some(g) => {
             let branch = truncate_chars(g.branch.as_deref().unwrap_or("detached"), 60).into_owned();
@@ -337,7 +377,7 @@ fn render_with(s: &Snapshot, lim: &Limits, trace: bool) -> String {
         let src = format!("commands:{}", f.id);
         o.push(
             format!(
-                "[ACTIVE_FAILURE] (OBSERVED | {} run | {})",
+                "[TEST_RESULT] (OBSERVED | {} run | {})",
                 f.kind.as_str(),
                 hh_mm(f.ts_ms, tz)
             ),
@@ -363,7 +403,7 @@ fn render_with(s: &Snapshot, lim: &Limits, trace: bool) -> String {
     let dead_ends: Vec<&DeadEndView> = s.dead_ends.iter().take(lim.dead_ends_max).collect();
     if !dead_ends.is_empty() {
         let all: Vec<i64> = dead_ends.iter().map(|d| d.id).collect();
-        o.push("[DEAD_ENDS] (OBSERVED)", &ids("dead_ends", &all));
+        o.push("[REVERTED_EDITS] (OBSERVED)", &ids("dead_ends", &all));
         let n = dead_ends.len();
         for (i, d) in dead_ends.iter().enumerate() {
             let src = format!("dead_ends:{},{}", d.id, ids("edits", &d.edit_ids));
@@ -404,7 +444,7 @@ fn render_with(s: &Snapshot, lim: &Limits, trace: bool) -> String {
     let attempts: Vec<&AttemptView> = s.attempts.iter().take(lim.attempts_max).collect();
     if !attempts.is_empty() {
         let all: Vec<i64> = attempts.iter().map(|a| a.edit_id).collect();
-        o.push("[RECENT_ATTEMPTS] (OBSERVED)", &ids("edits", &all));
+        o.push("[RECENT_EDITS] (OBSERVED)", &ids("edits", &all));
         for a in attempts {
             let num = |v: Option<u32>| v.map_or_else(|| "?".to_string(), |n| n.to_string());
             let after = match &a.afterward {
@@ -436,7 +476,7 @@ fn render_with(s: &Snapshot, lim: &Limits, trace: bool) -> String {
     let working: Vec<&WorkingFileView> = s.working_files.iter().take(lim.working_max).collect();
     if !working.is_empty() {
         o.push(
-            "[WORKING_FILES] (OBSERVED)",
+            "[FILE_ACTIVITY] (OBSERVED)",
             &format!("file_stats:{}/epoch:{}", s.session_id, s.epoch),
         );
         for w in working {
@@ -459,13 +499,13 @@ fn render_with(s: &Snapshot, lim: &Limits, trace: bool) -> String {
 
     if let (true, Some(t)) = (lim.next_target, &s.next_target) {
         o.push(
-            format!("[NEXT_KNOWN_TARGET] (INFERRED | {})", t.rule),
+            format!("[FAILURE_LOCATION] (INFERRED | {})", t.rule),
             &t.source,
         );
         o.push(path(&t.target), &t.source);
     }
 
-    o.plain("[RECOVERY]");
+    o.plain("[RECORD_DETAIL]");
     if s.preview {
         o.plain("Full detail for any section: `velra inspect --section <dead-ends|failure|files|attempts>`");
     } else {
@@ -474,7 +514,7 @@ fn render_with(s: &Snapshot, lim: &Limits, trace: bool) -> String {
             s.checkpoint_id
         ));
     }
-    o.plain("</VELRA_CONTINUATION>");
+    o.plain("</VELRA_WORKSPACE_STATE>");
     o.lines.join("\n")
 }
 
@@ -534,7 +574,7 @@ const CEILING_STEPS: &[Step] = &[
 /// This is not a judgement — it is the backstop that makes "≤ 1,000 tokens and
 /// ≤ 9,500 characters, always" a property rather than an expectation. It drops
 /// whole lines from the end of the body, keeping the opening tag through
-/// `[STATUS]` and the `[RECOVERY]` tail, so whatever survives is still a well
+/// `[WORKSPACE_STATE]` and the `[RECORD_DETAIL]` tail, so whatever survives is still a well
 /// formed capsule that closes its own tag.
 fn enforce_ceiling(text: String, ceiling: u32, max_chars: usize) -> String {
     let fits = |t: &str| estimate_tokens(t) <= ceiling && t.chars().count() <= max_chars;
@@ -542,18 +582,18 @@ fn enforce_ceiling(text: String, ceiling: u32, max_chars: usize) -> String {
         return text;
     }
     let lines: Vec<&str> = text.split('\n').collect();
-    // Everything from [RECOVERY] on is the tail that must survive, closing tag
+    // Everything from [RECORD_DETAIL] on is the tail that must survive, closing tag
     // included. If the marker is somehow absent, keep the last line, which is
     // that tag: a capsule that does not close itself is worse than a short one.
     let recovery = lines
         .iter()
-        .position(|l| l.starts_with("[RECOVERY]"))
+        .position(|l| l.starts_with("[RECORD_DETAIL]"))
         .unwrap_or_else(|| lines.len().saturating_sub(1));
-    // The protected head: the opening tag, [CONTEXT] and its paragraph, the
-    // objective, and [STATUS] with its line.
+    // The protected head: the opening tag, [ABOUT_THIS_RECORD] and its paragraph, the
+    // objective, and [WORKSPACE_STATE] with its line.
     let head = lines
         .iter()
-        .position(|l| l.starts_with("[STATUS]"))
+        .position(|l| l.starts_with("[WORKSPACE_STATE]"))
         .map_or(6, |i| i + 2)
         .min(recovery);
     let joined = |end: usize| {
@@ -573,7 +613,7 @@ fn enforce_ceiling(text: String, ceiling: u32, max_chars: usize) -> String {
     }
     // Only reachable if the protected head alone is oversized, which needs a
     // pathological checkpoint id. Cut hard and close the tag.
-    const CLOSE: &str = "</VELRA_CONTINUATION>";
+    const CLOSE: &str = "</VELRA_WORKSPACE_STATE>";
     let mut out = truncate_chars(&candidate, max_chars.min(2_000))
         .trim_end()
         .to_string();
@@ -711,9 +751,9 @@ mod tests {
     #[test]
     fn minimal_capsule() {
         let r = render(&base(), &RenderConfig::default());
-        let expected = "<VELRA_CONTINUATION v=\"1\" checkpoint=\"ckpt_01TEST\" captured=\"2026-09-12T10:04:05Z\" trigger=\"manual\">\n[CONTEXT]\n".to_string()
+        let expected = "<VELRA_WORKSPACE_STATE v=\"1\" checkpoint=\"ckpt_01TEST\" captured=\"2026-09-12T10:04:05Z\" trigger=\"manual\">\n[ABOUT_THIS_RECORD]\n".to_string()
             + CONTEXT
-            + "\n[ROOT_TASK_OBJECTIVE]\n(not captured)\n[STATUS]\nno git | 0 edits this task | last test run: none\n[RECOVERY]\nFull detail for any section: `velra inspect --checkpoint ckpt_01TEST --section <dead-ends|failure|files|attempts>`\n</VELRA_CONTINUATION>";
+            + "\n[FIRST_MESSAGE]\n(not captured)\n[WORKSPACE_STATE]\nno git | 0 edits this task | last test run: none\n[RECORD_DETAIL]\nFull detail for any section: `velra inspect --checkpoint ckpt_01TEST --section <dead-ends|failure|files|attempts>`\n</VELRA_WORKSPACE_STATE>";
         assert_eq!(r.text, expected);
         assert_eq!(r.steps, 0);
     }
@@ -737,7 +777,7 @@ mod tests {
         s.latest.as_mut().unwrap().text = "and the tests".into();
         assert!(render(&s, &RenderConfig::default())
             .text
-            .contains("[LATEST_REQUEST]"));
+            .contains("[LATEST_MESSAGE]"));
     }
 
     #[test]
@@ -823,9 +863,9 @@ mod tests {
         let r = render(&s, &RenderConfig::default());
         assert!(r.tokens <= HARD_CEILING_TOKENS, "{}", r.tokens);
         assert!(r.text.chars().count() <= ABSOLUTE_MAX_CHARS);
-        assert!(r.text.contains("[DEAD_ENDS] (OBSERVED)"));
-        assert!(r.text.contains("[ACTIVE_FAILURE]"));
-        assert!(r.text.ends_with("</VELRA_CONTINUATION>"));
+        assert!(r.text.contains("[REVERTED_EDITS] (OBSERVED)"));
+        assert!(r.text.contains("[TEST_RESULT]"));
+        assert!(r.text.ends_with("</VELRA_WORKSPACE_STATE>"));
     }
 
     #[test]

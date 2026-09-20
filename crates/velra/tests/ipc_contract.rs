@@ -196,7 +196,7 @@ fn b3_delivery_json_matches_the_specified_shape() {
     let capsule = value["hookSpecificOutput"]["additionalContext"]
         .as_str()
         .expect("capsule");
-    assert!(capsule.starts_with("<VELRA_CONTINUATION"));
+    assert!(capsule.starts_with("<VELRA_WORKSPACE_STATE"));
     assert!(
         capsule.len() <= 9_500,
         "capsule stays under the hook output limit"

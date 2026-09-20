@@ -3,7 +3,7 @@
 //!     cargo run --release -p velra --example budget_probe -- <velra_home> [session_id]
 //!
 //! Answers one question the benchmark kept raising indirectly: at which target
-//! does `[WORKING_FILES]` survive, and what does the capsule estimate there?
+//! does `[FILE_ACTIVITY]` survive, and what does the capsule estimate there?
 //! Development tool only; not part of the shipped binary.
 
 use std::path::PathBuf;
@@ -57,9 +57,9 @@ fn main() {
             .filter_map(|l| l.strip_prefix('['))
             .filter_map(|l| l.split(']').next())
             .collect();
-        let has_wf = sections.contains(&"WORKING_FILES");
+        let has_wf = sections.contains(&"FILE_ACTIVITY");
         println!(
-            "{target:>7}  {:>5}  {:>6}  {:>5}  WORKING_FILES={}  [{}]",
+            "{target:>7}  {:>5}  {:>6}  {:>5}  FILE_ACTIVITY={}  [{}]",
             r.tokens,
             r.text.chars().count(),
             r.steps,

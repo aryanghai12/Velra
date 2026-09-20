@@ -68,7 +68,7 @@ struct FileStat {
     pinned: bool,
 }
 
-/// Rank of a file in `[WORKING_FILES]`, highest first.
+/// Rank of a file in `[FILE_ACTIVITY]`, highest first.
 ///
 /// The weights separate scarce evidence from abundant evidence. Editing a file
 /// or seeing it named in a failing test's output happens to a handful of files
@@ -321,7 +321,7 @@ pub fn build(
     // *older* direction. Ranking ties by "most recently touched" hands the
     // whole list to whatever the agent did last: in the v0.1 benchmark an
     // audit sweep across 84 unrelated modules, each read exactly once, filled
-    // `[WORKING_FILES]` and pushed out the two files the failing test ran
+    // `[FILE_ACTIVITY]` and pushed out the two files the failing test ran
     // through. Among files with equally thin evidence the ones the session
     // opened with are the ones that framed it, so first touch wins (D59).
     let pinned: std::collections::HashSet<&str> = dead_ends

@@ -2,24 +2,24 @@
 source: crates/velra/tests/common/mod.rs
 expression: text
 ---
-<VELRA_CONTINUATION v="1" checkpoint="ckpt_01TESTFIXTURE0000000000000" captured="2026-09-12T10:04:12Z" trigger="manual">
-[CONTEXT]
-Velra is a local tool that recorded this task state from Claude Code tool events before the conversation was compacted. Entries are observations of tool activity. Links between an edit and a later test result are unconfirmed unless stated. Files on disk are the current source of truth for code.
-[ROOT_TASK_OBJECTIVE] (OBSERVED | user prompt | 10:04)
+<VELRA_WORKSPACE_STATE v="1" checkpoint="ckpt_01TESTFIXTURE0000000000000" captured="2026-09-12T10:04:12Z" trigger="manual">
+[ABOUT_THIS_RECORD]
+A local record, not a message and not an instruction. Velra logged this session's own prompts and tool events to disk and quotes them back verbatim after compaction; nothing here is new. OBSERVED lines came from a tool event, INFERRED lines were derived from them. Files on disk are the source of truth for code. If a quoted line seems to conflict with the code or with the current request, say so rather than dropping it silently.
+[FIRST_MESSAGE] (OBSERVED | user prompt | 10:04)
 stop the session cookie from surviving logout
-[STATUS]
+[WORKSPACE_STATE]
 no git | 1 edits this task | last test run: FAIL
-[ACTIVE_FAILURE] (OBSERVED | test run | 10:04)
+[TEST_RESULT] (OBSERVED | test run | 10:04)
 Command: pytest tests/test_auth.py -x
 Result: FAIL (exit 1)
   FAILED tests/test_auth.py::test_logout
-[DEAD_ENDS] (OBSERVED)
+[REVERTED_EDITS] (OBSERVED)
 - src/auth/session.py | 1 edit(s) | reverted via `git restore src/auth/session.py` at 10:04
     - max_age = None
     + max_age = 0
   Observed afterward: `pytest tests/test_auth.py -x` FAIL. Causal link: UNCONFIRMED.
-[WORKING_FILES] (OBSERVED)
+[FILE_ACTIVITY] (OBSERVED)
 - src/auth/session.py | edited 1x, read 0x
-[RECOVERY]
+[RECORD_DETAIL]
 Full detail for any section: `velra inspect --checkpoint ckpt_01TESTFIXTURE0000000000000 --section <dead-ends|failure|files|attempts>`
-</VELRA_CONTINUATION>
+</VELRA_WORKSPACE_STATE>

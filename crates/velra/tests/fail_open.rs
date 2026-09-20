@@ -256,5 +256,5 @@ fn hooks_work_when_the_project_is_not_a_git_repository() {
     let out = env.cmd().arg("inspect").output().expect("inspect");
     let capsule = String::from_utf8_lossy(&out.stdout);
     assert!(capsule.contains("no git"), "{capsule}");
-    assert!(capsule.contains("[ROOT_TASK_OBJECTIVE]"));
+    assert!(capsule.contains("[FIRST_MESSAGE]"));
 }

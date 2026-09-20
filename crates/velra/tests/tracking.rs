@@ -124,16 +124,16 @@ fn f5_reapplied_dead_ends_are_excluded_from_the_capsule() {
 
     let capsule = log.capsule();
     assert!(
-        !capsule.contains("[DEAD_ENDS]"),
+        !capsule.contains("[REVERTED_EDITS]"),
         "reapplied dead ends are not rendered:\n{capsule}"
     );
 }
 
-/// The defect that deleted `[DEAD_ENDS]` from a real capsule, replayed offline.
+/// The defect that deleted `[REVERTED_EDITS]` from a real capsule, replayed offline.
 ///
 /// In `saturated-velra-r1` of the v0.1 benchmark the agent tried a rounding
 /// change, discarded it with `git restore`, and the capsule it received after
-/// `/compact` had no `[DEAD_ENDS]` section at all — the most distinctive thing
+/// `/compact` had no `[REVERTED_EDITS]` section at all — the most distinctive thing
 /// the product produces, silently gone. The dead end was in the database the
 /// whole time; it was filtered out on the way to the page, because
 /// `file_versions` held this exact sequence:
@@ -254,7 +254,7 @@ fn f5c_a_late_git_pre_row_does_not_resurrect_a_dead_end() {
 
     let capsule = log.capsule();
     assert!(
-        capsule.contains("[DEAD_ENDS]"),
+        capsule.contains("[REVERTED_EDITS]"),
         "the section reaches the capsule:\n{capsule}"
     );
     assert!(
@@ -318,7 +318,7 @@ fn f2b_a_restore_chained_with_a_failing_command_is_still_attributed() {
 
     // The capsule quotes the command without the `cd` that preceded it.
     let capsule = log.capsule();
-    assert!(capsule.contains("[DEAD_ENDS]"), "{capsule}");
+    assert!(capsule.contains("[REVERTED_EDITS]"), "{capsule}");
     assert!(
         !capsule.contains("cd \"/tmp/proj\""),
         "the working-directory prefix is not worth capsule budget:\n{capsule}"
@@ -458,7 +458,7 @@ fn a_later_pass_clears_the_active_failure() {
         "FAILED tests/test_auth.py::test_x\n1 failed",
     );
     let capsule = log.capsule();
-    assert!(capsule.contains("[ACTIVE_FAILURE]"), "{capsule}");
+    assert!(capsule.contains("[TEST_RESULT]"), "{capsule}");
 
     log.command_ok(
         "pytest tests/test_auth.py",
@@ -466,7 +466,7 @@ fn a_later_pass_clears_the_active_failure() {
     );
     let capsule = log.capsule();
     assert!(
-        !capsule.contains("[ACTIVE_FAILURE]"),
+        !capsule.contains("[TEST_RESULT]"),
         "a later PASS of the same signature clears it:\n{capsule}"
     );
 }
@@ -515,8 +515,8 @@ fn follow_up_prompts_do_not_replace_the_root_objective() {
     log.reduce();
 
     let capsule = log.capsule();
-    assert!(capsule.contains("[ROOT_TASK_OBJECTIVE]"));
+    assert!(capsule.contains("[FIRST_MESSAGE]"));
     assert!(capsule.contains("fix the flaky logout test in the auth module"));
-    assert!(capsule.contains("[LATEST_REQUEST]"), "{capsule}");
+    assert!(capsule.contains("[LATEST_MESSAGE]"), "{capsule}");
     assert!(capsule.contains("why did that fail?"), "{capsule}");
 }

@@ -117,7 +117,7 @@ pub struct Observation<'a> {
 /// discards a change carries, by construction, the discarded content: if a
 /// spooled `PreToolUse` event is ingested after the turn-end scan that opened
 /// the dead end, treating that row as evidence marks the dead end reapplied
-/// and deletes `[DEAD_ENDS]` from the capsule. Observed in the v0.1 benchmark;
+/// and deletes `[REVERTED_EDITS]` from the capsule. Observed in the v0.1 benchmark;
 /// see `f5c_a_late_git_pre_row_does_not_resurrect_a_dead_end`.
 pub fn is_settled_source(source: VersionSource) -> bool {
     matches!(

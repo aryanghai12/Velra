@@ -15,10 +15,10 @@ const CAUSAL_WORDS: [&str; 4] = ["caused", "because", "due to", "led to"];
 
 fn check(capsule: &str) {
     assert!(
-        capsule.starts_with("<VELRA_CONTINUATION v=\"1\""),
+        capsule.starts_with("<VELRA_WORKSPACE_STATE v=\"1\""),
         "{capsule}"
     );
-    assert!(capsule.ends_with("</VELRA_CONTINUATION>"), "{capsule}");
+    assert!(capsule.ends_with("</VELRA_WORKSPACE_STATE>"), "{capsule}");
     assert!(!capsule.contains('\r'), "line endings must be \\n only");
     assert!(
         !capsule.contains('\\'),
@@ -235,10 +235,17 @@ fn e1_many_files() {
         101,
         "error[E0308]: mismatched types\n  --> src/mod3.rs:1:1\n",
     );
-    // Rendered at the spec's 800: this asserts what the ladder keeps at the
-    // documented budget, not how much the shipped default's safety margin
-    // trims. See Log::capsule_at.
-    let capsule = log.capsule_at(800);
+    // Rendered above the shipped default so that nothing is trimmed: this
+    // asserts what a full-detail render contains, not how much the default's
+    // safety margin removes. See Log::capsule_at.
+    //
+    // This was 800 until the v0.1.1 capsule rewrite. The passive section
+    // labels and the longer `[ABOUT_THIS_RECORD]` preamble -- the fix for the
+    // E6 rejection -- cost this fixture about 40 estimated tokens, and it was
+    // already rendering at 798 against 800. 900 restores the headroom the
+    // figure was standing in for. `e2_truncation_ladder_runs_in_order` is what
+    // guards the ladder's behaviour at the real budget.
+    let capsule = log.capsule_at(900);
     check(&capsule);
     assert_eq!(
         capsule.matches("\n- src/mod").count(),
@@ -287,22 +294,22 @@ fn e1_full_state() {
     );
     log.edit("src/auth/cookies.py", "secure = True\n");
     log.prompt("what else could be keeping the cookie alive?");
-    // Rendered at the spec's 800 for the same reason as e1_many_files: the
+    // Rendered above the default for the same reason as e1_many_files: the
     // claim under test is that a full state yields every section, which is a
-    // statement about the ladder, not about the default's margin.
-    let capsule = log.capsule_at(800);
+    // statement about the renderer, not about the default's margin.
+    let capsule = log.capsule_at(900);
     check(&capsule);
     for section in [
-        "[ROOT_TASK_OBJECTIVE]",
-        "[ACTIVE_SUBTASK]",
-        "[LATEST_REQUEST]",
-        "[STATUS]",
-        "[ACTIVE_FAILURE]",
-        "[DEAD_ENDS]",
-        "[RECENT_ATTEMPTS]",
-        "[WORKING_FILES]",
-        "[NEXT_KNOWN_TARGET]",
-        "[RECOVERY]",
+        "[FIRST_MESSAGE]",
+        "[SUBTASK_MESSAGE]",
+        "[LATEST_MESSAGE]",
+        "[WORKSPACE_STATE]",
+        "[TEST_RESULT]",
+        "[REVERTED_EDITS]",
+        "[RECENT_EDITS]",
+        "[FILE_ACTIVITY]",
+        "[FAILURE_LOCATION]",
+        "[RECORD_DETAIL]",
     ] {
         assert!(capsule.contains(section), "missing {section}:\n{capsule}");
     }
@@ -323,11 +330,11 @@ fn e4_every_line_traces_to_a_row() {
     let traced = render::render_traced(&snapshot, &RenderConfig::default()).text;
 
     let exempt = |line: &str| {
-        line.starts_with("<VELRA_CONTINUATION")
-            || line == "</VELRA_CONTINUATION>"
-            || line == "[CONTEXT]"
-            || line.starts_with("Velra is a local tool")
-            || line == "[RECOVERY]"
+        line.starts_with("<VELRA_WORKSPACE_STATE")
+            || line == "</VELRA_WORKSPACE_STATE>"
+            || line == "[ABOUT_THIS_RECORD]"
+            || line.starts_with("A local record, not a message")
+            || line == "[RECORD_DETAIL]"
             || line.starts_with("Full detail for any section:")
     };
     for line in traced.lines() {
@@ -430,27 +437,27 @@ proptest! {
         let rendered = render::render(&snapshot, &RenderConfig::default());
         prop_assert!(rendered.tokens <= HARD_CEILING_TOKENS, "{} tokens", rendered.tokens);
         prop_assert!(rendered.text.chars().count() <= ABSOLUTE_MAX_CHARS);
-        prop_assert!(rendered.text.ends_with("</VELRA_CONTINUATION>"));
+        prop_assert!(rendered.text.ends_with("</VELRA_WORKSPACE_STATE>"));
         // The ceiling backstop cuts lines and re-closes the tag. An earlier
         // version could emit a second closing tag, which `ends_with` alone
         // does not catch: the block would still end correctly and still be
         // malformed. Count it.
         prop_assert_eq!(
-            rendered.text.matches("</VELRA_CONTINUATION>").count(),
+            rendered.text.matches("</VELRA_WORKSPACE_STATE>").count(),
             1,
             "exactly one closing tag: {}",
             rendered.text
         );
         prop_assert_eq!(
-            rendered.text.matches("<VELRA_CONTINUATION ").count(),
+            rendered.text.matches("<VELRA_WORKSPACE_STATE ").count(),
             1,
             "exactly one opening tag: {}",
             rendered.text
         );
         // Sections that are never removed.
-        prop_assert!(rendered.text.contains("[CONTEXT]"));
-        prop_assert!(rendered.text.contains("[STATUS]"));
-        prop_assert!(rendered.text.contains("[RECOVERY]"));
+        prop_assert!(rendered.text.contains("[ABOUT_THIS_RECORD]"));
+        prop_assert!(rendered.text.contains("[WORKSPACE_STATE]"));
+        prop_assert!(rendered.text.contains("[RECORD_DETAIL]"));
     }
 
     /// E2: a state that fits the target is rendered in full.
@@ -534,13 +541,13 @@ fn e2_truncation_ladder_runs_in_order() {
     assert!(tight.tokens <= HARD_CEILING_TOKENS);
 }
 
-/// The `[WORKING_FILES]` cliff, pinned as measured — this is an **open
+/// The `[FILE_ACTIVITY]` cliff, pinned as measured — this is an **open
 /// defect**, not a guarantee.
 ///
 /// `SPEC_STEPS` sets `working_max = 4` as its first rung and `working_max = 0`
 /// as its last, with nothing between them, so under pressure the section goes
 /// from four files to none in a single move. §18 of the v0.1 benchmark report
-/// records the consequence: `[WORKING_FILES]` absent from 4 of 4 delivered
+/// records the consequence: `[FILE_ACTIVITY]` absent from 4 of 4 delivered
 /// capsules, every one of which came in 78 or more tokens under the ceiling.
 ///
 /// This test asserts the cliff is still exactly where the report says it is,
@@ -590,7 +597,7 @@ fn the_working_files_ladder_still_steps_from_four_to_zero() {
 /// charges, or the truncation ladder stops while the block is still over
 /// budget.
 ///
-/// The fixtures are two `<VELRA_CONTINUATION>` blocks Claude Code actually
+/// The fixtures are two `<VELRA_WORKSPACE_STATE>` blocks Claude Code actually
 /// received during the v0.1 benchmark, alongside the token count each one
 /// really cost — measured, not modelled, by differencing billed input tokens
 /// between two otherwise identical minimal sessions. With the original
@@ -625,7 +632,7 @@ fn estimator_is_above_real_tokenizer_counts() {
 }
 
 /// H2: a session in which an approach was tried and discarded must render a
-/// `[DEAD_ENDS]` section. This is the product feature the benchmark found
+/// `[REVERTED_EDITS]` section. This is the product feature the benchmark found
 /// missing from a delivered capsule, so it is asserted end to end rather than
 /// only at the unit level.
 #[test]
@@ -645,7 +652,7 @@ fn a_discarded_approach_always_reaches_the_capsule() {
     );
 
     let capsule = log.capsule();
-    assert!(capsule.contains("[DEAD_ENDS]"), "{capsule}");
+    assert!(capsule.contains("[REVERTED_EDITS]"), "{capsule}");
     assert!(capsule.contains("src/money.py"), "{capsule}");
     assert!(
         capsule.contains("reverted via `git restore src/money.py`"),
@@ -653,7 +660,7 @@ fn a_discarded_approach_always_reaches_the_capsule() {
     );
 }
 
-/// The `[WORKING_FILES]` defect the benchmark found, reproduced offline.
+/// The `[FILE_ACTIVITY]` defect the benchmark found, reproduced offline.
 ///
 /// In `saturated-velra-r1` the agent spent eight turns auditing 84 unrelated
 /// modules after finding the failure. Every one of those reads scored the same
@@ -693,7 +700,7 @@ fn an_unrelated_read_sweep_does_not_evict_the_files_the_task_is_about() {
     let capsule = log.capsule();
     let working: Vec<&str> = capsule
         .lines()
-        .skip_while(|l| !l.starts_with("[WORKING_FILES]"))
+        .skip_while(|l| !l.starts_with("[FILE_ACTIVITY]"))
         .skip(1)
         .take_while(|l| l.starts_with("- "))
         .collect();

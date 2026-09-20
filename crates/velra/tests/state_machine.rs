@@ -50,7 +50,7 @@ fn d2_session_start_delivers_once_and_the_next_prompt_does_not_redeliver() {
     let ts = log.ts + 10_000;
     let first =
         deliver(&mut log, Channel::SessionStart, "key-session-start", ts).expect("delivered");
-    assert!(first.capsule.contains("[ROOT_TASK_OBJECTIVE]"));
+    assert!(first.capsule.contains("[FIRST_MESSAGE]"));
     assert_eq!(state(&log), Some(ContinuationState::Attached));
     assert_eq!(injections(&log), 1);
 

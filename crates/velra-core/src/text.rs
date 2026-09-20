@@ -298,10 +298,10 @@ mod tests {
         // benchmark, reduced to the shapes that made them dense: section tags,
         // paths, a ULID and quoted code. The estimator must land above the
         // measured count for this kind of text, never below it.
-        let dense = "[WORKING_FILES] (OBSERVED)\n\
+        let dense = "[FILE_ACTIVITY] (OBSERVED)\n\
              - src/ledger/validation/invoice_number_gb.py | edited 0x, read 1x\n\
              - src/ledger/importers/ledger_ofx_v3.py | edited 0x, read 1x\n\
-             [NEXT_KNOWN_TARGET] (INFERRED | failure-location)\n\
+             [FAILURE_LOCATION] (INFERRED | failure-location)\n\
              tests/test_engine.py:54\n";
         let per_token = dense.len() as f64 / f64::from(estimate_tokens(dense));
         assert!(
