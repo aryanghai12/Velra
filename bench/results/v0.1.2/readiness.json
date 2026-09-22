@@ -1,0 +1,1526 @@
+{
+  "artifact": {
+    "id": "velra-tokenburn-readiness",
+    "path": "bench\\results\\v0.1.2\\readiness.json",
+    "authoritative": true,
+    "is_current": true,
+    "benchmark": "v0.1.2 Token-Burn",
+    "supersedes": "bench/results/v0.1.2/hardened/readiness.20260921T101557Z.json -- the archived hardened evaluation's gate, frozen and preserved byte-for-byte; it is historical and is not this",
+    "written_by": "bench/tokenburn/run.py"
+  },
+  "at": "20260922T170718Z",
+  "mode": "live",
+  "benchmarks": [
+    "A_cold_continuation",
+    "B_clear_survival"
+  ],
+  "results_dir": "C:\\Users\\aryan\\Videos\\Velra\\bench\\results\\v0.1.2\\tokenburn",
+  "preregistration_id": "velra-tokenburn",
+  "preregistration_version": "1.0.0",
+  "preregistration_sha256": "775f18f4775997e7a952515425f0ac99d71462de38486edc8786a5b54d93551f",
+  "environment": {
+    "python": "3.14.0",
+    "platform": "win32",
+    "repo_root": "C:\\Users\\aryan\\Videos\\Velra",
+    "cargo": "cargo 1.98.1 (797e8a9bc 2026-08-05)",
+    "velra_binary": "C:\\Users\\aryan\\Videos\\Velra\\target\\release\\velra.exe",
+    "velra_version": "velra 0.1.2 (c7b1caaac, x86_64-pc-windows-gnu)",
+    "claude_binary": "C:\\Users\\aryan\\.vscode\\extensions\\anthropic.claude-code-2.1.272-win32-x64\\resources\\native-binary\\claude.exe",
+    "claude_version": "2.1.272",
+    "model_configuration": {
+      "model": "sonnet",
+      "permission_mode": "bypassPermissions",
+      "flags": [
+        "-p",
+        "--input-format",
+        "stream-json",
+        "--output-format",
+        "stream-json",
+        "--verbose",
+        "--include-hook-events",
+        "--permission-mode",
+        "bypassPermissions",
+        "--permission-prompts",
+        "none",
+        "--strict-mcp-config"
+      ],
+      "max_budget_usd_per_session": 25.0
+    },
+    "preregistration": {
+      "preregistration_id": "velra-tokenburn",
+      "preregistration_version": "1.0.0",
+      "preregistration_sha256": "775f18f4775997e7a952515425f0ac99d71462de38486edc8786a5b54d93551f"
+    }
+  },
+  "provenance": {
+    "git_head": "c7b1caaacba225a063ae49e1bad859b2fc125c1a",
+    "git_branch": "main",
+    "working_tree_changes": [],
+    "working_tree_clean": true,
+    "self_written_paths_excluded": [
+      "?? bench/results/v0.1.2/readiness.json"
+    ],
+    "self_written_patterns": [
+      "bench/results/v0.1.2/readiness.json",
+      "bench/results/v0.1.2/tokenburn/"
+    ],
+    "changes_including_self_written": 1,
+    "note": "`working_tree_clean` ignores the benchmark's own output paths and nothing else. Every other uncommitted path is counted, because evidence has to be attributable to a commit somebody can check out.",
+    "binary": {
+      "binary": "C:\\Users\\aryan\\Videos\\Velra\\target\\release\\velra.exe",
+      "binary_bytes": 5555200,
+      "reported_version": "velra 0.1.2 (c7b1caaac, x86_64-pc-windows-gnu)",
+      "embedded_commit": "c7b1caaac",
+      "git_head": "c7b1caaacba225a063ae49e1bad859b2fc125c1a",
+      "git_head_short9": "c7b1caaac",
+      "git_branch": "main",
+      "git_describe": "v0.1.1-benchmark-baseline-9-gc7b1caa",
+      "working_tree_clean": false,
+      "working_tree_changes": [
+        "?? bench/results/v0.1.2/readiness.json"
+      ],
+      "commit_matches_binary": true,
+      "host": {
+        "platform": "Windows-11-10.0.26200-SP0",
+        "machine": "AMD64",
+        "python": "3.14.0",
+        "processor": "Intel64 Family 6 Model 183 Stepping 1, GenuineIntel",
+        "cpu_count": 20
+      },
+      "agent": {
+        "binary": "C:\\Users\\aryan\\.vscode\\extensions\\anthropic.claude-code-2.1.272-win32-x64\\resources\\native-binary\\claude.exe",
+        "version": "2.1.272"
+      },
+      "warnings": [
+        "the working tree is dirty: results cannot be attributed to a commit"
+      ]
+    }
+  },
+  "legacy_preservation": {
+    "legacy_root": "C:\\Users\\aryan\\Videos\\Velra\\bench\\legacy",
+    "present": true,
+    "scenario_modules_present": true,
+    "scenario_modules_missing": [],
+    "archived_runners": [
+      "run_efficacy_benchmark.py",
+      "run_full_benchmark.py",
+      "run_hardened_eval.py"
+    ],
+    "preserved_artifacts": {
+      "bench\\results\\trials": true,
+      "bench\\results\\v0.1.1": true,
+      "bench\\results\\v0.1.1_frozen_baseline": true,
+      "bench\\results\\superseded": true,
+      "bench\\results\\v0.1.2\\trials": true,
+      "bench\\results\\v0.1.2\\stages": true,
+      "bench\\results\\v0.1.2\\controls": true,
+      "BENCHMARK_REPORT.md": true,
+      "bench\\results\\v0.1.2\\hardened": true
+    },
+    "counts_toward_v012_scorecard": false,
+    "note": "The archived scenarios remain runnable as regression tests. They contribute nothing to this scorecard: the Token-Burn pipeline reads only bench/results/v0.1.2/tokenburn/trials and no legacy artifact is an input to any verdict here."
+  },
+  "tests": {
+    "tokenburn_selftest_exit": 0,
+    "tokenburn_selftest_tail": [
+      "  case04-orphan                    DROPPED        INCOMPLETE_PAIR",
+      "",
+      "SELFTEST PASSED - 19 cases, 37 trials, 17 pairs, no Claude process and no network call."
+    ],
+    "pytest_exit": 0,
+    "pytest_tail": [
+      "........................................................................ [ 99%]",
+      ".                                                                        [100%]",
+      "217 passed in 33.11s"
+    ],
+    "legacy_harness_selftest_exit": 0,
+    "cargo_test_exit": 0
+  },
+  "scenario_manifests": {
+    "A_cold_continuation": {
+      "repo": "C:\\Users\\aryan\\AppData\\Local\\Temp\\velra-tokenburn-readiness\\readiness-A_cold_continuation",
+      "fixture_seed": "f6233e55efb918ca",
+      "turn_script_hash": "e84715336b0762fc",
+      "turn_count": 17,
+      "transition": "new_session",
+      "target_test": "tests/test_retry.py::test_retry_preserves_idempotency_key",
+      "ground_truth": {
+        "as_generated": {
+          "suite_exit": 1,
+          "suite_failures": 3,
+          "expected_suite_failures": 3,
+          "target": "tests/test_retry.py::test_retry_preserves_idempotency_key",
+          "expect_target": "fail",
+          "observed_target": "fail"
+        },
+        "true_fix": {
+          "expect_target": "pass",
+          "observed_target": "pass",
+          "expect_invariant": true,
+          "observed_invariant": true
+        },
+        "dead_end": {
+          "expect_target": "pass",
+          "observed_target": "pass",
+          "expect_invariant": false,
+          "observed_invariant": false
+        }
+      },
+      "manifest": {
+        "benchmark": "A_cold_continuation",
+        "title": "Cold-continuation token-burn trap",
+        "transition": "new_session",
+        "repo": "C:\\Users\\aryan\\AppData\\Local\\Temp\\velra-tokenburn-readiness\\readiness-A_cold_continuation",
+        "turn_count": 17,
+        "transition_index": 16,
+        "continuation_prompt": "Continue where we left off and finish the task. Do not ask me what it was.",
+        "turn_script_hash": "e84715336b0762fc",
+        "fixture_seed": "f6233e55efb918ca",
+        "leak_terms": [
+          "outside the loop",
+          "before the loop",
+          "once per request",
+          "hoist",
+          "move the key",
+          "compute the key once",
+          "pure function of the request",
+          "no process-wide state",
+          "process-wide state",
+          "incident last quarter",
+          "memoise",
+          "memoize",
+          "module-level dict",
+          "_memo",
+          "the active task",
+          "currently working on",
+          "next action"
+        ],
+        "capsule_markers": [
+          "src/payments/retry.py",
+          "test_retry_preserves_idempotency_key",
+          "retry_backoff"
+        ],
+        "capsule_token_ceiling": 800,
+        "ladder": [
+          100000,
+          250000,
+          500000,
+          700000,
+          800000,
+          900000
+        ],
+        "state_recovery": {
+          "current_task": [
+            "test_retry_preserves_idempotency_key",
+            "idempotency key",
+            "retry"
+          ],
+          "active_failure": [
+            "test_retry_preserves_idempotency_key",
+            "idempotency"
+          ],
+          "relevant_files": [
+            "src/payments/retry.py",
+            "src/payments/idempotency.py"
+          ],
+          "next_action": [
+            "retry_backoff",
+            "src/payments/retry.py"
+          ]
+        },
+        "first_correct_action": {
+          "tools": [
+            "Read",
+            "Edit",
+            "Write",
+            "MultiEdit",
+            "Grep"
+          ],
+          "target_contains": [
+            "src/payments/retry.py"
+          ],
+          "must_not_precede": [
+            "src/payments/ledger.py",
+            "src/payments/reconcile.py"
+          ]
+        },
+        "final_correctness": {
+          "target_test_must_pass": true,
+          "max_suite_failures": 2,
+          "required_final_state": [
+            {
+              "file": "src/payments/retry.py",
+              "must_not_contain": [
+                "_memo",
+                "setdefault",
+                "global "
+              ]
+            }
+          ]
+        },
+        "invariant": {
+          "must_hold_in_file": "src/payments/retry.py",
+          "must_not_contain": [
+            "_memo",
+            "setdefault",
+            "global "
+          ]
+        },
+        "dead_end": {
+          "must_not_edit": [
+            "src/payments/ledger.py",
+            "src/payments/reconcile.py"
+          ],
+          "description": "the module-level memo in retry.py, tried at turn 8 and reverted at turn 9 without a commit"
+        },
+        "target_test": "tests/test_retry.py::test_retry_preserves_idempotency_key"
+      }
+    },
+    "B_clear_survival": {
+      "repo": "C:\\Users\\aryan\\AppData\\Local\\Temp\\velra-tokenburn-readiness\\readiness-B_clear_survival",
+      "fixture_seed": "a070849ef9ae109d",
+      "turn_script_hash": "8656331d0e9dd957",
+      "turn_count": 17,
+      "transition": "clear",
+      "target_test": "tests/test_reconcile.py::test_march_window_totals",
+      "ground_truth": {
+        "as_generated": {
+          "suite_exit": 1,
+          "suite_failures": 3,
+          "expected_suite_failures": 3,
+          "target": "tests/test_reconcile.py::test_march_window_totals",
+          "expect_target": "fail",
+          "observed_target": "fail"
+        },
+        "true_fix": {
+          "expect_target": "pass",
+          "observed_target": "pass",
+          "expect_invariant": true,
+          "observed_invariant": true
+        },
+        "dead_end": {
+          "expect_target": "pass",
+          "observed_target": "pass",
+          "expect_invariant": false,
+          "observed_invariant": false
+        }
+      },
+      "manifest": {
+        "benchmark": "B_clear_survival",
+        "title": "/clear survival",
+        "transition": "clear",
+        "repo": "C:\\Users\\aryan\\AppData\\Local\\Temp\\velra-tokenburn-readiness\\readiness-B_clear_survival",
+        "turn_count": 17,
+        "transition_index": 16,
+        "continuation_prompt": "Continue the task and fix the bug.",
+        "turn_script_hash": "8656331d0e9dd957",
+        "fixture_seed": "a070849ef9ae109d",
+        "leak_terms": [
+          "booking date, never",
+          "never the value date",
+          "close on the booking",
+          "backdates",
+          "backdated",
+          "upstream backdate",
+          "window has to close on",
+          "booking_date is the one",
+          "widen the window",
+          "widening the window",
+          "_slack",
+          "slack of a day",
+          "timedelta(days=1)",
+          "double-count",
+          "double counts",
+          "the active task",
+          "currently working on",
+          "next action"
+        ],
+        "capsule_markers": [
+          "src/payments/reconcile.py",
+          "test_march_window_totals",
+          "booking",
+          "in_window"
+        ],
+        "capsule_token_ceiling": 800,
+        "ladder": [
+          100000,
+          250000,
+          500000,
+          700000,
+          800000,
+          900000
+        ],
+        "state_recovery": {
+          "current_task": [
+            "reconcile",
+            "test_march_window_totals",
+            "close_window"
+          ],
+          "active_failure": [
+            "test_march_window_totals",
+            "reconcile"
+          ],
+          "relevant_files": [
+            "src/payments/reconcile.py",
+            "src/payments/feed.py"
+          ],
+          "next_action": [
+            "in_window",
+            "src/payments/reconcile.py"
+          ]
+        },
+        "first_correct_action": {
+          "tools": [
+            "Read",
+            "Edit",
+            "Write",
+            "MultiEdit",
+            "Grep"
+          ],
+          "target_contains": [
+            "src/payments/reconcile.py"
+          ],
+          "must_not_precede": [
+            "src/payments/retry.py",
+            "src/payments/ledger.py"
+          ]
+        },
+        "final_correctness": {
+          "target_test_must_pass": true,
+          "max_suite_failures": 2,
+          "required_final_state": [
+            {
+              "file": "src/payments/reconcile.py",
+              "must_contain": [
+                "booking_date"
+              ],
+              "must_not_contain": [
+                "_SLACK",
+                "timedelta(days=1)"
+              ]
+            }
+          ]
+        },
+        "invariant": {
+          "must_hold_in_file": "src/payments/reconcile.py",
+          "must_contain": [
+            "booking_date"
+          ],
+          "must_not_contain": [
+            "_SLACK"
+          ]
+        },
+        "dead_end": {
+          "must_not_edit": [
+            "tests/test_reconcile.py",
+            "src/payments/retry.py"
+          ],
+          "description": "the one-day window slack in reconcile.py, tried at turn 7 and reverted at turn 8 without a commit"
+        },
+        "target_test": "tests/test_reconcile.py::test_march_window_totals"
+      }
+    }
+  },
+  "leak_scans": {
+    "A_cold_continuation": {
+      "clean": true,
+      "terms": [
+        "outside the loop",
+        "before the loop",
+        "once per request",
+        "hoist",
+        "move the key",
+        "compute the key once",
+        "pure function of the request",
+        "no process-wide state",
+        "process-wide state",
+        "incident last quarter",
+        "memoise",
+        "memoize",
+        "module-level dict",
+        "_memo",
+        "the active task",
+        "currently working on",
+        "next action"
+      ],
+      "surfaces_scanned": [
+        "tree",
+        "filenames",
+        "git_history",
+        "git_refs",
+        "claude_md",
+        "project_memory",
+        "environment",
+        "post_prompt",
+        "pre_prompts"
+      ],
+      "fatal_surfaces": [
+        "tree",
+        "filenames",
+        "git_history",
+        "git_refs",
+        "claude_md",
+        "project_memory",
+        "environment",
+        "post_prompt"
+      ],
+      "hits_by_surface": {
+        "pre_prompts": 6
+      },
+      "fatal_hits": [],
+      "n_hits": 6
+    },
+    "B_clear_survival": {
+      "clean": true,
+      "terms": [
+        "booking date, never",
+        "never the value date",
+        "close on the booking",
+        "backdates",
+        "backdated",
+        "upstream backdate",
+        "window has to close on",
+        "booking_date is the one",
+        "widen the window",
+        "widening the window",
+        "_slack",
+        "slack of a day",
+        "timedelta(days=1)",
+        "double-count",
+        "double counts",
+        "the active task",
+        "currently working on",
+        "next action"
+      ],
+      "surfaces_scanned": [
+        "tree",
+        "filenames",
+        "git_history",
+        "git_refs",
+        "claude_md",
+        "project_memory",
+        "environment",
+        "post_prompt",
+        "pre_prompts"
+      ],
+      "fatal_surfaces": [
+        "tree",
+        "filenames",
+        "git_history",
+        "git_refs",
+        "claude_md",
+        "project_memory",
+        "environment",
+        "post_prompt"
+      ],
+      "hits_by_surface": {
+        "pre_prompts": 7
+      },
+      "fatal_hits": [],
+      "n_hits": 7
+    }
+  },
+  "context_configuration": {
+    "rungs": [
+      {
+        "target_context_size": 100000,
+        "synthetic_context_size": 100423,
+        "chars": 361524,
+        "megabytes": 0.36,
+        "seconds": 0.1,
+        "verification": {
+          "ok": true,
+          "problems": [],
+          "measured_chars": 361524,
+          "declared_chars": 361524,
+          "target_chars": 360000,
+          "shortfall_fraction": -0.004233
+        },
+        "deterministic": true,
+        "actual_observed_context_size": null,
+        "note": "a generated fixture, not an observation of a Claude context window"
+      },
+      {
+        "target_context_size": 250000,
+        "synthetic_context_size": 250728,
+        "chars": 902619,
+        "megabytes": 0.9,
+        "seconds": 0.16,
+        "verification": {
+          "ok": true,
+          "problems": [],
+          "measured_chars": 902619,
+          "declared_chars": 902619,
+          "target_chars": 900000,
+          "shortfall_fraction": -0.00291
+        },
+        "deterministic": true,
+        "actual_observed_context_size": null,
+        "note": "a generated fixture, not an observation of a Claude context window"
+      },
+      {
+        "target_context_size": 500000,
+        "synthetic_context_size": 500471,
+        "chars": 1801696,
+        "megabytes": 1.8,
+        "seconds": 0.25,
+        "verification": {
+          "ok": true,
+          "problems": [],
+          "measured_chars": 1801696,
+          "declared_chars": 1801696,
+          "target_chars": 1800000,
+          "shortfall_fraction": -0.000942
+        },
+        "deterministic": true,
+        "actual_observed_context_size": null,
+        "note": "a generated fixture, not an observation of a Claude context window"
+      },
+      {
+        "target_context_size": 700000,
+        "synthetic_context_size": 700349,
+        "chars": 2521256,
+        "megabytes": 2.52,
+        "seconds": 0.31,
+        "verification": {
+          "ok": true,
+          "problems": [],
+          "measured_chars": 2521256,
+          "declared_chars": 2521256,
+          "target_chars": 2520000,
+          "shortfall_fraction": -0.000498
+        },
+        "deterministic": true,
+        "actual_observed_context_size": null,
+        "note": "a generated fixture, not an observation of a Claude context window"
+      },
+      {
+        "target_context_size": 800000,
+        "synthetic_context_size": 800283,
+        "chars": 2881019,
+        "megabytes": 2.88,
+        "seconds": 0.32,
+        "verification": {
+          "ok": true,
+          "problems": [],
+          "measured_chars": 2881019,
+          "declared_chars": 2881019,
+          "target_chars": 2880000,
+          "shortfall_fraction": -0.000354
+        },
+        "deterministic": true,
+        "actual_observed_context_size": null,
+        "note": "a generated fixture, not an observation of a Claude context window"
+      },
+      {
+        "target_context_size": 900000,
+        "synthetic_context_size": 900597,
+        "chars": 3242149,
+        "megabytes": 3.24,
+        "seconds": 0.66,
+        "verification": {
+          "ok": true,
+          "problems": [],
+          "measured_chars": 3242149,
+          "declared_chars": 3242149,
+          "target_chars": 3240000,
+          "shortfall_fraction": -0.000663
+        },
+        "deterministic": true,
+        "actual_observed_context_size": null,
+        "note": "a generated fixture, not an observation of a Claude context window"
+      }
+    ],
+    "chars_per_token_assumed": 3.6,
+    "fixture_version": 1,
+    "plan": [
+      {
+        "target_context_size": 100000,
+        "estimated_chars": 360000,
+        "estimated_megabytes": 0.36,
+        "seed_string": "A_cold_continuation|100000|1|0",
+        "note": "a TARGET, not a capability claim: whether the runtime can actually hold this is an open question the live run answers"
+      },
+      {
+        "target_context_size": 250000,
+        "estimated_chars": 900000,
+        "estimated_megabytes": 0.9,
+        "seed_string": "A_cold_continuation|250000|1|0",
+        "note": "a TARGET, not a capability claim: whether the runtime can actually hold this is an open question the live run answers"
+      },
+      {
+        "target_context_size": 500000,
+        "estimated_chars": 1800000,
+        "estimated_megabytes": 1.8,
+        "seed_string": "A_cold_continuation|500000|1|0",
+        "note": "a TARGET, not a capability claim: whether the runtime can actually hold this is an open question the live run answers"
+      },
+      {
+        "target_context_size": 700000,
+        "estimated_chars": 2520000,
+        "estimated_megabytes": 2.52,
+        "seed_string": "A_cold_continuation|700000|1|0",
+        "note": "a TARGET, not a capability claim: whether the runtime can actually hold this is an open question the live run answers"
+      },
+      {
+        "target_context_size": 800000,
+        "estimated_chars": 2880000,
+        "estimated_megabytes": 2.88,
+        "seed_string": "A_cold_continuation|800000|1|0",
+        "note": "a TARGET, not a capability claim: whether the runtime can actually hold this is an open question the live run answers"
+      },
+      {
+        "target_context_size": 900000,
+        "estimated_chars": 3240000,
+        "estimated_megabytes": 3.24,
+        "seed_string": "A_cold_continuation|900000|1|0",
+        "note": "a TARGET, not a capability claim: whether the runtime can actually hold this is an open question the live run answers"
+      }
+    ]
+  },
+  "telemetry": {
+    "sources_in_preference_order": [
+      "structured_usage",
+      "session_artifact",
+      "synthetic_fixture",
+      "derived",
+      "unavailable"
+    ],
+    "statuses": [
+      "measured",
+      "proxy",
+      "unavailable",
+      "inconclusive"
+    ],
+    "required_fields": [
+      "input_tokens",
+      "output_tokens",
+      "cache_read_input_tokens",
+      "cache_creation_input_tokens",
+      "total_input_tokens",
+      "context_size_at_transition"
+    ],
+    "identity_fields": [
+      "timestamp",
+      "session_id",
+      "source_session_id",
+      "destination_session_id"
+    ],
+    "provenance_fields": [
+      "metric_name",
+      "value",
+      "unit",
+      "source",
+      "raw_artifact_reference",
+      "measurement_status"
+    ],
+    "terminal_scraping_hits": [],
+    "cache_field_policy": "cache_read_input_tokens and cache_creation_input_tokens are reported only when explicitly present in structured data; otherwise UNAVAILABLE. They are never recovered from stdout, stderr, progress displays or status lines, and never defaulted to zero.",
+    "context_size_policy": "actual_observed_context_size is UNAVAILABLE unless the runtime emits a structured context-size field. A synthetic fixture's size is reported separately and is never an observation.",
+    "cache_condition_policy": "UNKNOWN when either cache field is unavailable. UNKNOWN is never reported as EXPIRED."
+  },
+  "mock_adapter": {
+    "scripted_cases": 19,
+    "synthetic_trials": 37,
+    "matched_pairs": 17,
+    "dropped_pairs": [
+      "IDENTITY_MISMATCH",
+      "INCOMPLETE_PAIR"
+    ],
+    "verdict_counts": {
+      "VELRA_WIN": 3,
+      "BASELINE_WIN": 2,
+      "TIE": 6,
+      "INCONCLUSIVE": 6
+    },
+    "failures": [],
+    "feeds_production_pipeline": true,
+    "pipeline": [
+      "parse.parse_trial",
+      "metrics.evaluate",
+      "causal.evaluate",
+      "pairing.pair_up",
+      "verdict.pair_verdict",
+      "verdict.pool",
+      "report.markdown"
+    ],
+    "separate_evaluator_exists": false
+  },
+  "capsule_provenance": {
+    "ok": true,
+    "capsule_written_by": "velra restore (production renderer)",
+    "capsule_written_by_benchmark": false,
+    "note": "the benchmark replays activity through the real hook path and reads back what the production renderer produced; it never composes capsule text",
+    "scenarios": {
+      "A_cold_continuation": {
+        "scenario": "A_cold_continuation",
+        "restore_exit": 0,
+        "capsule_chars": 1406,
+        "capsule_is_production_output": true,
+        "declared_markers": [
+          "src/payments/retry.py",
+          "test_retry_preserves_idempotency_key",
+          "retry_backoff"
+        ],
+        "markers_found": [
+          "src/payments/retry.py",
+          "test_retry_preserves_idempotency_key",
+          "retry_backoff"
+        ],
+        "markers_missing": [],
+        "ok": true,
+        "sections": [
+          "[ABOUT_THIS_RECORD]",
+          "[FIRST_MESSAGE] (OBSERVED | user prompt | 22:38)",
+          "[LATEST_MESSAGE] (OBSERVED | user prompt | 22:38)",
+          "[WORKSPACE_STATE]",
+          "[TEST_RESULT] (OBSERVED | test run | 22:38)",
+          "[RECENT_EDITS] (OBSERVED)",
+          "[FILE_ACTIVITY] (OBSERVED)",
+          "[FAILURE_LOCATION] (INFERRED | last-active-edit)",
+          "[RECORD_DETAIL]"
+        ],
+        "stderr": ""
+      },
+      "B_clear_survival": {
+        "scenario": "B_clear_survival",
+        "restore_exit": 0,
+        "capsule_chars": 1453,
+        "capsule_is_production_output": true,
+        "declared_markers": [
+          "src/payments/reconcile.py",
+          "test_march_window_totals",
+          "booking",
+          "in_window"
+        ],
+        "markers_found": [
+          "src/payments/reconcile.py",
+          "test_march_window_totals",
+          "booking",
+          "in_window"
+        ],
+        "markers_missing": [],
+        "ok": true,
+        "sections": [
+          "[ABOUT_THIS_RECORD]",
+          "[FIRST_MESSAGE] (OBSERVED | user prompt | 22:38)",
+          "[STATED_CONSTRAINTS] (OBSERVED | user prompt | quoted verbatim)",
+          "[LATEST_MESSAGE] (OBSERVED | user prompt | 22:38)",
+          "[WORKSPACE_STATE]",
+          "[TEST_RESULT] (OBSERVED | test run | 22:38)",
+          "[RECENT_EDITS] (OBSERVED)",
+          "[FILE_ACTIVITY] (OBSERVED)",
+          "[FAILURE_LOCATION] (INFERRED | last-active-edit)",
+          "[RECORD_DETAIL]"
+        ],
+        "stderr": ""
+      }
+    }
+  },
+  "smoke_test": {
+    "ok": true,
+    "checks_passed": 22,
+    "checks_total": 22,
+    "failed": [],
+    "staged_tokens": 549,
+    "capsule_chars": 1075,
+    "operational_state": {
+      "active_file": "src/payments/retry.rs",
+      "next_action": "inspect retry_backoff()"
+    },
+    "checks": [
+      {
+        "check": "velra binary present",
+        "ok": true,
+        "detail": "C:\\Users\\aryan\\Videos\\Velra\\target\\release\\velra.exe"
+      },
+      {
+        "check": "the source session is restorable",
+        "ok": true,
+        "detail": "[{\"session_id\": \"smoke-source-0001\", \"title\": null, \"last_activity_ms\": 1790096930617, \"has_state\": true}]"
+      },
+      {
+        "check": "velra restore stages a capsule",
+        "ok": true,
+        "detail": "{\n  \"workspace_id\": \"225bc1a8d854feed\",\n  \"source_session_id\": \"smoke-source-0001\",\n  \"source_checkpoint_id\": null,\n  \"tokens\": 549,\n  \"content_hash\": \"85f50dacfdae09a966d2650f8aabfa13\",\n  \"summary\": "
+      },
+      {
+        "check": "the staged capsule is within the registered token ceiling",
+        "ok": true,
+        "detail": "549 tokens, ceiling 800"
+      },
+      {
+        "check": "the staged record declares startup-only delivery",
+        "ok": true,
+        "detail": "[\"startup\"]"
+      },
+      {
+        "check": "the staged record names the source session, not a destination",
+        "ok": true,
+        "detail": "smoke-source-0001"
+      },
+      {
+        "check": "the capsule arrives through SessionStart",
+        "ok": true,
+        "detail": "exit=0, 1075 chars"
+      },
+      {
+        "check": "the source and destination session ids differ",
+        "ok": true,
+        "detail": "smoke-source-0001 -> smoke-dest-0001"
+      },
+      {
+        "check": "the destination received the active file",
+        "ok": true,
+        "detail": "src/payments/retry.rs"
+      },
+      {
+        "check": "the destination received the next action",
+        "ok": true,
+        "detail": "inspect retry_backoff()"
+      },
+      {
+        "check": "the capsule is bounded",
+        "ok": true,
+        "detail": "1075 chars, ceiling 8000"
+      },
+      {
+        "check": "the old transcript was not replayed into the destination",
+        "ok": true,
+        "detail": "the capsule is one bounded record, not a conversation"
+      },
+      {
+        "check": "a second SessionStart does not re-inject it",
+        "ok": true,
+        "detail": "exit=0, stdout=''"
+      },
+      {
+        "check": "nor does a third",
+        "ok": true,
+        "detail": "exit=0"
+      },
+      {
+        "check": "the staged capsule is gone once claimed",
+        "ok": true,
+        "detail": "C:\\Users\\aryan\\AppData\\Local\\Temp\\tmpju7456_s\\smoke\\velra_home\\staged\\225bc1a8d854feed\\staged_capsule"
+      },
+      {
+        "check": "the capsule can be staged again",
+        "ok": true,
+        "detail": "{\n  \"workspace_id\": \"225bc1a8d854feed\",\n  \"source_session_id\": \"smoke-source-0001\",\n  \"source_checkpoint_id\": null,\n  \"t"
+      },
+      {
+        "check": "SessionStart(clear) does not consume a startup capsule",
+        "ok": true,
+        "detail": "exit=0, stdout=''"
+      },
+      {
+        "check": "SessionStart(resume) does not consume a startup capsule",
+        "ok": true,
+        "detail": "exit=0, stdout=''"
+      },
+      {
+        "check": "SessionStart(compact) does not consume a startup capsule",
+        "ok": true,
+        "detail": "exit=0, stdout=''"
+      },
+      {
+        "check": "SessionStart(fork) does not consume a startup capsule",
+        "ok": true,
+        "detail": "exit=0, stdout=''"
+      },
+      {
+        "check": "the capsule is still staged after every wrong source",
+        "ok": true,
+        "detail": "C:\\Users\\aryan\\AppData\\Local\\Temp\\tmpju7456_s\\smoke\\velra_home\\staged\\225bc1a8d854feed\\staged_capsule"
+      },
+      {
+        "check": "and startup still gets it afterwards",
+        "ok": true,
+        "detail": "exit=0"
+      }
+    ],
+    "live_claude_smoke_test_run": false,
+    "note": "drives the real velra binary against the recorded Claude Code 2.1.272 SessionStart payloads. No Claude process is started; a live smoke test needs explicit authorization this phase does not have."
+  },
+  "trial_plan": {
+    "qualification": {
+      "pairs": [
+        {
+          "pair_id": "A_cold_continuation#q1",
+          "benchmark": "A_cold_continuation",
+          "stage": "q",
+          "replicate": 1,
+          "context_ladder_rung": null,
+          "arms": {
+            "baseline": {
+              "trial": "A_cold_continuation-q1-baseline",
+              "dir": "C:\\Users\\aryan\\Videos\\Velra\\bench\\results\\v0.1.2\\tokenburn\\trials\\A_cold_continuation-q1-baseline"
+            },
+            "velra": {
+              "trial": "A_cold_continuation-q1-velra",
+              "dir": "C:\\Users\\aryan\\Videos\\Velra\\bench\\results\\v0.1.2\\tokenburn\\trials\\A_cold_continuation-q1-velra"
+            }
+          },
+          "already_on_disk": {
+            "baseline": false,
+            "velra": false
+          }
+        },
+        {
+          "pair_id": "A_cold_continuation#q2",
+          "benchmark": "A_cold_continuation",
+          "stage": "q",
+          "replicate": 2,
+          "context_ladder_rung": null,
+          "arms": {
+            "baseline": {
+              "trial": "A_cold_continuation-q2-baseline",
+              "dir": "C:\\Users\\aryan\\Videos\\Velra\\bench\\results\\v0.1.2\\tokenburn\\trials\\A_cold_continuation-q2-baseline"
+            },
+            "velra": {
+              "trial": "A_cold_continuation-q2-velra",
+              "dir": "C:\\Users\\aryan\\Videos\\Velra\\bench\\results\\v0.1.2\\tokenburn\\trials\\A_cold_continuation-q2-velra"
+            }
+          },
+          "already_on_disk": {
+            "baseline": false,
+            "velra": false
+          }
+        },
+        {
+          "pair_id": "B_clear_survival#q1",
+          "benchmark": "B_clear_survival",
+          "stage": "q",
+          "replicate": 1,
+          "context_ladder_rung": null,
+          "arms": {
+            "baseline": {
+              "trial": "B_clear_survival-q1-baseline",
+              "dir": "C:\\Users\\aryan\\Videos\\Velra\\bench\\results\\v0.1.2\\tokenburn\\trials\\B_clear_survival-q1-baseline"
+            },
+            "velra": {
+              "trial": "B_clear_survival-q1-velra",
+              "dir": "C:\\Users\\aryan\\Videos\\Velra\\bench\\results\\v0.1.2\\tokenburn\\trials\\B_clear_survival-q1-velra"
+            }
+          },
+          "already_on_disk": {
+            "baseline": false,
+            "velra": false
+          }
+        },
+        {
+          "pair_id": "B_clear_survival#q2",
+          "benchmark": "B_clear_survival",
+          "stage": "q",
+          "replicate": 2,
+          "context_ladder_rung": null,
+          "arms": {
+            "baseline": {
+              "trial": "B_clear_survival-q2-baseline",
+              "dir": "C:\\Users\\aryan\\Videos\\Velra\\bench\\results\\v0.1.2\\tokenburn\\trials\\B_clear_survival-q2-baseline"
+            },
+            "velra": {
+              "trial": "B_clear_survival-q2-velra",
+              "dir": "C:\\Users\\aryan\\Videos\\Velra\\bench\\results\\v0.1.2\\tokenburn\\trials\\B_clear_survival-q2-velra"
+            }
+          },
+          "already_on_disk": {
+            "baseline": false,
+            "velra": false
+          }
+        }
+      ],
+      "pairs_per_benchmark": 2,
+      "sessions": 8,
+      "purpose": "prove the scenario creates the claimed pain, the baseline behaves legitimately, restore works, the capsule arrives, telemetry works and correctness is measurable",
+      "counts_toward_scorecard": false,
+      "redesign_allowed": true
+    },
+    "formal": {
+      "pairs": [
+        {
+          "pair_id": "A_cold_continuation#f1",
+          "benchmark": "A_cold_continuation",
+          "stage": "f",
+          "replicate": 1,
+          "context_ladder_rung": null,
+          "arms": {
+            "baseline": {
+              "trial": "A_cold_continuation-f1-baseline",
+              "dir": "C:\\Users\\aryan\\Videos\\Velra\\bench\\results\\v0.1.2\\tokenburn\\trials\\A_cold_continuation-f1-baseline"
+            },
+            "velra": {
+              "trial": "A_cold_continuation-f1-velra",
+              "dir": "C:\\Users\\aryan\\Videos\\Velra\\bench\\results\\v0.1.2\\tokenburn\\trials\\A_cold_continuation-f1-velra"
+            }
+          },
+          "already_on_disk": {
+            "baseline": false,
+            "velra": false
+          }
+        },
+        {
+          "pair_id": "A_cold_continuation#f2",
+          "benchmark": "A_cold_continuation",
+          "stage": "f",
+          "replicate": 2,
+          "context_ladder_rung": null,
+          "arms": {
+            "baseline": {
+              "trial": "A_cold_continuation-f2-baseline",
+              "dir": "C:\\Users\\aryan\\Videos\\Velra\\bench\\results\\v0.1.2\\tokenburn\\trials\\A_cold_continuation-f2-baseline"
+            },
+            "velra": {
+              "trial": "A_cold_continuation-f2-velra",
+              "dir": "C:\\Users\\aryan\\Videos\\Velra\\bench\\results\\v0.1.2\\tokenburn\\trials\\A_cold_continuation-f2-velra"
+            }
+          },
+          "already_on_disk": {
+            "baseline": false,
+            "velra": false
+          }
+        },
+        {
+          "pair_id": "A_cold_continuation#f3",
+          "benchmark": "A_cold_continuation",
+          "stage": "f",
+          "replicate": 3,
+          "context_ladder_rung": null,
+          "arms": {
+            "baseline": {
+              "trial": "A_cold_continuation-f3-baseline",
+              "dir": "C:\\Users\\aryan\\Videos\\Velra\\bench\\results\\v0.1.2\\tokenburn\\trials\\A_cold_continuation-f3-baseline"
+            },
+            "velra": {
+              "trial": "A_cold_continuation-f3-velra",
+              "dir": "C:\\Users\\aryan\\Videos\\Velra\\bench\\results\\v0.1.2\\tokenburn\\trials\\A_cold_continuation-f3-velra"
+            }
+          },
+          "already_on_disk": {
+            "baseline": false,
+            "velra": false
+          }
+        },
+        {
+          "pair_id": "A_cold_continuation#f4",
+          "benchmark": "A_cold_continuation",
+          "stage": "f",
+          "replicate": 4,
+          "context_ladder_rung": null,
+          "arms": {
+            "baseline": {
+              "trial": "A_cold_continuation-f4-baseline",
+              "dir": "C:\\Users\\aryan\\Videos\\Velra\\bench\\results\\v0.1.2\\tokenburn\\trials\\A_cold_continuation-f4-baseline"
+            },
+            "velra": {
+              "trial": "A_cold_continuation-f4-velra",
+              "dir": "C:\\Users\\aryan\\Videos\\Velra\\bench\\results\\v0.1.2\\tokenburn\\trials\\A_cold_continuation-f4-velra"
+            }
+          },
+          "already_on_disk": {
+            "baseline": false,
+            "velra": false
+          }
+        },
+        {
+          "pair_id": "B_clear_survival#f1",
+          "benchmark": "B_clear_survival",
+          "stage": "f",
+          "replicate": 1,
+          "context_ladder_rung": null,
+          "arms": {
+            "baseline": {
+              "trial": "B_clear_survival-f1-baseline",
+              "dir": "C:\\Users\\aryan\\Videos\\Velra\\bench\\results\\v0.1.2\\tokenburn\\trials\\B_clear_survival-f1-baseline"
+            },
+            "velra": {
+              "trial": "B_clear_survival-f1-velra",
+              "dir": "C:\\Users\\aryan\\Videos\\Velra\\bench\\results\\v0.1.2\\tokenburn\\trials\\B_clear_survival-f1-velra"
+            }
+          },
+          "already_on_disk": {
+            "baseline": false,
+            "velra": false
+          }
+        },
+        {
+          "pair_id": "B_clear_survival#f2",
+          "benchmark": "B_clear_survival",
+          "stage": "f",
+          "replicate": 2,
+          "context_ladder_rung": null,
+          "arms": {
+            "baseline": {
+              "trial": "B_clear_survival-f2-baseline",
+              "dir": "C:\\Users\\aryan\\Videos\\Velra\\bench\\results\\v0.1.2\\tokenburn\\trials\\B_clear_survival-f2-baseline"
+            },
+            "velra": {
+              "trial": "B_clear_survival-f2-velra",
+              "dir": "C:\\Users\\aryan\\Videos\\Velra\\bench\\results\\v0.1.2\\tokenburn\\trials\\B_clear_survival-f2-velra"
+            }
+          },
+          "already_on_disk": {
+            "baseline": false,
+            "velra": false
+          }
+        },
+        {
+          "pair_id": "B_clear_survival#f3",
+          "benchmark": "B_clear_survival",
+          "stage": "f",
+          "replicate": 3,
+          "context_ladder_rung": null,
+          "arms": {
+            "baseline": {
+              "trial": "B_clear_survival-f3-baseline",
+              "dir": "C:\\Users\\aryan\\Videos\\Velra\\bench\\results\\v0.1.2\\tokenburn\\trials\\B_clear_survival-f3-baseline"
+            },
+            "velra": {
+              "trial": "B_clear_survival-f3-velra",
+              "dir": "C:\\Users\\aryan\\Videos\\Velra\\bench\\results\\v0.1.2\\tokenburn\\trials\\B_clear_survival-f3-velra"
+            }
+          },
+          "already_on_disk": {
+            "baseline": false,
+            "velra": false
+          }
+        },
+        {
+          "pair_id": "B_clear_survival#f4",
+          "benchmark": "B_clear_survival",
+          "stage": "f",
+          "replicate": 4,
+          "context_ladder_rung": null,
+          "arms": {
+            "baseline": {
+              "trial": "B_clear_survival-f4-baseline",
+              "dir": "C:\\Users\\aryan\\Videos\\Velra\\bench\\results\\v0.1.2\\tokenburn\\trials\\B_clear_survival-f4-baseline"
+            },
+            "velra": {
+              "trial": "B_clear_survival-f4-velra",
+              "dir": "C:\\Users\\aryan\\Videos\\Velra\\bench\\results\\v0.1.2\\tokenburn\\trials\\B_clear_survival-f4-velra"
+            }
+          },
+          "already_on_disk": {
+            "baseline": false,
+            "velra": false
+          }
+        }
+      ],
+      "pairs_per_benchmark": 4,
+      "sessions": 16,
+      "redesign_allowed": false,
+      "scenario_frozen_before_first_formal_trial": true
+    },
+    "total_pairs": 12,
+    "total_sessions": 24,
+    "ladder_rung_for_trials": 250000,
+    "note": "each trial drives two Claude sessions -- a source and a destination -- so a 'session' here is a pair of processes; the counts above are trials, matching \u00a711."
+  },
+  "live_safety_gate": {
+    "gate_present": true,
+    "gate_module": "safety",
+    "requires_flag": "--live",
+    "requires_env": "VELRA_ALLOW_LIVE_BENCHMARK=1",
+    "live_env_flag_present": true,
+    "nested_claude_markers": [],
+    "would_allow_live_now": true,
+    "refusal_reasons_now": []
+  },
+  "offline_guarantee": null,
+  "checks": [
+    {
+      "phase": "environment",
+      "check": "python >= 3.11",
+      "ok": true,
+      "detail": "3.14.0",
+      "fatal": true
+    },
+    {
+      "phase": "environment",
+      "check": "cargo available",
+      "ok": true,
+      "detail": "cargo 1.98.1 (797e8a9bc 2026-08-05)",
+      "fatal": false
+    },
+    {
+      "phase": "environment",
+      "check": "velra release binary present",
+      "ok": true,
+      "detail": "C:\\Users\\aryan\\Videos\\Velra\\target\\release\\velra.exe",
+      "fatal": true
+    },
+    {
+      "phase": "environment",
+      "check": "velra --version answers",
+      "ok": true,
+      "detail": "velra 0.1.2 (c7b1caaac, x86_64-pc-windows-gnu)",
+      "fatal": true
+    },
+    {
+      "phase": "environment",
+      "check": "Claude Code binary resolved",
+      "ok": true,
+      "detail": "2.1.272 at C:\\Users\\aryan\\.vscode\\extensions\\anthropic.claude-code-2.1.272-win32-x64\\resources\\native-binary\\claude.exe",
+      "fatal": true
+    },
+    {
+      "phase": "environment",
+      "check": "pre-registration loads and hashes",
+      "ok": true,
+      "detail": "775f18f4775997e7",
+      "fatal": true
+    },
+    {
+      "phase": "provenance",
+      "check": "working tree clean (excluding this runner's own output)",
+      "ok": true,
+      "detail": "0 changed path(s); 1 self-written path(s) excluded",
+      "fatal": true
+    },
+    {
+      "phase": "provenance",
+      "check": "no tracked file is deleted",
+      "ok": true,
+      "detail": "",
+      "fatal": true
+    },
+    {
+      "phase": "provenance",
+      "check": "the velra binary was built from HEAD",
+      "ok": true,
+      "detail": "c7b1caaac vs c7b1caaac",
+      "fatal": true
+    },
+    {
+      "phase": "legacy",
+      "check": "bench/legacy exists",
+      "ok": true,
+      "detail": "C:\\Users\\aryan\\Videos\\Velra\\bench\\legacy",
+      "fatal": true
+    },
+    {
+      "phase": "legacy",
+      "check": "S1/S2/S3 scenario sources archived, not deleted",
+      "ok": true,
+      "detail": "",
+      "fatal": true
+    },
+    {
+      "phase": "legacy",
+      "check": "the archived runners moved with them",
+      "ok": true,
+      "detail": "run_efficacy_benchmark.py, run_full_benchmark.py, run_hardened_eval.py",
+      "fatal": true
+    },
+    {
+      "phase": "legacy",
+      "check": "historical results and reports still present",
+      "ok": true,
+      "detail": "",
+      "fatal": true
+    },
+    {
+      "phase": "legacy",
+      "check": "legacy scenarios excluded from the v0.1.2 scorecard",
+      "ok": true,
+      "detail": "separate trials root, separate pre-registration",
+      "fatal": true
+    },
+    {
+      "phase": "tests",
+      "check": "tokenburn selftest (18 scripted cases, offline)",
+      "ok": true,
+      "detail": "SELFTEST PASSED - 19 cases, 37 trials, 17 pairs, no Claude process and no network call.",
+      "fatal": true
+    },
+    {
+      "phase": "tests",
+      "check": "pytest bench/tests",
+      "ok": true,
+      "detail": "217 passed in 33.11s",
+      "fatal": true
+    },
+    {
+      "phase": "tests",
+      "check": "legacy harness selftest still passes after the archive",
+      "ok": true,
+      "detail": "SELFTEST PASSED - the pipeline runs end to end and every branch of the verdict logic returns what the scripted outcomes imply.",
+      "fatal": true
+    },
+    {
+      "phase": "tests",
+      "check": "cargo test --workspace --features fault-injection",
+      "ok": true,
+      "detail": "",
+      "fatal": true
+    },
+    {
+      "phase": "fixtures",
+      "check": "A_cold_continuation: ground truth verified by running pytest",
+      "ok": true,
+      "detail": "{\"as_generated\": {\"observed_target\": \"fail\"}, \"true_fix\": {\"observed_target\": \"pass\", \"observed_invariant\": true}, \"dead_end\": {\"observed_target\": \"pass\", \"observed_invariant\": false}}",
+      "fatal": true
+    },
+    {
+      "phase": "fixtures",
+      "check": "A_cold_continuation: at least 15 meaningful turns",
+      "ok": true,
+      "detail": "17 turns",
+      "fatal": true
+    },
+    {
+      "phase": "fixtures",
+      "check": "B_clear_survival: ground truth verified by running pytest",
+      "ok": true,
+      "detail": "{\"as_generated\": {\"observed_target\": \"fail\"}, \"true_fix\": {\"observed_target\": \"pass\", \"observed_invariant\": true}, \"dead_end\": {\"observed_target\": \"pass\", \"observed_invariant\": false}}",
+      "fatal": true
+    },
+    {
+      "phase": "fixtures",
+      "check": "B_clear_survival: at least 15 meaningful turns",
+      "ok": true,
+      "detail": "17 turns",
+      "fatal": true
+    },
+    {
+      "phase": "leaks",
+      "check": "A_cold_continuation: no fatal leak on any of 9 surfaces",
+      "ok": true,
+      "detail": "leak scan clean across 9 surfaces (non-fatal: {'pre_prompts': 6})",
+      "fatal": true
+    },
+    {
+      "phase": "leaks",
+      "check": "B_clear_survival: no fatal leak on any of 9 surfaces",
+      "ok": true,
+      "detail": "leak scan clean across 9 surfaces (non-fatal: {'pre_prompts': 7})",
+      "fatal": true
+    },
+    {
+      "phase": "ladder",
+      "check": "100,000 generates, verifies and is deterministic",
+      "ok": true,
+      "detail": "361,524 chars, 0.36 MB",
+      "fatal": true
+    },
+    {
+      "phase": "ladder",
+      "check": "250,000 generates, verifies and is deterministic",
+      "ok": true,
+      "detail": "902,619 chars, 0.90 MB",
+      "fatal": true
+    },
+    {
+      "phase": "ladder",
+      "check": "500,000 generates, verifies and is deterministic",
+      "ok": true,
+      "detail": "1,801,696 chars, 1.80 MB",
+      "fatal": true
+    },
+    {
+      "phase": "ladder",
+      "check": "700,000 generates, verifies and is deterministic",
+      "ok": true,
+      "detail": "2,521,256 chars, 2.52 MB",
+      "fatal": true
+    },
+    {
+      "phase": "ladder",
+      "check": "800,000 generates, verifies and is deterministic",
+      "ok": true,
+      "detail": "2,881,019 chars, 2.88 MB",
+      "fatal": true
+    },
+    {
+      "phase": "ladder",
+      "check": "900,000 generates, verifies and is deterministic",
+      "ok": true,
+      "detail": "3,242,149 chars, 3.24 MB",
+      "fatal": true
+    },
+    {
+      "phase": "telemetry",
+      "check": "no terminal scraping anywhere in the package",
+      "ok": true,
+      "detail": "[]",
+      "fatal": true
+    },
+    {
+      "phase": "telemetry",
+      "check": "every metric carries the six provenance fields",
+      "ok": true,
+      "detail": "metric_name, value, unit, source, raw_artifact_reference, measurement_status",
+      "fatal": true
+    },
+    {
+      "phase": "mock",
+      "check": "MockClaudeAdapter feeds the production pipeline",
+      "ok": true,
+      "detail": "19 cases, 37 trials, 17 pairs",
+      "fatal": true
+    },
+    {
+      "phase": "capsule",
+      "check": "A_cold_continuation: the production capsule carries every declared marker",
+      "ok": true,
+      "detail": "3/3 markers, 1406 chars",
+      "fatal": true
+    },
+    {
+      "phase": "capsule",
+      "check": "B_clear_survival: the production capsule carries every declared marker",
+      "ok": true,
+      "detail": "4/4 markers, 1453 chars",
+      "fatal": true
+    },
+    {
+      "phase": "capsule",
+      "check": "the benchmark composes no capsule text",
+      "ok": true,
+      "detail": "velra restore (production renderer)",
+      "fatal": true
+    },
+    {
+      "phase": "smoke",
+      "check": "restore stages, SessionStart delivers, exactly once",
+      "ok": true,
+      "detail": "22/22 checks",
+      "fatal": true
+    },
+    {
+      "phase": "plan",
+      "check": "every pair schedules both arms",
+      "ok": true,
+      "detail": "12 pairs, 24 trials",
+      "fatal": true
+    },
+    {
+      "phase": "plan",
+      "check": "formal stage meets the registered pair count",
+      "ok": true,
+      "detail": "4 per benchmark",
+      "fatal": true
+    },
+    {
+      "phase": "safety",
+      "check": "the gate exists in executable code",
+      "ok": true,
+      "detail": "--live + VELRA_ALLOW_LIVE_BENCHMARK=1",
+      "fatal": true
+    },
+    {
+      "phase": "safety",
+      "check": "live execution is authorized",
+      "ok": true,
+      "detail": "",
+      "fatal": true
+    }
+  ],
+  "blockers": [],
+  "warnings": [],
+  "ready": true,
+  "state": "READY FOR LIVE EVALUATION",
+  "elapsed_seconds": 92.2
+}

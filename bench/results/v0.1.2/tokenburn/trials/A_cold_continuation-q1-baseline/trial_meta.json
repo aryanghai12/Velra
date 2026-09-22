@@ -1,0 +1,1123 @@
+{
+  "scenario": "A_cold_continuation",
+  "arm": "baseline",
+  "replicate": 1,
+  "pair_id": "A_cold_continuation#q1",
+  "pair_key": {
+    "benchmark": "A_cold_continuation",
+    "scenario": "A_cold_continuation",
+    "pair_id": "A_cold_continuation#q1",
+    "fixture_seed": "f6233e55efb918ca",
+    "model": "sonnet",
+    "claude_version": "2.1.272 (Claude Code)",
+    "git_head": "c7b1caaacba225a063ae49e1bad859b2fc125c1a",
+    "turn_script_hash": "e84715336b0762fc",
+    "permission_mode": "bypassPermissions",
+    "context_ladder_rung": 250000
+  },
+  "model": "sonnet",
+  "session_id": "e37bf69b-5966-4dd3-a7cf-2bcfaf1d4640",
+  "source_session_id": "980ff0b9-e35d-40bb-ac40-2dec3b278b97",
+  "destination_session_id": "e37bf69b-5966-4dd3-a7cf-2bcfaf1d4640",
+  "source_session": {
+    "session_id": "980ff0b9-e35d-40bb-ac40-2dec3b278b97",
+    "turns": 17,
+    "transition": "new_session",
+    "turn_marks": [
+      {
+        "turn": 0,
+        "elapsed_s": 20.927,
+        "subtype": "success",
+        "total_cost_usd": 0.11120699999999999,
+        "usage": {
+          "input_tokens": 10,
+          "cache_creation_input_tokens": 15723,
+          "cache_read_input_tokens": 162180,
+          "output_tokens": 1489,
+          "output_tokens_details": {
+            "thinking_tokens": 73
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 15723,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 633,
+              "cache_read_input_tokens": 36604,
+              "cache_creation_input_tokens": 997,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 997
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        }
+      },
+      {
+        "turn": 1,
+        "elapsed_s": 30.546,
+        "subtype": "success",
+        "total_cost_usd": 0.1599466,
+        "usage": {
+          "input_tokens": 8,
+          "cache_creation_input_tokens": 2378,
+          "cache_read_input_tokens": 154908,
+          "output_tokens": 823,
+          "output_tokens_details": {
+            "thinking_tokens": 0
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 2378,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 124,
+              "cache_read_input_tokens": 39718,
+              "cache_creation_input_tokens": 261,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 261
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        }
+      },
+      {
+        "turn": 2,
+        "elapsed_s": 36.166,
+        "subtype": "success",
+        "total_cost_usd": 0.1740744,
+        "usage": {
+          "input_tokens": 2,
+          "cache_creation_input_tokens": 232,
+          "cache_read_input_tokens": 39979,
+          "output_tokens": 520,
+          "output_tokens_details": {
+            "thinking_tokens": 56
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 232,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 520,
+              "cache_read_input_tokens": 39979,
+              "cache_creation_input_tokens": 232,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 232
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        }
+      },
+      {
+        "turn": 3,
+        "elapsed_s": 44.662,
+        "subtype": "success",
+        "total_cost_usd": 0.20198059999999998,
+        "usage": {
+          "input_tokens": 4,
+          "cache_creation_input_tokens": 982,
+          "cache_read_input_tokens": 81051,
+          "output_tokens": 776,
+          "output_tokens_details": {
+            "thinking_tokens": 124
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 982,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 542,
+              "cache_read_input_tokens": 40840,
+              "cache_creation_input_tokens": 353,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 353
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        }
+      },
+      {
+        "turn": 4,
+        "elapsed_s": 74.334,
+        "subtype": "success",
+        "total_cost_usd": 0.28429780000000004,
+        "usage": {
+          "input_tokens": 10,
+          "cache_creation_input_tokens": 3368,
+          "cache_read_input_tokens": 214226,
+          "output_tokens": 2598,
+          "output_tokens_details": {
+            "thinking_tokens": 986
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 3368,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 536,
+              "cache_read_input_tokens": 44184,
+              "cache_creation_input_tokens": 377,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 377
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        }
+      },
+      {
+        "turn": 5,
+        "elapsed_s": 85.46,
+        "subtype": "success",
+        "total_cost_usd": 0.34026380000000006,
+        "usage": {
+          "input_tokens": 8,
+          "cache_creation_input_tokens": 2659,
+          "cache_read_input_tokens": 183070,
+          "output_tokens": 870,
+          "output_tokens_details": {
+            "thinking_tokens": 117
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 2659,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 256,
+              "cache_read_input_tokens": 46936,
+              "cache_creation_input_tokens": 284,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 284
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        }
+      },
+      {
+        "turn": 6,
+        "elapsed_s": 90.967,
+        "subtype": "success",
+        "total_cost_usd": 0.37229260000000003,
+        "usage": {
+          "input_tokens": 4,
+          "cache_creation_input_tokens": 2240,
+          "cache_read_input_tokens": 94804,
+          "output_tokens": 410,
+          "output_tokens_details": {
+            "thinking_tokens": 0
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 2240,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 258,
+              "cache_read_input_tokens": 47584,
+              "cache_creation_input_tokens": 1876,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 1876
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        }
+      },
+      {
+        "turn": 7,
+        "elapsed_s": 97.964,
+        "subtype": "success",
+        "total_cost_usd": 0.4006716,
+        "usage": {
+          "input_tokens": 4,
+          "cache_creation_input_tokens": 761,
+          "cache_read_input_tokens": 99285,
+          "output_tokens": 547,
+          "output_tokens_details": {
+            "thinking_tokens": 137
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 761,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 259,
+              "cache_read_input_tokens": 49825,
+              "cache_creation_input_tokens": 396,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 396
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        }
+      },
+      {
+        "turn": 8,
+        "elapsed_s": 115.994,
+        "subtype": "success",
+        "total_cost_usd": 0.466541,
+        "usage": {
+          "input_tokens": 8,
+          "cache_creation_input_tokens": 2290,
+          "cache_read_input_tokens": 204567,
+          "output_tokens": 1578,
+          "output_tokens_details": {
+            "thinking_tokens": 286
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 2290,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 361,
+              "cache_read_input_tokens": 52247,
+              "cache_creation_input_tokens": 264,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 264
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        }
+      },
+      {
+        "turn": 9,
+        "elapsed_s": 130.865,
+        "subtype": "success",
+        "total_cost_usd": 0.5200372,
+        "usage": {
+          "input_tokens": 6,
+          "cache_creation_input_tokens": 2572,
+          "cache_read_input_tokens": 159431,
+          "output_tokens": 1131,
+          "output_tokens_details": {
+            "thinking_tokens": 486
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 2572,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 337,
+              "cache_read_input_tokens": 53926,
+              "cache_creation_input_tokens": 1157,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 1157
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        }
+      },
+      {
+        "turn": 10,
+        "elapsed_s": 135.327,
+        "subtype": "success",
+        "total_cost_usd": 0.5510506000000001,
+        "usage": {
+          "input_tokens": 4,
+          "cache_creation_input_tokens": 1596,
+          "cache_read_input_tokens": 110607,
+          "output_tokens": 250,
+          "output_tokens_details": {
+            "thinking_tokens": 0
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 1596,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 104,
+              "cache_read_input_tokens": 55524,
+              "cache_creation_input_tokens": 1155,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 1155
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        }
+      },
+      {
+        "turn": 11,
+        "elapsed_s": 142.249,
+        "subtype": "success",
+        "total_cost_usd": 0.582709,
+        "usage": {
+          "input_tokens": 4,
+          "cache_creation_input_tokens": 648,
+          "cache_read_input_tokens": 113592,
+          "output_tokens": 634,
+          "output_tokens_details": {
+            "thinking_tokens": 0
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 648,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 420,
+              "cache_read_input_tokens": 56913,
+              "cache_creation_input_tokens": 414,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 414
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        }
+      },
+      {
+        "turn": 12,
+        "elapsed_s": 153.875,
+        "subtype": "success",
+        "total_cost_usd": 0.6385494,
+        "usage": {
+          "input_tokens": 6,
+          "cache_creation_input_tokens": 3230,
+          "cache_read_input_tokens": 173342,
+          "output_tokens": 824,
+          "output_tokens_details": {
+            "thinking_tokens": 231
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 3230,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 289,
+              "cache_read_input_tokens": 58162,
+              "cache_creation_input_tokens": 2395,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 2395
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        }
+      },
+      {
+        "turn": 13,
+        "elapsed_s": 171.112,
+        "subtype": "success",
+        "total_cost_usd": 0.7417946000000001,
+        "usage": {
+          "input_tokens": 6,
+          "cache_creation_input_tokens": 12507,
+          "cache_read_input_tokens": 182976,
+          "output_tokens": 1661,
+          "output_tokens_details": {
+            "thinking_tokens": 438
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 12507,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 1020,
+              "cache_read_input_tokens": 61454,
+              "cache_creation_input_tokens": 11610,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 11610
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        }
+      },
+      {
+        "turn": 14,
+        "elapsed_s": 184.118,
+        "subtype": "success",
+        "total_cost_usd": 0.7939822000000001,
+        "usage": {
+          "input_tokens": 4,
+          "cache_creation_input_tokens": 2807,
+          "cache_read_input_tokens": 147258,
+          "output_tokens": 1150,
+          "output_tokens_details": {
+            "thinking_tokens": 577
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 2807,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 592,
+              "cache_read_input_tokens": 74194,
+              "cache_creation_input_tokens": 1677,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 1677
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        }
+      },
+      {
+        "turn": 15,
+        "elapsed_s": 194.971,
+        "subtype": "success",
+        "total_cost_usd": 0.8380782000000001,
+        "usage": {
+          "input_tokens": 4,
+          "cache_creation_input_tokens": 1014,
+          "cache_read_input_tokens": 152460,
+          "output_tokens": 954,
+          "output_tokens_details": {
+            "thinking_tokens": 66
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 1014,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 780,
+              "cache_read_input_tokens": 76589,
+              "cache_creation_input_tokens": 296,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 296
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        }
+      },
+      {
+        "turn": 16,
+        "elapsed_s": 196.392,
+        "subtype": "success",
+        "total_cost_usd": 0.8570992000000001,
+        "usage": {
+          "input_tokens": 2,
+          "cache_creation_input_tokens": 890,
+          "cache_read_input_tokens": 76885,
+          "output_tokens": 8,
+          "output_tokens_details": {
+            "thinking_tokens": 0
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 890,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 8,
+              "cache_read_input_tokens": 76885,
+              "cache_creation_input_tokens": 890,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 890
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        }
+      }
+    ]
+  },
+  "destination_session": {
+    "turns": 1,
+    "turn_marks": [
+      {
+        "turn": 0,
+        "elapsed_s": 120.058,
+        "subtype": "success",
+        "total_cost_usd": 0.35826399999999997,
+        "usage": {
+          "input_tokens": 30,
+          "cache_creation_input_tokens": 25500,
+          "cache_read_input_tokens": 665245,
+          "output_tokens": 12219,
+          "output_tokens_details": {
+            "thinking_tokens": 6853
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 25500,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 338,
+              "cache_read_input_tokens": 52399,
+              "cache_creation_input_tokens": 366,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 366
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        }
+      }
+    ]
+  },
+  "repo_provenance": {
+    "git_head": "c7b1caaacba225a063ae49e1bad859b2fc125c1a",
+    "git_branch": "main",
+    "working_tree_changes": 2,
+    "working_tree_clean": false,
+    "captured_at_trial_start": true
+  },
+  "arm_order_index": 0,
+  "arm_order": [
+    "baseline",
+    "velra"
+  ],
+  "transition_lifecycle": {
+    "transition": "new_session",
+    "restore_before_turn_index": null,
+    "restore_while_source_session_live": false,
+    "source_turns_total": 17,
+    "clear_turn_index": null,
+    "destination_is_a_new_process": true,
+    "continuation_prompt_identical_on_both_arms": true
+  },
+  "old_transcript_replayed": false,
+  "transcript_source": "C:\\Users\\aryan\\.claude\\projects\\C--Users-aryan-AppData-Local-Temp-velra-tokenburn-fixtures-A-cold-continuation-q1-baseline\\e37bf69b-5966-4dd3-a7cf-2bcfaf1d4640.jsonl",
+  "manifest": {
+    "benchmark": "A_cold_continuation",
+    "title": "Cold-continuation token-burn trap",
+    "transition": "new_session",
+    "repo": "C:\\Users\\aryan\\AppData\\Local\\Temp\\velra-tokenburn-fixtures\\A_cold_continuation-q1-baseline",
+    "turn_count": 17,
+    "transition_index": 16,
+    "continuation_prompt": "Continue where we left off and finish the task. Do not ask me what it was.",
+    "turn_script_hash": "e84715336b0762fc",
+    "fixture_seed": "f6233e55efb918ca",
+    "leak_terms": [
+      "outside the loop",
+      "before the loop",
+      "once per request",
+      "hoist",
+      "move the key",
+      "compute the key once",
+      "pure function of the request",
+      "no process-wide state",
+      "process-wide state",
+      "incident last quarter",
+      "memoise",
+      "memoize",
+      "module-level dict",
+      "_memo",
+      "the active task",
+      "currently working on",
+      "next action"
+    ],
+    "capsule_markers": [
+      "src/payments/retry.py",
+      "test_retry_preserves_idempotency_key",
+      "retry_backoff"
+    ],
+    "capsule_token_ceiling": 800,
+    "ladder": [
+      100000,
+      250000,
+      500000,
+      700000,
+      800000,
+      900000
+    ],
+    "state_recovery": {
+      "current_task": [
+        "test_retry_preserves_idempotency_key",
+        "idempotency key",
+        "retry"
+      ],
+      "active_failure": [
+        "test_retry_preserves_idempotency_key",
+        "idempotency"
+      ],
+      "relevant_files": [
+        "src/payments/retry.py",
+        "src/payments/idempotency.py"
+      ],
+      "next_action": [
+        "retry_backoff",
+        "src/payments/retry.py"
+      ]
+    },
+    "first_correct_action": {
+      "tools": [
+        "Read",
+        "Edit",
+        "Write",
+        "MultiEdit",
+        "Grep"
+      ],
+      "target_contains": [
+        "src/payments/retry.py"
+      ],
+      "must_not_precede": [
+        "src/payments/ledger.py",
+        "src/payments/reconcile.py"
+      ]
+    },
+    "final_correctness": {
+      "target_test_must_pass": true,
+      "max_suite_failures": 2,
+      "required_final_state": [
+        {
+          "file": "src/payments/retry.py",
+          "must_not_contain": [
+            "_memo",
+            "setdefault",
+            "global "
+          ]
+        }
+      ]
+    },
+    "invariant": {
+      "must_hold_in_file": "src/payments/retry.py",
+      "must_not_contain": [
+        "_memo",
+        "setdefault",
+        "global "
+      ]
+    },
+    "dead_end": {
+      "must_not_edit": [
+        "src/payments/ledger.py",
+        "src/payments/reconcile.py"
+      ],
+      "description": "the module-level memo in retry.py, tried at turn 8 and reverted at turn 9 without a commit"
+    },
+    "target_test": "tests/test_retry.py::test_retry_preserves_idempotency_key",
+    "ground_truth": {
+      "as_generated": {
+        "suite_exit": 1,
+        "suite_failures": 3,
+        "expected_suite_failures": 3,
+        "target": "tests/test_retry.py::test_retry_preserves_idempotency_key",
+        "expect_target": "fail",
+        "observed_target": "fail"
+      },
+      "true_fix": {
+        "expect_target": "pass",
+        "observed_target": "pass",
+        "expect_invariant": true,
+        "observed_invariant": true
+      },
+      "dead_end": {
+        "expect_target": "pass",
+        "observed_target": "pass",
+        "expect_invariant": false,
+        "observed_invariant": false
+      }
+    },
+    "leak_scan": {
+      "clean": true,
+      "terms": [
+        "outside the loop",
+        "before the loop",
+        "once per request",
+        "hoist",
+        "move the key",
+        "compute the key once",
+        "pure function of the request",
+        "no process-wide state",
+        "process-wide state",
+        "incident last quarter",
+        "memoise",
+        "memoize",
+        "module-level dict",
+        "_memo",
+        "the active task",
+        "currently working on",
+        "next action"
+      ],
+      "surfaces_scanned": [
+        "tree",
+        "filenames",
+        "git_history",
+        "git_refs",
+        "claude_md",
+        "project_memory",
+        "environment",
+        "post_prompt",
+        "pre_prompts"
+      ],
+      "fatal_surfaces": [
+        "tree",
+        "filenames",
+        "git_history",
+        "git_refs",
+        "claude_md",
+        "project_memory",
+        "environment",
+        "post_prompt"
+      ],
+      "hits_by_surface": {
+        "pre_prompts": 6
+      },
+      "fatal_hits": [],
+      "hits": [
+        {
+          "surface": "pre_prompts",
+          "where": "turn 4",
+          "term": "pure function of the request",
+          "context": "he part that matters: whatever we do, the key has to stay a pure function of the request. No process-wide state. We had an incident last quarter fro"
+        },
+        {
+          "surface": "pre_prompts",
+          "where": "turn 4",
+          "term": "no process-wide state",
+          "context": "we do, the key has to stay a pure function of the request. No process-wide state. We had an incident last quarter from exactly that."
+        },
+        {
+          "surface": "pre_prompts",
+          "where": "turn 4",
+          "term": "process-wide state",
+          "context": "do, the key has to stay a pure function of the request. No process-wide state. We had an incident last quarter from exactly that."
+        },
+        {
+          "surface": "pre_prompts",
+          "where": "turn 4",
+          "term": "incident last quarter",
+          "context": "e function of the request. No process-wide state. We had an incident last quarter from exactly that."
+        },
+        {
+          "surface": "pre_prompts",
+          "where": "turn 8",
+          "term": "module-level dict",
+          "context": "Try memoising the key in a module-level dict in retry.py and re-run the retry tests."
+        },
+        {
+          "surface": "pre_prompts",
+          "where": "turn 9",
+          "term": "process-wide state",
+          "context": "That passes, but it's the process-wide state I told you to avoid. Revert it with git restore and confirm"
+        }
+      ],
+      "n_hits": 6
+    }
+  },
+  "leak_scan": {
+    "clean": true,
+    "terms": [
+      "outside the loop",
+      "before the loop",
+      "once per request",
+      "hoist",
+      "move the key",
+      "compute the key once",
+      "pure function of the request",
+      "no process-wide state",
+      "process-wide state",
+      "incident last quarter",
+      "memoise",
+      "memoize",
+      "module-level dict",
+      "_memo",
+      "the active task",
+      "currently working on",
+      "next action"
+    ],
+    "surfaces_scanned": [
+      "tree",
+      "filenames",
+      "git_history",
+      "git_refs",
+      "claude_md",
+      "project_memory",
+      "environment",
+      "post_prompt",
+      "pre_prompts"
+    ],
+    "fatal_surfaces": [
+      "tree",
+      "filenames",
+      "git_history",
+      "git_refs",
+      "claude_md",
+      "project_memory",
+      "environment",
+      "post_prompt"
+    ],
+    "hits_by_surface": {
+      "pre_prompts": 6
+    },
+    "fatal_hits": [],
+    "hits": [
+      {
+        "surface": "pre_prompts",
+        "where": "turn 4",
+        "term": "pure function of the request",
+        "context": "he part that matters: whatever we do, the key has to stay a pure function of the request. No process-wide state. We had an incident last quarter fro"
+      },
+      {
+        "surface": "pre_prompts",
+        "where": "turn 4",
+        "term": "no process-wide state",
+        "context": "we do, the key has to stay a pure function of the request. No process-wide state. We had an incident last quarter from exactly that."
+      },
+      {
+        "surface": "pre_prompts",
+        "where": "turn 4",
+        "term": "process-wide state",
+        "context": "do, the key has to stay a pure function of the request. No process-wide state. We had an incident last quarter from exactly that."
+      },
+      {
+        "surface": "pre_prompts",
+        "where": "turn 4",
+        "term": "incident last quarter",
+        "context": "e function of the request. No process-wide state. We had an incident last quarter from exactly that."
+      },
+      {
+        "surface": "pre_prompts",
+        "where": "turn 8",
+        "term": "module-level dict",
+        "context": "Try memoising the key in a module-level dict in retry.py and re-run the retry tests."
+      },
+      {
+        "surface": "pre_prompts",
+        "where": "turn 9",
+        "term": "process-wide state",
+        "context": "That passes, but it's the process-wide state I told you to avoid. Revert it with git restore and confirm"
+      }
+    ],
+    "n_hits": 6
+  },
+  "context_fixture": {
+    "kind": "synthetic_load_fixture",
+    "fixture_version": 1,
+    "scenario": "A_cold_continuation",
+    "seed": 0,
+    "seed_string": "A_cold_continuation|250000|1|0",
+    "target_context_size": 250000,
+    "synthetic_context_size": 250728,
+    "token_basis": "estimated",
+    "chars_per_token_assumed": 3.6,
+    "chars": 902619,
+    "bytes_on_disk": 902619,
+    "files": [
+      {
+        "path": "build-01.log",
+        "chars": 306722,
+        "blocks": 396,
+        "sha256": "3fecfc080dea703b947556d1a11f4701"
+      },
+      {
+        "path": "test-01.log",
+        "chars": 234804,
+        "blocks": 332,
+        "sha256": "04d50ea8095fd8257a76d6312aa495b1"
+      },
+      {
+        "path": "build-02.log",
+        "chars": 216666,
+        "blocks": 286,
+        "sha256": "b765f392d1bb9905dc4c5da1f9b44f56"
+      },
+      {
+        "path": "test-02.log",
+        "chars": 144427,
+        "blocks": 204,
+        "sha256": "bc22f117002ffb45b04a74fad87f48ec"
+      }
+    ],
+    "context_generation_method": "programmatic synthetic build/test logs, read by the session as part of its turn script",
+    "reason_if_target_not_reached": null,
+    "actual_observed_context_size": null,
+    "warning": "synthetic_context_size is an ESTIMATE of a generated file's size at a declared chars-per-token ratio. It is NOT an observation of a Claude session's context and must never be reported as one.",
+    "verification": {
+      "ok": true,
+      "problems": [],
+      "measured_chars": 902619,
+      "declared_chars": 902619,
+      "target_chars": 900000,
+      "shortfall_fraction": -0.00291
+    }
+  },
+  "fixture": "C:\\Users\\aryan\\AppData\\Local\\Temp\\velra-tokenburn-fixtures\\A_cold_continuation-q1-baseline",
+  "velra_home": "C:\\Users\\aryan\\Videos\\Velra\\bench\\results\\v0.1.2\\tokenburn\\trials\\A_cold_continuation-q1-baseline\\velra_home",
+  "claude_binary": "C:\\Users\\aryan\\.vscode\\extensions\\anthropic.claude-code-2.1.272-win32-x64\\resources\\native-binary\\claude.exe",
+  "claude_version": "2.1.272 (Claude Code)",
+  "velra_binary": "C:\\Users\\aryan\\Videos\\Velra\\target\\release\\velra.exe",
+  "wall_seconds": 317.395,
+  "stderr": "",
+  "preregistration_id": "velra-tokenburn",
+  "preregistration_version": "1.0.0",
+  "preregistration_sha256": "775f18f4775997e7a952515425f0ac99d71462de38486edc8786a5b54d93551f"
+}

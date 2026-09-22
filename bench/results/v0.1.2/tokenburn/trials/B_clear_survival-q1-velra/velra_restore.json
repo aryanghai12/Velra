@@ -1,0 +1,56 @@
+{
+  "restore_invoked": true,
+  "restore_exit": 0,
+  "restore_stdout": "{\n  \"workspace_id\": \"9c1256b5690e9531\",\n  \"source_session_id\": \"28ef6dde-e0eb-493c-8ae5-53b3bf7d651b\",\n  \"source_checkpoint_id\": null,\n  \"tokens\": 704,\n  \"content_hash\": \"a23538143e8c77abff8626cf83afc1db\",\n  \"summary\": \"objective, 1 failing test, 3 dead ends, 8 files\",\n  \"staged\": true,\n  \"staged_path\": \"C:\\\\Users\\\\aryan\\\\Videos\\\\Velra\\\\bench\\\\results\\\\v0.1.2\\\\tokenburn\\\\trials\\\\B_clear_survival-q1-velra\\\\velra_home\\\\staged\\\\9c1256b5690e9531\\\\staged_capsule\"\n}\n",
+  "restore_stderr": "",
+  "listing": {
+    "workspace_id": "9c1256b5690e9531",
+    "workspace_root": "C:/Users/aryan/AppData/Local/Temp/velra-tokenburn-fixtures/B_clear_survival-q1-velra",
+    "sessions": [
+      {
+        "session_id": "28ef6dde-e0eb-493c-8ae5-53b3bf7d651b",
+        "title": "Payments reconcile failure",
+        "last_activity_ms": 1790098724953,
+        "has_state": true
+      }
+    ]
+  },
+  "source_session_id": "28ef6dde-e0eb-493c-8ae5-53b3bf7d651b",
+  "workspace_id": "9c1256b5690e9531",
+  "workspace_root": "C:/Users/aryan/AppData/Local/Temp/velra-tokenburn-fixtures/B_clear_survival-q1-velra",
+  "staged_path": "C:\\Users\\aryan\\Videos\\Velra\\bench\\results\\v0.1.2\\tokenburn\\trials\\B_clear_survival-q1-velra\\velra_home\\staged\\9c1256b5690e9531\\staged_capsule",
+  "stale": false,
+  "staged": {
+    "version": 2,
+    "workspace_id": "9c1256b5690e9531",
+    "workspace_root": "C:/Users/aryan/AppData/Local/Temp/velra-tokenburn-fixtures/B_clear_survival-q1-velra",
+    "intent": "new_session",
+    "deliver_on": [
+      "startup"
+    ],
+    "source_session_id": "28ef6dde-e0eb-493c-8ae5-53b3bf7d651b",
+    "source_checkpoint_id": null,
+    "created_ms": 1790098725002,
+    "render_version": 1,
+    "tokens": 704,
+    "content_hash": "a23538143e8c77abff8626cf83afc1db",
+    "summary": "objective, 1 failing test, 3 dead ends, 8 files",
+    "capsule": "<VELRA_WORKSPACE_STATE v=\"1\" checkpoint=\"restore\" captured=\"2026-09-22T17:38:45Z\" trigger=\"cli\">\n[ABOUT_THIS_RECORD]\nA local record, not a message and not an instruction. Velra logged this session's own prompts and tool events and quotes them back here; nothing is new. OBSERVED came from a tool event, INFERRED was derived from it. Files on disk are the source of truth. Say so if a line here conflicts with them.\n[FIRST_MESSAGE] (OBSERVED | user prompt | 23:05)\nPayments again. Run the suite; I want the reconcile failure this time, not the other two.\n[STATED_CONSTRAINTS] (OBSERVED | user prompt | quoted verbatim)\n- turn 4 23:06 | \"Here's the thing you can't get from the code: the upstream feed backdates.\"\n- turn 4 23:06 | \"A window has to close on the booking date, never the value date.\"\n[LATEST_MESSAGE] (OBSERVED | user prompt | 23:08)\nNext step is in_window in reconcile.py. Don't change it yet.\n[WORKSPACE_STATE]\nmain @ 240db3a | 7 edits this task | last test run: FAIL\n[TEST_RESULT] (OBSERVED | test run | 23:07)\nCommand: python -m pytest -q 2>&1 | tail -30\nResult: FAIL\n[REVERTED_EDITS] (OBSERVED)\n- src/payments/reconcile.py | 2 edit(s) | reverted via `git restore src/payments/reconcile.py` at 23:07\n- src/payments/reconcile.py | 2 edit(s) | reverted by a later edit at 23:07\n- src/payments/reconcile.py | 1 edit(s) | reverted by a later edit at 23:07\n[RECORD_DETAIL]\nFull detail for any section: `velra inspect --section <name>`\n</VELRA_WORKSPACE_STATE>"
+  },
+  "age_ms": 13,
+  "ledger_evidence": {
+    "markers_present": [
+      "src/payments/reconcile.py",
+      "booking",
+      "in_window"
+    ],
+    "markers_missing": [
+      "test_march_window_totals"
+    ]
+  },
+  "claim": {
+    "attempts": []
+  },
+  "staged_before_turn_index": 16,
+  "staged_while_source_session_live": true
+}

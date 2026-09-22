@@ -1,0 +1,352 @@
+{
+  "trial": "A_cold_continuation-q2-velra",
+  "scenario": "A_cold_continuation",
+  "arm": "velra",
+  "pair_id": "A_cold_continuation#q2",
+  "replicate": 2,
+  "pair_key": {
+    "benchmark": "A_cold_continuation",
+    "scenario": "A_cold_continuation",
+    "pair_id": "A_cold_continuation#q2",
+    "fixture_seed": "f6233e55efb918ca",
+    "model": "sonnet",
+    "claude_version": "2.1.272 (Claude Code)",
+    "git_head": "c7b1caaacba225a063ae49e1bad859b2fc125c1a",
+    "turn_script_hash": "e84715336b0762fc",
+    "permission_mode": "bypassPermissions",
+    "context_ladder_rung": 250000
+  },
+  "source_session": "a44a233f-1ec8-41bb-a074-484de18676d4",
+  "destination_session": "8b33e6bb-3d5a-41cb-824c-815ea8637b16",
+  "telemetry_source": "structured_usage",
+  "usage_selection": {
+    "selected_class": "result",
+    "expected_record_count": 1,
+    "available_classes": {
+      "assistant": 20,
+      "result": 1
+    },
+    "rejected_classes": {
+      "assistant": 20
+    },
+    "why": "1 result record(s); the classes are alternative reports of the same spend, so the others are not added to it: {'assistant': 20}"
+  },
+  "measurement_status": "measured",
+  "missing_primary_metrics": [],
+  "cache_condition": {
+    "condition": "HIT",
+    "why": "cache_read_input_tokens=307906, cache_creation_input_tokens=17242",
+    "cache_read": {
+      "name": "cache_read_input_tokens",
+      "value": 307906,
+      "unit": "tokens",
+      "source": "structured_usage",
+      "raw_artifact_reference": "A_cold_continuation-q2-velra/stream.jsonl",
+      "measurement_status": "measured",
+      "note": "summed over 1 structured usage records"
+    },
+    "cache_creation": {
+      "name": "cache_creation_input_tokens",
+      "value": 17242,
+      "unit": "tokens",
+      "source": "structured_usage",
+      "raw_artifact_reference": "A_cold_continuation-q2-velra/stream.jsonl",
+      "measurement_status": "measured",
+      "note": "summed over 1 structured usage records"
+    }
+  },
+  "context_provenance": {
+    "context_generation_method": "programmatic synthetic build/test logs, read by the session as part of its turn script",
+    "reason_if_target_not_reached": null,
+    "token_basis": "estimated",
+    "chars_per_token_assumed": 3.6,
+    "fixture_kind": "synthetic_load_fixture"
+  },
+  "metrics": {
+    "input_tokens": {
+      "name": "input_tokens",
+      "value": 16,
+      "unit": "tokens",
+      "source": "structured_usage",
+      "raw_artifact_reference": "A_cold_continuation-q2-velra/stream.jsonl",
+      "measurement_status": "measured",
+      "note": "summed over 1 structured usage records"
+    },
+    "output_tokens": {
+      "name": "output_tokens",
+      "value": 6007,
+      "unit": "tokens",
+      "source": "structured_usage",
+      "raw_artifact_reference": "A_cold_continuation-q2-velra/stream.jsonl",
+      "measurement_status": "measured",
+      "note": "summed over 1 structured usage records"
+    },
+    "cache_read_input_tokens": {
+      "name": "cache_read_input_tokens",
+      "value": 307906,
+      "unit": "tokens",
+      "source": "structured_usage",
+      "raw_artifact_reference": "A_cold_continuation-q2-velra/stream.jsonl",
+      "measurement_status": "measured",
+      "note": "summed over 1 structured usage records"
+    },
+    "cache_creation_input_tokens": {
+      "name": "cache_creation_input_tokens",
+      "value": 17242,
+      "unit": "tokens",
+      "source": "structured_usage",
+      "raw_artifact_reference": "A_cold_continuation-q2-velra/stream.jsonl",
+      "measurement_status": "measured",
+      "note": "summed over 1 structured usage records"
+    },
+    "total_input_tokens": {
+      "name": "total_input_tokens",
+      "value": 325164,
+      "unit": "tokens",
+      "source": "derived",
+      "raw_artifact_reference": "A_cold_continuation-q2-velra/stream.jsonl",
+      "measurement_status": "measured",
+      "note": "uncached input + cache reads + cache creation"
+    },
+    "usage_records": {
+      "name": "usage_records",
+      "value": 1,
+      "unit": "records",
+      "source": "derived",
+      "raw_artifact_reference": "A_cold_continuation-q2-velra/stream.jsonl",
+      "measurement_status": "measured",
+      "note": ""
+    },
+    "target_context_size": {
+      "name": "target_context_size",
+      "value": 250000,
+      "unit": "tokens",
+      "source": "derived",
+      "raw_artifact_reference": "A_cold_continuation-q2-velra/context_fixture.json",
+      "measurement_status": "measured",
+      "note": "a plan value, not an observation"
+    },
+    "synthetic_context_size": {
+      "name": "synthetic_context_size",
+      "value": 250728,
+      "unit": "tokens",
+      "source": "synthetic_fixture",
+      "raw_artifact_reference": "A_cold_continuation-q2-velra/context_fixture.json",
+      "measurement_status": "proxy",
+      "note": "generated fixture size, estimated at 3.6 chars/token; NOT a Claude observation"
+    },
+    "actual_observed_context_size": {
+      "name": "actual_observed_context_size",
+      "value": null,
+      "unit": "tokens",
+      "source": "unavailable",
+      "raw_artifact_reference": "A_cold_continuation-q2-velra/stream.jsonl",
+      "measurement_status": "unavailable",
+      "note": "no structured context-size field was present in the capture; the runtime does not expose one and it is not inferred"
+    },
+    "achieved_context_size": {
+      "name": "achieved_context_size",
+      "value": null,
+      "unit": "tokens",
+      "source": "unavailable",
+      "raw_artifact_reference": "A_cold_continuation-q2-velra/stream.jsonl",
+      "measurement_status": "unavailable",
+      "note": "alias of actual_observed_context_size; never the synthetic size"
+    },
+    "capsule_tokens": {
+      "name": "capsule_tokens",
+      "value": 710,
+      "unit": "tokens",
+      "source": "session_artifact",
+      "raw_artifact_reference": "A_cold_continuation-q2-velra/velra_restore.json",
+      "measurement_status": "proxy",
+      "note": "Velra's own render-budget estimate, not a tokenizer measurement"
+    },
+    "capsule_chars": {
+      "name": "capsule_chars",
+      "value": 1451,
+      "unit": "characters",
+      "source": "structured_usage",
+      "raw_artifact_reference": "A_cold_continuation-q2-velra/stream.jsonl",
+      "measurement_status": "measured",
+      "note": ""
+    },
+    "turns": {
+      "name": "turns",
+      "value": 1,
+      "unit": "turns",
+      "source": "structured_usage",
+      "raw_artifact_reference": "A_cold_continuation-q2-velra/stream.jsonl",
+      "measurement_status": "measured",
+      "note": ""
+    },
+    "tool_calls": {
+      "name": "tool_calls",
+      "value": 10,
+      "unit": "calls",
+      "source": "structured_usage",
+      "raw_artifact_reference": "A_cold_continuation-q2-velra/stream.jsonl",
+      "measurement_status": "measured",
+      "note": ""
+    },
+    "file_reads": {
+      "name": "file_reads",
+      "value": 4,
+      "unit": "reads",
+      "source": "structured_usage",
+      "raw_artifact_reference": "A_cold_continuation-q2-velra/stream.jsonl",
+      "measurement_status": "measured",
+      "note": ""
+    },
+    "searches": {
+      "name": "searches",
+      "value": 0,
+      "unit": "searches",
+      "source": "structured_usage",
+      "raw_artifact_reference": "A_cold_continuation-q2-velra/stream.jsonl",
+      "measurement_status": "measured",
+      "note": ""
+    },
+    "steps_to_first_correct_action": {
+      "name": "steps_to_first_correct_action",
+      "value": null,
+      "unit": "steps",
+      "source": "unavailable",
+      "raw_artifact_reference": "A_cold_continuation-q2-velra/stream.jsonl",
+      "measurement_status": "unavailable",
+      "note": "no action in this session matched the declared rule"
+    }
+  },
+  "state_recovery": {
+    "per_item": {
+      "current_task": {
+        "declared": true,
+        "identified": true,
+        "markers": [
+          "test_retry_preserves_idempotency_key",
+          "idempotency key",
+          "retry"
+        ],
+        "markers_found": [
+          "retry"
+        ]
+      },
+      "active_failure": {
+        "declared": true,
+        "identified": true,
+        "markers": [
+          "test_retry_preserves_idempotency_key",
+          "idempotency"
+        ],
+        "markers_found": [
+          "idempotency"
+        ]
+      },
+      "relevant_files": {
+        "declared": true,
+        "identified": true,
+        "markers": [
+          "src/payments/retry.py",
+          "src/payments/idempotency.py"
+        ],
+        "markers_found": [
+          "src/payments/retry.py",
+          "src/payments/idempotency.py"
+        ]
+      },
+      "next_action": {
+        "declared": true,
+        "identified": true,
+        "markers": [
+          "retry_backoff",
+          "src/payments/retry.py"
+        ],
+        "markers_found": [
+          "src/payments/retry.py"
+        ]
+      }
+    },
+    "declared_items": 4,
+    "identified_items": 4,
+    "complete": true
+  },
+  "first_correct_action": {
+    "declared": true,
+    "found": false,
+    "steps": null,
+    "dead_end_touched_first": true,
+    "why": "no action in this session matched the declared rule"
+  },
+  "final_correctness": {
+    "checks": {
+      "required_final_state": {
+        "declared": true,
+        "ok": true,
+        "files": [
+          {
+            "file": "src/payments/retry.py",
+            "ok": true,
+            "missing": [],
+            "forbidden_present": []
+          }
+        ]
+      },
+      "target_test": {
+        "declared": true,
+        "ok": true,
+        "node_id": "tests/test_retry.py::test_retry_preserves_idempotency_key",
+        "exit": 0,
+        "tail": [
+          ".                                                                        [100%]",
+          "1 passed in 0.01s"
+        ]
+      },
+      "no_regression": {
+        "declared": true,
+        "ok": true,
+        "suite_failures": 0,
+        "ceiling": 2,
+        "suite_exit": 0
+      },
+      "invariant": {
+        "declared": true,
+        "file": "src/payments/retry.py",
+        "ok": true,
+        "missing": [],
+        "forbidden_present": []
+      },
+      "dead_end_avoided": {
+        "declared": true,
+        "ok": false,
+        "touched": [
+          "src/payments/ledger.py",
+          "src/payments/reconcile.py"
+        ]
+      }
+    },
+    "declared_checks": 5,
+    "correct": false,
+    "evaluable": true
+  },
+  "capture": {
+    "total_lines": 121,
+    "malformed_lines": 0,
+    "malformed_fraction": 0.0,
+    "duplicates_removed": 0,
+    "usable": true
+  },
+  "deliveries": [
+    {
+      "stream_index": 2,
+      "hook_name": "SessionStart:startup",
+      "hook_event": "SessionStart",
+      "session_start_source": null,
+      "exit_code": 0,
+      "chars": 1451,
+      "system_message": "\u26a1 Velra restored: objective, 1 failing test, 1 dead end, 8 files \u2014 from session a44a233f (710 tokens)",
+      "on_startup": true
+    }
+  ],
+  "causal_validity": "INCOMPLETE",
+  "first_broken_link": "C_retained"
+}

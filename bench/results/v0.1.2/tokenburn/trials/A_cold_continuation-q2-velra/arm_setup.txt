@@ -1,0 +1,5 @@
+velra enable
+exit=0
+✓ Velra already enabled.
+
+

@@ -1,0 +1,265 @@
+{
+  "links": {
+    "A_large_state": {
+      "status": "pass",
+      "why": "17 source turns with a recorded context load",
+      "evidence": {
+        "source_session_turns": 17,
+        "target_context_size": 250000,
+        "synthetic_context_size": 250728,
+        "actual_observed_context_size": null,
+        "context_generation_method": "programmatic synthetic build/test logs, read by the session as part of its turn script",
+        "reason_if_target_not_reached": null,
+        "size_basis": "synthetic_fixture"
+      }
+    },
+    "B_absent_natively": {
+      "status": "pass",
+      "why": "no surface an agent can read carries the state",
+      "evidence": {
+        "surfaces_scanned": [
+          "tree",
+          "filenames",
+          "git_history",
+          "git_refs",
+          "claude_md",
+          "project_memory",
+          "environment",
+          "post_prompt",
+          "pre_prompts"
+        ],
+        "hits_by_surface": {
+          "pre_prompts": 6
+        },
+        "fatal_hits": [],
+        "terms": [
+          "outside the loop",
+          "before the loop",
+          "once per request",
+          "hoist",
+          "move the key",
+          "compute the key once",
+          "pure function of the request",
+          "no process-wide state",
+          "process-wide state",
+          "incident last quarter",
+          "memoise",
+          "memoize",
+          "module-level dict",
+          "_memo",
+          "the active task",
+          "currently working on",
+          "next action"
+        ]
+      }
+    },
+    "C_retained": {
+      "status": "fail",
+      "why": "the ledger did not hold every piece of the declared operational state: this is a CAPTURE failure, not a delivery one",
+      "evidence": {
+        "markers_present": [
+          "src/payments/retry.py"
+        ],
+        "markers_missing": [
+          "test_retry_preserves_idempotency_key",
+          "retry_backoff"
+        ],
+        "source_session_id": "a44a233f-1ec8-41bb-a074-484de18676d4",
+        "restore_exit": 0
+      }
+    },
+    "D_staged": {
+      "status": "pass",
+      "why": "a startup-eligible capsule was staged for this workspace",
+      "evidence": {
+        "staged_path": "C:\\Users\\aryan\\Videos\\Velra\\bench\\results\\v0.1.2\\tokenburn\\trials\\A_cold_continuation-q2-velra\\velra_home\\staged\\8357314d2702dcff\\staged_capsule",
+        "workspace_id": "8357314d2702dcff",
+        "expected_workspace_id": "8357314d2702dcff",
+        "intent": "new_session",
+        "deliver_on": [
+          "startup"
+        ],
+        "source_session_id": "a44a233f-1ec8-41bb-a074-484de18676d4",
+        "tokens": 710,
+        "content_hash": "ff619172028e228924ae08f9a87622a3",
+        "stale": false,
+        "age_ms": 31
+      }
+    },
+    "E_delivered": {
+      "status": "pass",
+      "why": "SessionStart(startup) emitted the capsule",
+      "evidence": {
+        "attempts": [],
+        "claimed_count": 0,
+        "startup_deliveries": [
+          {
+            "stream_index": 2,
+            "hook_name": "SessionStart:startup",
+            "hook_event": "SessionStart",
+            "session_start_source": null,
+            "exit_code": 0,
+            "chars": 1451,
+            "system_message": "\u26a1 Velra restored: objective, 1 failing test, 1 dead end, 8 files \u2014 from session a44a233f (710 tokens)",
+            "on_startup": true
+          }
+        ],
+        "all_deliveries": [
+          {
+            "stream_index": 2,
+            "hook_name": "SessionStart:startup",
+            "hook_event": "SessionStart",
+            "session_start_source": null,
+            "exit_code": 0,
+            "chars": 1451,
+            "system_message": "\u26a1 Velra restored: objective, 1 failing test, 1 dead end, 8 files \u2014 from session a44a233f (710 tokens)",
+            "on_startup": true
+          }
+        ]
+      }
+    },
+    "F_received": {
+      "status": "fail",
+      "why": "the delivered bytes did not carry every declared piece of operational state",
+      "evidence": {
+        "delivery_count": 1,
+        "capsule_chars": 1451,
+        "markers_found": [
+          "src/payments/retry.py"
+        ],
+        "markers_missing": [
+          "test_retry_preserves_idempotency_key",
+          "retry_backoff"
+        ],
+        "source_session_id": "a44a233f-1ec8-41bb-a074-484de18676d4",
+        "destination_session_id": "8b33e6bb-3d5a-41cb-824c-815ea8637b16",
+        "capsule_token_ceiling": 800,
+        "old_transcript_replayed": false
+      }
+    },
+    "G_used": {
+      "status": "pass",
+      "why": "the destination acted on the restored state",
+      "evidence": {
+        "identified_items": 4,
+        "declared_items": 4,
+        "per_item": {
+          "current_task": {
+            "declared": true,
+            "identified": true,
+            "markers": [
+              "test_retry_preserves_idempotency_key",
+              "idempotency key",
+              "retry"
+            ],
+            "markers_found": [
+              "retry"
+            ]
+          },
+          "active_failure": {
+            "declared": true,
+            "identified": true,
+            "markers": [
+              "test_retry_preserves_idempotency_key",
+              "idempotency"
+            ],
+            "markers_found": [
+              "idempotency"
+            ]
+          },
+          "relevant_files": {
+            "declared": true,
+            "identified": true,
+            "markers": [
+              "src/payments/retry.py",
+              "src/payments/idempotency.py"
+            ],
+            "markers_found": [
+              "src/payments/retry.py",
+              "src/payments/idempotency.py"
+            ]
+          },
+          "next_action": {
+            "declared": true,
+            "identified": true,
+            "markers": [
+              "retry_backoff",
+              "src/payments/retry.py"
+            ],
+            "markers_found": [
+              "src/payments/retry.py"
+            ]
+          }
+        },
+        "first_correct_action": {
+          "declared": true,
+          "found": false,
+          "steps": null,
+          "dead_end_touched_first": true,
+          "why": "no action in this session matched the declared rule"
+        }
+      }
+    },
+    "H_correct": {
+      "status": "fail",
+      "why": "the task was not completed correctly",
+      "evidence": {
+        "checks": {
+          "required_final_state": {
+            "declared": true,
+            "ok": true,
+            "files": [
+              {
+                "file": "src/payments/retry.py",
+                "ok": true,
+                "missing": [],
+                "forbidden_present": []
+              }
+            ]
+          },
+          "target_test": {
+            "declared": true,
+            "ok": true,
+            "node_id": "tests/test_retry.py::test_retry_preserves_idempotency_key",
+            "exit": 0,
+            "tail": [
+              ".                                                                        [100%]",
+              "1 passed in 0.01s"
+            ]
+          },
+          "no_regression": {
+            "declared": true,
+            "ok": true,
+            "suite_failures": 0,
+            "ceiling": 2,
+            "suite_exit": 0
+          },
+          "invariant": {
+            "declared": true,
+            "file": "src/payments/retry.py",
+            "ok": true,
+            "missing": [],
+            "forbidden_present": []
+          },
+          "dead_end_avoided": {
+            "declared": true,
+            "ok": false,
+            "touched": [
+              "src/payments/ledger.py",
+              "src/payments/reconcile.py"
+            ]
+          }
+        },
+        "declared_checks": 5
+      }
+    },
+    "I_burden_reduced": {
+      "status": "deferred",
+      "why": "'reduced' needs two arms; resolved by the pair verdict",
+      "evidence": {}
+    }
+  },
+  "first_broken_link": "C_retained",
+  "causal_validity": "INCOMPLETE",
+  "summary": "A_large_state=pass; B_absent_natively=pass; C_retained=fail; D_staged=pass; E_delivered=pass; F_received=fail; G_used=pass; H_correct=fail; I_burden_reduced=deferred"
+}

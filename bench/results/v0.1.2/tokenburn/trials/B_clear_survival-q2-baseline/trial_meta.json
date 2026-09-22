@@ -1,0 +1,1130 @@
+{
+  "scenario": "B_clear_survival",
+  "arm": "baseline",
+  "replicate": 2,
+  "pair_id": "B_clear_survival#q2",
+  "pair_key": {
+    "benchmark": "B_clear_survival",
+    "scenario": "B_clear_survival",
+    "pair_id": "B_clear_survival#q2",
+    "fixture_seed": "a070849ef9ae109d",
+    "model": "sonnet",
+    "claude_version": "2.1.272 (Claude Code)",
+    "git_head": "c7b1caaacba225a063ae49e1bad859b2fc125c1a",
+    "turn_script_hash": "8656331d0e9dd957",
+    "permission_mode": "bypassPermissions",
+    "context_ladder_rung": 250000
+  },
+  "model": "sonnet",
+  "session_id": "80ebe12b-2600-4fa6-a53d-a4e88c28a855",
+  "source_session_id": "62972290-62bf-41b1-bb03-dc56fe8d8042",
+  "destination_session_id": "80ebe12b-2600-4fa6-a53d-a4e88c28a855",
+  "source_session": {
+    "session_id": "62972290-62bf-41b1-bb03-dc56fe8d8042",
+    "turns": 17,
+    "transition": "clear",
+    "turn_marks": [
+      {
+        "turn": 0,
+        "elapsed_s": 21.253,
+        "subtype": "success",
+        "total_cost_usd": 0.1144874,
+        "usage": {
+          "input_tokens": 10,
+          "cache_creation_input_tokens": 16239,
+          "cache_read_input_tokens": 165762,
+          "output_tokens": 1538,
+          "output_tokens_details": {
+            "thinking_tokens": 523
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 16239,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 558,
+              "cache_read_input_tokens": 37757,
+              "cache_creation_input_tokens": 360,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 360
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        }
+      },
+      {
+        "turn": 1,
+        "elapsed_s": 28.021,
+        "subtype": "success",
+        "total_cost_usd": 0.1404578,
+        "usage": {
+          "input_tokens": 4,
+          "cache_creation_input_tokens": 1203,
+          "cache_read_input_tokens": 76902,
+          "output_tokens": 577,
+          "output_tokens_details": {
+            "thinking_tokens": 121
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 1203,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 242,
+              "cache_read_input_tokens": 38785,
+              "cache_creation_input_tokens": 535,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 535
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        }
+      },
+      {
+        "turn": 2,
+        "elapsed_s": 32.448,
+        "subtype": "success",
+        "total_cost_usd": 0.1622746,
+        "usage": {
+          "input_tokens": 4,
+          "cache_creation_input_tokens": 765,
+          "cache_read_input_tokens": 78994,
+          "output_tokens": 295,
+          "output_tokens_details": {
+            "thinking_tokens": 0
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 765,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 189,
+              "cache_read_input_tokens": 39674,
+              "cache_creation_input_tokens": 411,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 411
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        }
+      },
+      {
+        "turn": 3,
+        "elapsed_s": 34.746,
+        "subtype": "success",
+        "total_cost_usd": 0.17333759999999998,
+        "usage": {
+          "input_tokens": 2,
+          "cache_creation_input_tokens": 298,
+          "cache_read_input_tokens": 40085,
+          "output_tokens": 185,
+          "output_tokens_details": {
+            "thinking_tokens": 0
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 298,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 185,
+              "cache_read_input_tokens": 40085,
+              "cache_creation_input_tokens": 298,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 298
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        }
+      },
+      {
+        "turn": 4,
+        "elapsed_s": 52.266,
+        "subtype": "success",
+        "total_cost_usd": 0.2417976,
+        "usage": {
+          "input_tokens": 10,
+          "cache_creation_input_tokens": 2815,
+          "cache_read_input_tokens": 207400,
+          "output_tokens": 1570,
+          "output_tokens_details": {
+            "thinking_tokens": 189
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 2815,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 75,
+              "cache_read_input_tokens": 42807,
+              "cache_creation_input_tokens": 391,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 391
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        }
+      },
+      {
+        "turn": 5,
+        "elapsed_s": 60.141,
+        "subtype": "success",
+        "total_cost_usd": 0.29528719999999997,
+        "usage": {
+          "input_tokens": 4,
+          "cache_creation_input_tokens": 7372,
+          "cache_read_input_tokens": 86568,
+          "output_tokens": 668,
+          "output_tokens_details": {
+            "thinking_tokens": 225
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 7372,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 502,
+              "cache_read_input_tokens": 43370,
+              "cache_creation_input_tokens": 7200,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 7200
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        }
+      },
+      {
+        "turn": 6,
+        "elapsed_s": 63.679,
+        "subtype": "success",
+        "total_cost_usd": 0.3219972,
+        "usage": {
+          "input_tokens": 4,
+          "cache_creation_input_tokens": 1191,
+          "cache_read_input_tokens": 101740,
+          "output_tokens": 159,
+          "output_tokens_details": {
+            "thinking_tokens": 0
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 1191,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 7,
+              "cache_read_input_tokens": 51170,
+              "cache_creation_input_tokens": 591,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 591
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        }
+      },
+      {
+        "turn": 7,
+        "elapsed_s": 87.05,
+        "subtype": "success",
+        "total_cost_usd": 0.4430936,
+        "usage": {
+          "input_tokens": 16,
+          "cache_creation_input_tokens": 4107,
+          "cache_read_input_tokens": 426682,
+          "output_tokens": 1930,
+          "output_tokens_details": {
+            "thinking_tokens": 272
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 4107,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 49,
+              "cache_read_input_tokens": 55270,
+              "cache_creation_input_tokens": 598,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 598
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        }
+      },
+      {
+        "turn": 8,
+        "elapsed_s": 100.997,
+        "subtype": "success",
+        "total_cost_usd": 0.48335819999999996,
+        "usage": {
+          "input_tokens": 4,
+          "cache_creation_input_tokens": 1391,
+          "cache_read_input_tokens": 111913,
+          "output_tokens": 1231,
+          "output_tokens_details": {
+            "thinking_tokens": 802
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 1391,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 417,
+              "cache_read_input_tokens": 56045,
+              "cache_creation_input_tokens": 1214,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 1214
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        }
+      },
+      {
+        "turn": 9,
+        "elapsed_s": 115.068,
+        "subtype": "success",
+        "total_cost_usd": 0.5324561999999999,
+        "usage": {
+          "input_tokens": 4,
+          "cache_creation_input_tokens": 3453,
+          "cache_read_input_tokens": 115040,
+          "output_tokens": 1227,
+          "output_tokens_details": {
+            "thinking_tokens": 806
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 3453,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 225,
+              "cache_read_input_tokens": 57781,
+              "cache_creation_input_tokens": 2931,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 2931
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        }
+      },
+      {
+        "turn": 10,
+        "elapsed_s": 127.328,
+        "subtype": "success",
+        "total_cost_usd": 0.6094196000000001,
+        "usage": {
+          "input_tokens": 6,
+          "cache_creation_input_tokens": 7479,
+          "cache_read_input_tokens": 183177,
+          "output_tokens": 1040,
+          "output_tokens_details": {
+            "thinking_tokens": 363
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 7479,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 544,
+              "cache_read_input_tokens": 61413,
+              "cache_creation_input_tokens": 6778,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 6778
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        }
+      },
+      {
+        "turn": 11,
+        "elapsed_s": 142.905,
+        "subtype": "success",
+        "total_cost_usd": 0.6908628000000001,
+        "usage": {
+          "input_tokens": 8,
+          "cache_creation_input_tokens": 3346,
+          "cache_read_input_tokens": 276016,
+          "output_tokens": 1284,
+          "output_tokens_details": {
+            "thinking_tokens": 168
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 3346,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 276,
+              "cache_read_input_tokens": 69807,
+              "cache_creation_input_tokens": 1730,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 1730
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        }
+      },
+      {
+        "turn": 12,
+        "elapsed_s": 151.476,
+        "subtype": "success",
+        "total_cost_usd": 0.7345064000000001,
+        "usage": {
+          "input_tokens": 4,
+          "cache_creation_input_tokens": 1876,
+          "cache_read_input_tokens": 143458,
+          "output_tokens": 744,
+          "output_tokens_details": {
+            "thinking_tokens": 34
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 1876,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 354,
+              "cache_read_input_tokens": 71921,
+              "cache_creation_input_tokens": 1492,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 1492
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        }
+      },
+      {
+        "turn": 13,
+        "elapsed_s": 162.166,
+        "subtype": "success",
+        "total_cost_usd": 0.7785338000000002,
+        "usage": {
+          "input_tokens": 4,
+          "cache_creation_input_tokens": 1327,
+          "cache_read_input_tokens": 147307,
+          "output_tokens": 925,
+          "output_tokens_details": {
+            "thinking_tokens": 373
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 1327,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 715,
+              "cache_read_input_tokens": 73894,
+              "cache_creation_input_tokens": 846,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 846
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        }
+      },
+      {
+        "turn": 14,
+        "elapsed_s": 165.891,
+        "subtype": "success",
+        "total_cost_usd": 0.8153232000000001,
+        "usage": {
+          "input_tokens": 4,
+          "cache_creation_input_tokens": 1158,
+          "cache_read_input_tokens": 150297,
+          "output_tokens": 209,
+          "output_tokens_details": {
+            "thinking_tokens": 0
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 1158,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 57,
+              "cache_read_input_tokens": 75557,
+              "cache_creation_input_tokens": 341,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 341
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        }
+      },
+      {
+        "turn": 15,
+        "elapsed_s": 167.332,
+        "subtype": "success",
+        "total_cost_usd": 0.8317948000000002,
+        "usage": {
+          "input_tokens": 2,
+          "cache_creation_input_tokens": 167,
+          "cache_read_input_tokens": 75898,
+          "output_tokens": 62,
+          "output_tokens_details": {
+            "thinking_tokens": 0
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 167,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 62,
+              "cache_read_input_tokens": 75898,
+              "cache_creation_input_tokens": 167,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 167
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        }
+      },
+      {
+        "turn": 16,
+        "elapsed_s": 167.466,
+        "subtype": "success",
+        "total_cost_usd": 0,
+        "usage": {
+          "output_tokens_details": {
+            "thinking_tokens": 0
+          },
+          "input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "cache_read_input_tokens": 0,
+          "output_tokens": 0,
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "",
+          "iterations": [],
+          "speed": "standard"
+        }
+      }
+    ]
+  },
+  "destination_session": {
+    "turns": 1,
+    "turn_marks": [
+      {
+        "turn": 0,
+        "elapsed_s": 66.786,
+        "subtype": "success",
+        "total_cost_usd": 0.1680578,
+        "usage": {
+          "input_tokens": 14,
+          "cache_creation_input_tokens": 16344,
+          "cache_read_input_tokens": 258594,
+          "output_tokens": 4997,
+          "output_tokens_details": {
+            "thinking_tokens": 3143
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 16344,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 334,
+              "cache_read_input_tokens": 43370,
+              "cache_creation_input_tokens": 238,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 238
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        }
+      }
+    ]
+  },
+  "repo_provenance": {
+    "git_head": "c7b1caaacba225a063ae49e1bad859b2fc125c1a",
+    "git_branch": "main",
+    "working_tree_changes": 2,
+    "working_tree_clean": false,
+    "captured_at_trial_start": true
+  },
+  "arm_order_index": 1,
+  "arm_order": [
+    "velra",
+    "baseline"
+  ],
+  "transition_lifecycle": {
+    "transition": "clear",
+    "restore_before_turn_index": 16,
+    "restore_while_source_session_live": true,
+    "source_turns_total": 17,
+    "clear_turn_index": 16,
+    "destination_is_a_new_process": true,
+    "continuation_prompt_identical_on_both_arms": true
+  },
+  "old_transcript_replayed": false,
+  "transcript_source": "C:\\Users\\aryan\\.claude\\projects\\C--Users-aryan-AppData-Local-Temp-velra-tokenburn-fixtures-B-clear-survival-q2-baseline\\80ebe12b-2600-4fa6-a53d-a4e88c28a855.jsonl",
+  "manifest": {
+    "benchmark": "B_clear_survival",
+    "title": "/clear survival",
+    "transition": "clear",
+    "repo": "C:\\Users\\aryan\\AppData\\Local\\Temp\\velra-tokenburn-fixtures\\B_clear_survival-q2-baseline",
+    "turn_count": 17,
+    "transition_index": 16,
+    "continuation_prompt": "Continue the task and fix the bug.",
+    "turn_script_hash": "8656331d0e9dd957",
+    "fixture_seed": "a070849ef9ae109d",
+    "leak_terms": [
+      "booking date, never",
+      "never the value date",
+      "close on the booking",
+      "backdates",
+      "backdated",
+      "upstream backdate",
+      "window has to close on",
+      "booking_date is the one",
+      "widen the window",
+      "widening the window",
+      "_slack",
+      "slack of a day",
+      "timedelta(days=1)",
+      "double-count",
+      "double counts",
+      "the active task",
+      "currently working on",
+      "next action"
+    ],
+    "capsule_markers": [
+      "src/payments/reconcile.py",
+      "test_march_window_totals",
+      "booking",
+      "in_window"
+    ],
+    "capsule_token_ceiling": 800,
+    "ladder": [
+      100000,
+      250000,
+      500000,
+      700000,
+      800000,
+      900000
+    ],
+    "state_recovery": {
+      "current_task": [
+        "reconcile",
+        "test_march_window_totals",
+        "close_window"
+      ],
+      "active_failure": [
+        "test_march_window_totals",
+        "reconcile"
+      ],
+      "relevant_files": [
+        "src/payments/reconcile.py",
+        "src/payments/feed.py"
+      ],
+      "next_action": [
+        "in_window",
+        "src/payments/reconcile.py"
+      ]
+    },
+    "first_correct_action": {
+      "tools": [
+        "Read",
+        "Edit",
+        "Write",
+        "MultiEdit",
+        "Grep"
+      ],
+      "target_contains": [
+        "src/payments/reconcile.py"
+      ],
+      "must_not_precede": [
+        "src/payments/retry.py",
+        "src/payments/ledger.py"
+      ]
+    },
+    "final_correctness": {
+      "target_test_must_pass": true,
+      "max_suite_failures": 2,
+      "required_final_state": [
+        {
+          "file": "src/payments/reconcile.py",
+          "must_contain": [
+            "booking_date"
+          ],
+          "must_not_contain": [
+            "_SLACK",
+            "timedelta(days=1)"
+          ]
+        }
+      ]
+    },
+    "invariant": {
+      "must_hold_in_file": "src/payments/reconcile.py",
+      "must_contain": [
+        "booking_date"
+      ],
+      "must_not_contain": [
+        "_SLACK"
+      ]
+    },
+    "dead_end": {
+      "must_not_edit": [
+        "tests/test_reconcile.py",
+        "src/payments/retry.py"
+      ],
+      "description": "the one-day window slack in reconcile.py, tried at turn 7 and reverted at turn 8 without a commit"
+    },
+    "target_test": "tests/test_reconcile.py::test_march_window_totals",
+    "ground_truth": {
+      "as_generated": {
+        "suite_exit": 1,
+        "suite_failures": 3,
+        "expected_suite_failures": 3,
+        "target": "tests/test_reconcile.py::test_march_window_totals",
+        "expect_target": "fail",
+        "observed_target": "fail"
+      },
+      "true_fix": {
+        "expect_target": "pass",
+        "observed_target": "pass",
+        "expect_invariant": true,
+        "observed_invariant": true
+      },
+      "dead_end": {
+        "expect_target": "pass",
+        "observed_target": "pass",
+        "expect_invariant": false,
+        "observed_invariant": false
+      }
+    },
+    "leak_scan": {
+      "clean": true,
+      "terms": [
+        "booking date, never",
+        "never the value date",
+        "close on the booking",
+        "backdates",
+        "backdated",
+        "upstream backdate",
+        "window has to close on",
+        "booking_date is the one",
+        "widen the window",
+        "widening the window",
+        "_slack",
+        "slack of a day",
+        "timedelta(days=1)",
+        "double-count",
+        "double counts",
+        "the active task",
+        "currently working on",
+        "next action"
+      ],
+      "surfaces_scanned": [
+        "tree",
+        "filenames",
+        "git_history",
+        "git_refs",
+        "claude_md",
+        "project_memory",
+        "environment",
+        "post_prompt",
+        "pre_prompts"
+      ],
+      "fatal_surfaces": [
+        "tree",
+        "filenames",
+        "git_history",
+        "git_refs",
+        "claude_md",
+        "project_memory",
+        "environment",
+        "post_prompt"
+      ],
+      "hits_by_surface": {
+        "pre_prompts": 7
+      },
+      "fatal_hits": [],
+      "hits": [
+        {
+          "surface": "pre_prompts",
+          "where": "turn 4",
+          "term": "booking date, never",
+          "context": ": the upstream feed backdates. A window has to close on the booking date, never the value date. Operations confirmed that on the call this"
+        },
+        {
+          "surface": "pre_prompts",
+          "where": "turn 4",
+          "term": "never the value date",
+          "context": "feed backdates. A window has to close on the booking date, never the value date. Operations confirmed that on the call this morning; it isn"
+        },
+        {
+          "surface": "pre_prompts",
+          "where": "turn 4",
+          "term": "close on the booking",
+          "context": "from the code: the upstream feed backdates. A window has to close on the booking date, never the value date. Operations confirmed that on th"
+        },
+        {
+          "surface": "pre_prompts",
+          "where": "turn 4",
+          "term": "backdates",
+          "context": "'s the thing you can't get from the code: the upstream feed backdates. A window has to close on the booking date, never the value"
+        },
+        {
+          "surface": "pre_prompts",
+          "where": "turn 4",
+          "term": "window has to close on",
+          "context": "you can't get from the code: the upstream feed backdates. A window has to close on the booking date, never the value date. Operations confirme"
+        },
+        {
+          "surface": "pre_prompts",
+          "where": "turn 7",
+          "term": "widening the window",
+          "context": "Try widening the window by a day on each side in reconcile.py and re-run the reconc"
+        },
+        {
+          "surface": "pre_prompts",
+          "where": "turn 8",
+          "term": "double-count",
+          "context": "Green, but wrong \u2014 that double-counts every row the adjacent window also claims. Revert it with"
+        }
+      ],
+      "n_hits": 7
+    }
+  },
+  "leak_scan": {
+    "clean": true,
+    "terms": [
+      "booking date, never",
+      "never the value date",
+      "close on the booking",
+      "backdates",
+      "backdated",
+      "upstream backdate",
+      "window has to close on",
+      "booking_date is the one",
+      "widen the window",
+      "widening the window",
+      "_slack",
+      "slack of a day",
+      "timedelta(days=1)",
+      "double-count",
+      "double counts",
+      "the active task",
+      "currently working on",
+      "next action"
+    ],
+    "surfaces_scanned": [
+      "tree",
+      "filenames",
+      "git_history",
+      "git_refs",
+      "claude_md",
+      "project_memory",
+      "environment",
+      "post_prompt",
+      "pre_prompts"
+    ],
+    "fatal_surfaces": [
+      "tree",
+      "filenames",
+      "git_history",
+      "git_refs",
+      "claude_md",
+      "project_memory",
+      "environment",
+      "post_prompt"
+    ],
+    "hits_by_surface": {
+      "pre_prompts": 7
+    },
+    "fatal_hits": [],
+    "hits": [
+      {
+        "surface": "pre_prompts",
+        "where": "turn 4",
+        "term": "booking date, never",
+        "context": ": the upstream feed backdates. A window has to close on the booking date, never the value date. Operations confirmed that on the call this"
+      },
+      {
+        "surface": "pre_prompts",
+        "where": "turn 4",
+        "term": "never the value date",
+        "context": "feed backdates. A window has to close on the booking date, never the value date. Operations confirmed that on the call this morning; it isn"
+      },
+      {
+        "surface": "pre_prompts",
+        "where": "turn 4",
+        "term": "close on the booking",
+        "context": "from the code: the upstream feed backdates. A window has to close on the booking date, never the value date. Operations confirmed that on th"
+      },
+      {
+        "surface": "pre_prompts",
+        "where": "turn 4",
+        "term": "backdates",
+        "context": "'s the thing you can't get from the code: the upstream feed backdates. A window has to close on the booking date, never the value"
+      },
+      {
+        "surface": "pre_prompts",
+        "where": "turn 4",
+        "term": "window has to close on",
+        "context": "you can't get from the code: the upstream feed backdates. A window has to close on the booking date, never the value date. Operations confirme"
+      },
+      {
+        "surface": "pre_prompts",
+        "where": "turn 7",
+        "term": "widening the window",
+        "context": "Try widening the window by a day on each side in reconcile.py and re-run the reconc"
+      },
+      {
+        "surface": "pre_prompts",
+        "where": "turn 8",
+        "term": "double-count",
+        "context": "Green, but wrong \u2014 that double-counts every row the adjacent window also claims. Revert it with"
+      }
+    ],
+    "n_hits": 7
+  },
+  "context_fixture": {
+    "kind": "synthetic_load_fixture",
+    "fixture_version": 1,
+    "scenario": "B_clear_survival",
+    "seed": 0,
+    "seed_string": "B_clear_survival|250000|1|0",
+    "target_context_size": 250000,
+    "synthetic_context_size": 250571,
+    "token_basis": "estimated",
+    "chars_per_token_assumed": 3.6,
+    "chars": 902056,
+    "bytes_on_disk": 902056,
+    "files": [
+      {
+        "path": "build-01.log",
+        "chars": 306487,
+        "blocks": 396,
+        "sha256": "301340da0f7c18c8eaa7e5242661e14a"
+      },
+      {
+        "path": "test-01.log",
+        "chars": 234920,
+        "blocks": 332,
+        "sha256": "9c732ab5794d851924be3db6864c061e"
+      },
+      {
+        "path": "build-02.log",
+        "chars": 216515,
+        "blocks": 280,
+        "sha256": "9104c2612f5a9cc490817ef8f2c5512e"
+      },
+      {
+        "path": "test-02.log",
+        "chars": 144134,
+        "blocks": 206,
+        "sha256": "14e98785b3f2cef27a31458903c6b564"
+      }
+    ],
+    "context_generation_method": "programmatic synthetic build/test logs, read by the session as part of its turn script",
+    "reason_if_target_not_reached": null,
+    "actual_observed_context_size": null,
+    "warning": "synthetic_context_size is an ESTIMATE of a generated file's size at a declared chars-per-token ratio. It is NOT an observation of a Claude session's context and must never be reported as one.",
+    "verification": {
+      "ok": true,
+      "problems": [],
+      "measured_chars": 902056,
+      "declared_chars": 902056,
+      "target_chars": 900000,
+      "shortfall_fraction": -0.002284
+    }
+  },
+  "fixture": "C:\\Users\\aryan\\AppData\\Local\\Temp\\velra-tokenburn-fixtures\\B_clear_survival-q2-baseline",
+  "velra_home": "C:\\Users\\aryan\\Videos\\Velra\\bench\\results\\v0.1.2\\tokenburn\\trials\\B_clear_survival-q2-baseline\\velra_home",
+  "claude_binary": "C:\\Users\\aryan\\.vscode\\extensions\\anthropic.claude-code-2.1.272-win32-x64\\resources\\native-binary\\claude.exe",
+  "claude_version": "2.1.272 (Claude Code)",
+  "velra_binary": "C:\\Users\\aryan\\Videos\\Velra\\target\\release\\velra.exe",
+  "wall_seconds": 235.353,
+  "stderr": "",
+  "preregistration_id": "velra-tokenburn",
+  "preregistration_version": "1.0.0",
+  "preregistration_sha256": "775f18f4775997e7a952515425f0ac99d71462de38486edc8786a5b54d93551f"
+}

@@ -1,0 +1,7 @@
+{
+  "effortLevel": "high",
+  "switchModelsOnFlag": false,
+  "inputNeededNotifEnabled": true,
+  "agentPushNotifEnabled": true,
+  "model": "opus"
+}

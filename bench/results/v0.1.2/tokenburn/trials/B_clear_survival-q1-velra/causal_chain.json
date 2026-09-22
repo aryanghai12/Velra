@@ -1,0 +1,270 @@
+{
+  "links": {
+    "A_large_state": {
+      "status": "pass",
+      "why": "17 source turns with a recorded context load",
+      "evidence": {
+        "source_session_turns": 17,
+        "target_context_size": 250000,
+        "synthetic_context_size": 250571,
+        "actual_observed_context_size": null,
+        "context_generation_method": "programmatic synthetic build/test logs, read by the session as part of its turn script",
+        "reason_if_target_not_reached": null,
+        "size_basis": "synthetic_fixture"
+      }
+    },
+    "B_absent_natively": {
+      "status": "pass",
+      "why": "no surface an agent can read carries the state",
+      "evidence": {
+        "surfaces_scanned": [
+          "tree",
+          "filenames",
+          "git_history",
+          "git_refs",
+          "claude_md",
+          "project_memory",
+          "environment",
+          "post_prompt",
+          "pre_prompts"
+        ],
+        "hits_by_surface": {
+          "pre_prompts": 7
+        },
+        "fatal_hits": [],
+        "terms": [
+          "booking date, never",
+          "never the value date",
+          "close on the booking",
+          "backdates",
+          "backdated",
+          "upstream backdate",
+          "window has to close on",
+          "booking_date is the one",
+          "widen the window",
+          "widening the window",
+          "_slack",
+          "slack of a day",
+          "timedelta(days=1)",
+          "double-count",
+          "double counts",
+          "the active task",
+          "currently working on",
+          "next action"
+        ]
+      }
+    },
+    "C_retained": {
+      "status": "fail",
+      "why": "the ledger did not hold every piece of the declared operational state: this is a CAPTURE failure, not a delivery one",
+      "evidence": {
+        "markers_present": [
+          "src/payments/reconcile.py",
+          "booking",
+          "in_window"
+        ],
+        "markers_missing": [
+          "test_march_window_totals"
+        ],
+        "source_session_id": "28ef6dde-e0eb-493c-8ae5-53b3bf7d651b",
+        "restore_exit": 0
+      }
+    },
+    "D_staged": {
+      "status": "pass",
+      "why": "a startup-eligible capsule was staged for this workspace",
+      "evidence": {
+        "staged_path": "C:\\Users\\aryan\\Videos\\Velra\\bench\\results\\v0.1.2\\tokenburn\\trials\\B_clear_survival-q1-velra\\velra_home\\staged\\9c1256b5690e9531\\staged_capsule",
+        "workspace_id": "9c1256b5690e9531",
+        "expected_workspace_id": "9c1256b5690e9531",
+        "intent": "new_session",
+        "deliver_on": [
+          "startup"
+        ],
+        "source_session_id": "28ef6dde-e0eb-493c-8ae5-53b3bf7d651b",
+        "tokens": 704,
+        "content_hash": "a23538143e8c77abff8626cf83afc1db",
+        "stale": false,
+        "age_ms": 13
+      }
+    },
+    "E_delivered": {
+      "status": "pass",
+      "why": "SessionStart(startup) emitted the capsule",
+      "evidence": {
+        "attempts": [],
+        "claimed_count": 0,
+        "startup_deliveries": [
+          {
+            "stream_index": 2,
+            "hook_name": "SessionStart:startup",
+            "hook_event": "SessionStart",
+            "session_start_source": null,
+            "exit_code": 0,
+            "chars": 1470,
+            "system_message": "\u26a1 Velra restored: objective, 1 failing test, 3 dead ends, 8 files \u2014 from session 28ef6dde (704 tokens)",
+            "on_startup": true
+          }
+        ],
+        "all_deliveries": [
+          {
+            "stream_index": 2,
+            "hook_name": "SessionStart:startup",
+            "hook_event": "SessionStart",
+            "session_start_source": null,
+            "exit_code": 0,
+            "chars": 1470,
+            "system_message": "\u26a1 Velra restored: objective, 1 failing test, 3 dead ends, 8 files \u2014 from session 28ef6dde (704 tokens)",
+            "on_startup": true
+          }
+        ]
+      }
+    },
+    "F_received": {
+      "status": "fail",
+      "why": "the delivered bytes did not carry every declared piece of operational state",
+      "evidence": {
+        "delivery_count": 1,
+        "capsule_chars": 1470,
+        "markers_found": [
+          "src/payments/reconcile.py",
+          "booking",
+          "in_window"
+        ],
+        "markers_missing": [
+          "test_march_window_totals"
+        ],
+        "source_session_id": "28ef6dde-e0eb-493c-8ae5-53b3bf7d651b",
+        "destination_session_id": "708e401f-ebec-4549-bc1d-bad86fe2093c",
+        "capsule_token_ceiling": 800,
+        "old_transcript_replayed": false
+      }
+    },
+    "G_used": {
+      "status": "pass",
+      "why": "the destination acted on the restored state",
+      "evidence": {
+        "identified_items": 4,
+        "declared_items": 4,
+        "per_item": {
+          "current_task": {
+            "declared": true,
+            "identified": true,
+            "markers": [
+              "reconcile",
+              "test_march_window_totals",
+              "close_window"
+            ],
+            "markers_found": [
+              "reconcile",
+              "test_march_window_totals"
+            ]
+          },
+          "active_failure": {
+            "declared": true,
+            "identified": true,
+            "markers": [
+              "test_march_window_totals",
+              "reconcile"
+            ],
+            "markers_found": [
+              "test_march_window_totals",
+              "reconcile"
+            ]
+          },
+          "relevant_files": {
+            "declared": true,
+            "identified": true,
+            "markers": [
+              "src/payments/reconcile.py",
+              "src/payments/feed.py"
+            ],
+            "markers_found": [
+              "src/payments/reconcile.py",
+              "src/payments/feed.py"
+            ]
+          },
+          "next_action": {
+            "declared": true,
+            "identified": true,
+            "markers": [
+              "in_window",
+              "src/payments/reconcile.py"
+            ],
+            "markers_found": [
+              "in_window",
+              "src/payments/reconcile.py"
+            ]
+          }
+        },
+        "first_correct_action": {
+          "declared": true,
+          "found": true,
+          "steps": 3,
+          "action_index": 4,
+          "tool": "Read",
+          "target": "C:\\Users\\aryan\\AppData\\Local\\Temp\\velra-tokenburn-fixtures\\B_clear_survival-q1-velra\\src\\payments\\reconcile.py",
+          "dead_end_touched_first": false
+        }
+      }
+    },
+    "H_correct": {
+      "status": "pass",
+      "why": "the task was completed correctly",
+      "evidence": {
+        "checks": {
+          "required_final_state": {
+            "declared": true,
+            "ok": true,
+            "files": [
+              {
+                "file": "src/payments/reconcile.py",
+                "ok": true,
+                "missing": [],
+                "forbidden_present": []
+              }
+            ]
+          },
+          "target_test": {
+            "declared": true,
+            "ok": true,
+            "node_id": "tests/test_reconcile.py::test_march_window_totals",
+            "exit": 0,
+            "tail": [
+              ".                                                                        [100%]",
+              "1 passed in 0.01s"
+            ]
+          },
+          "no_regression": {
+            "declared": true,
+            "ok": true,
+            "suite_failures": 2,
+            "ceiling": 2,
+            "suite_exit": 1
+          },
+          "invariant": {
+            "declared": true,
+            "file": "src/payments/reconcile.py",
+            "ok": true,
+            "missing": [],
+            "forbidden_present": []
+          },
+          "dead_end_avoided": {
+            "declared": true,
+            "ok": true,
+            "touched": []
+          }
+        },
+        "declared_checks": 5
+      }
+    },
+    "I_burden_reduced": {
+      "status": "deferred",
+      "why": "'reduced' needs two arms; resolved by the pair verdict",
+      "evidence": {}
+    }
+  },
+  "first_broken_link": "C_retained",
+  "causal_validity": "INCOMPLETE",
+  "summary": "A_large_state=pass; B_absent_natively=pass; C_retained=fail; D_staged=pass; E_delivered=pass; F_received=fail; G_used=pass; H_correct=pass; I_burden_reduced=deferred"
+}

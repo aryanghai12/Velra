@@ -1,0 +1,6 @@
+velra disable
+exit=0
+✓ Velra disabled. Claude Code is otherwise untouched.
+  Settings: C:\Users\aryan\.claude\settings.json  (backup: C:\Users\aryan\Videos\Velra\bench\results\v0.1.2\tokenburn\trials\B_clear_survival-q2-baseline\velra_home\backups\settings.json.20260922T174323Z.bak)
+
+

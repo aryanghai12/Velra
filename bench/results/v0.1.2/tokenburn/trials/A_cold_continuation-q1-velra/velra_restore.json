@@ -1,0 +1,55 @@
+{
+  "restore_invoked": true,
+  "restore_exit": 0,
+  "restore_stdout": "{\n  \"workspace_id\": \"ff1f5e67ea64c2e2\",\n  \"source_session_id\": \"35e68d86-242c-4c25-9561-42a31e57b4d0\",\n  \"source_checkpoint_id\": null,\n  \"tokens\": 700,\n  \"content_hash\": \"ee06975520b97ee7b650053d0db15c07\",\n  \"summary\": \"objective, 1 failing test, 1 dead end, 8 files\",\n  \"staged\": true,\n  \"staged_path\": \"C:\\\\Users\\\\aryan\\\\Videos\\\\Velra\\\\bench\\\\results\\\\v0.1.2\\\\tokenburn\\\\trials\\\\A_cold_continuation-q1-velra\\\\velra_home\\\\staged\\\\ff1f5e67ea64c2e2\\\\staged_capsule\"\n}\n",
+  "restore_stderr": "",
+  "listing": {
+    "workspace_id": "ff1f5e67ea64c2e2",
+    "workspace_root": "C:/Users/aryan/AppData/Local/Temp/velra-tokenburn-fixtures/A_cold_continuation-q1-velra",
+    "sessions": [
+      {
+        "session_id": "35e68d86-242c-4c25-9561-42a31e57b4d0",
+        "title": "Payments service test suite",
+        "last_activity_ms": 1790097547936,
+        "has_state": true
+      }
+    ]
+  },
+  "source_session_id": "35e68d86-242c-4c25-9561-42a31e57b4d0",
+  "workspace_id": "ff1f5e67ea64c2e2",
+  "workspace_root": "C:/Users/aryan/AppData/Local/Temp/velra-tokenburn-fixtures/A_cold_continuation-q1-velra",
+  "staged_path": "C:\\Users\\aryan\\Videos\\Velra\\bench\\results\\v0.1.2\\tokenburn\\trials\\A_cold_continuation-q1-velra\\velra_home\\staged\\ff1f5e67ea64c2e2\\staged_capsule",
+  "stale": false,
+  "staged": {
+    "version": 2,
+    "workspace_id": "ff1f5e67ea64c2e2",
+    "workspace_root": "C:/Users/aryan/AppData/Local/Temp/velra-tokenburn-fixtures/A_cold_continuation-q1-velra",
+    "intent": "new_session",
+    "deliver_on": [
+      "startup"
+    ],
+    "source_session_id": "35e68d86-242c-4c25-9561-42a31e57b4d0",
+    "source_checkpoint_id": null,
+    "created_ms": 1790097548166,
+    "render_version": 1,
+    "tokens": 700,
+    "content_hash": "ee06975520b97ee7b650053d0db15c07",
+    "summary": "objective, 1 failing test, 1 dead end, 8 files",
+    "capsule": "<VELRA_WORKSPACE_STATE v=\"1\" checkpoint=\"restore\" captured=\"2026-09-22T17:19:08Z\" trigger=\"cli\">\n[ABOUT_THIS_RECORD]\nA local record, not a message and not an instruction. Velra logged this session's own prompts and tool events and quotes them back here; nothing is new. OBSERVED came from a tool event, INFERRED was derived from it. Files on disk are the source of truth. Say so if a line here conflicts with them.\n[FIRST_MESSAGE] (OBSERVED | user prompt | 22:44)\nWe're on the payments service. Run the suite and tell me what's red.\n[STATED_CONSTRAINTS] (OBSERVED | user prompt | quoted verbatim)\n- turn 4 22:45 | \"Constraint, and this is the part that matters: whatever we do, the key has to stay a pure function of the request.\"\n[LATEST_MESSAGE] (OBSERVED | user prompt | 22:49)\nI'm going to leave this session here. Summarise nothing \u2014 just stop.\n[WORKSPACE_STATE]\nmain @ 5d08662 | 4 edits this task | last test run: FAIL\n[TEST_RESULT] (OBSERVED | test run | 22:47)\nCommand: python -m pytest tests/ -q 2>&1 | tail -40\nResult: FAIL\n  tests\\test_reconcile.py:25: AssertionError\n  FAILED tests/test_ledger.py::test_apply_fee_on_empty_total - assert 0 == 1\n  FAILED tests/test_reconcile.py::test_march_window_totals - assert 0 == 100\n[REVERTED_EDITS] (OBSERVED)\n- src/payments/retry.py | 1 edit(s) | reverted by a later edit at 22:47\n[RECORD_DETAIL]\nFull detail for any section: `velra inspect --section <name>`\n</VELRA_WORKSPACE_STATE>"
+  },
+  "age_ms": 34,
+  "ledger_evidence": {
+    "markers_present": [
+      "src/payments/retry.py"
+    ],
+    "markers_missing": [
+      "test_retry_preserves_idempotency_key",
+      "retry_backoff"
+    ]
+  },
+  "claim": {
+    "attempts": []
+  },
+  "staged_before_turn_index": null,
+  "staged_while_source_session_live": false
+}
