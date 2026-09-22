@@ -31,6 +31,7 @@ HERE = pathlib.Path(__file__).resolve().parent
 if __package__ in (None, ""):
     sys.path.insert(0, str(HERE))
     import causal  # type: ignore[no-redef]
+    import isolation  # type: ignore[no-redef]
     import metrics  # type: ignore[no-redef]
     import pairing  # type: ignore[no-redef]
     import parse  # type: ignore[no-redef]
@@ -38,18 +39,49 @@ if __package__ in (None, ""):
     import report as report_mod  # type: ignore[no-redef]
     import verdict as verdict_mod  # type: ignore[no-redef]
 else:
-    from . import causal, metrics, pairing, parse, prereg
+    from . import causal, isolation, metrics, pairing, parse, prereg
     from . import report as report_mod
     from . import verdict as verdict_mod
 
 
+def invalid_evaluation(trial_dir: pathlib.Path, meta: dict) -> dict:
+    """The whole record of a trial that declared itself invalid.
+
+    Nothing is scored: an invalid trial has no destination session to parse,
+    or one that ran under conditions the scenario did not intend. It carries
+    its identity so `pairing` can drop its pair by name, and its reasons.
+    """
+    return {
+        "trial": trial_dir.name,
+        "scenario": meta.get("scenario"),
+        "arm": meta.get("arm"),
+        "pair_id": meta.get("pair_id"),
+        "pair_key": meta.get("pair_key"),
+        "trial_validity": meta.get("trial_validity"),
+        "invalidation_reason": meta.get("invalidation_reason"),
+        "auto_memory_disabled": meta.get("auto_memory_disabled"),
+        "memory_scan_clean": meta.get("memory_scan_clean"),
+        "source_handoff_valid": meta.get("source_handoff_valid"),
+        "source_handoff_reason": meta.get("source_handoff_reason"),
+        "target_status_at_handoff": meta.get("target_status_at_handoff"),
+        "scored": False,
+    }
+
+
 def analyse_trial(trial_dir: pathlib.Path) -> tuple[dict, dict]:
     """One trial: its evaluation and its causal chain."""
+    meta = json.loads((trial_dir / "trial_meta.json").read_text(
+        encoding="utf-8"))
+    if isolation.is_invalid(meta):
+        return invalid_evaluation(trial_dir, meta), {
+            "causal_validity": "INVALID_TRIAL", "first_broken_link": None,
+            "invalidation_reason": meta.get("invalidation_reason")}
     parsed = parse.parse_trial(trial_dir)
     evaluation = metrics.evaluate(parsed)
     chain = causal.evaluate(parsed, evaluation)
     evaluation["causal_validity"] = chain["causal_validity"]
     evaluation["first_broken_link"] = chain["first_broken_link"]
+    evaluation["trial_validity"] = parsed.meta.get("trial_validity")
     return evaluation, chain
 
 
@@ -89,8 +121,12 @@ def run(trials_root: pathlib.Path, out_dir: pathlib.Path,
                     "unassigned": paired["unassigned"]},
         "pairs": verdicts,
         "pooled": pooled,
+        # Invalid trials are listed by themselves and appear nowhere else:
+        # not in the rows, not in a pair, not in a pool.
+        "invalid_trials": [e for e in evaluations
+                           if e.get("scored") is False],
         "trial_rows": [report_mod.trial_row(e, chains[e["trial"]])
-                       for e in evaluations],
+                       for e in evaluations if e.get("scored") is not False],
         **prereg.stamp(),
     }
 

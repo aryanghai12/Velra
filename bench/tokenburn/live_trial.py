@@ -12,10 +12,19 @@ What it does when it is eventually allowed to run
 
 Both arms share everything except one step::
 
+    0  move any earlier run's auto-memory for this fixture aside
     1  build the fixture repository and verify its ground truth
     2  generate the context-load rung into <repo>/logs/
-    3  set the arm:  `velra enable`  |  `velra disable`
+    3  set the arm:  `velra enable`  |  `velra disable`; then, both arms,
+       `autoMemoryEnabled: false` (the env carries
+       `CLAUDE_CODE_DISABLE_AUTO_MEMORY=1`), read back, and the fixture's
+       memory directory required empty -- otherwise INVALID, no session
     4  drive the source session through the scenario's turn script
+    V  BOTH ARMS, at the transition: `isolation.validate_handoff` -- target
+       FAIL, invariant as generated, worktree as generated. For B this runs
+       at the pause before `/clear` and before 5b; a failure ends the source
+       there. Then the memory directory must still be empty. Any failure:
+       the trial is INVALID, recorded with its reasons, and stops here.
 
     Benchmark A -- new_session
     5a VELRA ARM ONLY: after the source session ends,
@@ -64,6 +73,7 @@ selftest was exercising a different pipeline from the live run::
 
     trial_meta.json  stream.jsonl  transcript.jsonl  final_state.json
     context_fixture.json  velra_restore.json (velra arm)
+    source_handoff.json (both arms; an invalid trial has no stream.jsonl)
 
 Telemetry
 ---------
@@ -93,11 +103,12 @@ if __package__ in (None, ""):
     sys.path.insert(0, str(HERE))
     sys.path.insert(0, str(REPO_ROOT / "bench" / "harness"))
     import context_fixture  # type: ignore[no-redef]
+    import isolation  # type: ignore[no-redef]
     import prereg  # type: ignore[no-redef]
     import safety  # type: ignore[no-redef]
     import scenarios  # type: ignore[no-redef]
 else:
-    from . import context_fixture, prereg, safety, scenarios
+    from . import context_fixture, isolation, prereg, safety, scenarios
 
 ARMS = ("baseline", "velra")
 
@@ -125,14 +136,10 @@ def _run(argv, **kw) -> subprocess.CompletedProcess:
                           text=True, **kw)
 
 
-def trial_env(velra_home: pathlib.Path, fixture: pathlib.Path) -> dict:
-    env = dict(os.environ)
-    for key in safety.NESTED_MARKERS:
-        env.pop(key, None)
-    env["VELRA_HOME"] = str(velra_home)
-    env["VELRA_LOG"] = "debug"
-    env["CLAUDE_PROJECT_DIR"] = str(fixture)
-    return env
+#: Every Claude process of every trial, both arms, runs with this
+#: environment. Defined in `isolation` so the offline preflight checks the
+#: same function object, including `CLAUDE_CODE_DISABLE_AUTO_MEMORY=1`.
+trial_env = isolation.trial_env
 
 
 # --------------------------------------------------------------------------
@@ -155,7 +162,9 @@ def drive_session(claude: pathlib.Path, model: str, fixture: pathlib.Path,
     has completed and before the named turn is sent, with the process still
     alive. Benchmark B needs it: `velra restore` has to read the session's
     pre-`/clear` epoch, and there is no way to reach that epoch from outside a
-    session that has already been cleared.
+    session that has already been cleared. It is also where the source
+    handoff is validated; ``on_pause`` returning ``False`` ends the session
+    there, without sending the transition turn.
     """
     cmd = [str(claude), *CLAUDE_FLAGS, "--model", model,
            "--max-budget-usd", str(max_budget_usd)]
@@ -206,7 +215,14 @@ def drive_session(claude: pathlib.Path, model: str, fixture: pathlib.Path,
                     "reason": "velra restore, source session still live",
                     "t": round(time.time() - started, 3)}) + "\n")
                 log.flush()
-                on_pause(session_id)
+                if on_pause(session_id) is False:
+                    log.write(json.dumps({
+                        "_velra_bench": "stopped", "before_turn": turn_index,
+                        "reason": "source handoff invalid; transition not sent",
+                        "t": round(time.time() - started, 3)}) + "\n")
+                    log.flush()
+                    proc.stdin.close()
+                    break
             if turn_index < len(turns):
                 log.write(json.dumps({
                     "_velra_bench": "turn_start", "turn": turn_index,
@@ -408,12 +424,35 @@ def run_trial(*, scenario_name: str, arm: str, pair_id: str, replicate: int,
               max_budget_usd: float, seed: int = 0,
               arm_order_index: int = 0,
               arm_order: list | None = None) -> dict:
-    """One arm of one pair, start to finish. Requires an authorized live run."""
+    """One arm of one pair, start to finish. Requires an authorized live run.
+
+    Validity is established before anything is spent on a continuation, and
+    by the same code for both arms (`isolation`):
+
+    * before the source session: auto-memory disabled by both controls and
+      read back, and the fixture's memory directory empty (an earlier run's
+      memory is moved aside first);
+    * at the transition: `isolation.validate_handoff` -- for a `clear`
+      transition at the pause before `/clear`, in both arms, and before
+      `velra restore`; for a `new_session` transition when the source ends;
+    * before the destination: the controls still in force and the memory
+      directory still empty.
+
+    An invalid trial stops there. It is written with its reasons and no
+    destination session, is never repaired, and `pairing` drops its pair as
+    INVALID_TRIAL.
+    """
     scenario = scenarios.get(scenario_name)
     out = pathlib.Path(out)
     out.mkdir(parents=True, exist_ok=True)
 
     provenance = repo_provenance()
+    settings = isolation.settings_path()
+    settings_bytes = settings.read_bytes() if settings.exists() else None
+    memory = isolation.memory_dir(fixture)
+    # Before the build, because the build's leak scan reads this directory.
+    quarantined = isolation.quarantine_prior_memory(memory, out)
+
     manifest = scenario.build(fixture, verify=True)
     load = context_fixture.generate(fixture, rung, scenario_name, seed)
     check = context_fixture.verify(fixture, load)
@@ -425,85 +464,131 @@ def run_trial(*, scenario_name: str, arm: str, pair_id: str, replicate: int,
     shutil.rmtree(velra_home, ignore_errors=True)
     velra_home.mkdir(parents=True, exist_ok=True)
     env = trial_env(velra_home, fixture)
+    terms = list(manifest.get("leak_terms") or [])
+    markers = list(manifest.get("capsule_markers") or [])
 
-    # The arm. Both arms write the settings file, so its prior state is never
-    # a confound: the baseline removes the hooks rather than assuming they are
-    # absent.
-    setup = _run([velra, "enable" if arm == "velra" else "disable"], env=env,
-                 cwd=str(fixture))
-    (out / "arm_setup.txt").write_text(
-        f"velra {'enable' if arm == 'velra' else 'disable'}\n"
-        f"exit={setup.returncode}\n{setup.stdout}\n{setup.stderr}\n",
-        encoding="utf-8", newline="")
-
-    # -- the source session, and where `velra restore` sits in it ---------
-    #
-    # For a `clear` transition the restore MUST happen before the `/clear`
-    # turn is sent, and this is not a stylistic preference. Measured against
-    # the real binary: `SessionStart(source="clear")` bumps the session epoch
-    # (`reducer.rs`, SESSION_START arm), `restore::build` reads the session's
-    # *current* epoch through `snapshot::build`, and so a restore issued after
-    # the clear renders the new, empty epoch and returns
-    # `RestoreError::NoState`. Every Velra-arm B trial would have come out a
-    # capture failure, and the scenario would have measured nothing.
-    #
-    # It is also the honest workflow. A developer who is about to clear stages
-    # what they mean to carry *first*; staging after the clear is asking the
-    # tool to recover state the user has just told it to drop.
-    # The staging must also happen *inside* the live source process, not
-    # between two of them: `/clear` is a turn sent to a running session, and
-    # splitting the script into two `drive_session` calls would put the clear
-    # in a different session from the work it is supposed to be clearing.
     source_turns = list(scenario.turns)
     restore_at = (source_turns.index(CLEAR_TURN)
                   if scenario.transition == "clear" and CLEAR_TURN in source_turns
                   else None)
-
     restore: dict | None = None
+    handoff: dict | None = None
+    source: dict | None = None
+    destination: dict | None = None
+    scans: dict = {}
+    controls: dict = {}
+    setting_applied: dict = {}
 
-    def stage_now(session_id: str | None) -> None:
-        """Run `velra restore` against the still-running source session."""
-        nonlocal restore
-        if arm != "velra" or restore is not None:
-            return
-        restore = do_restore(velra, env, fixture, session_id or "", manifest)
-        restore["staged_before_turn_index"] = restore_at
-        restore["staged_while_source_session_live"] = True
-        (out / "velra_restore.json").write_text(
-            json.dumps(restore, indent=2), encoding="utf-8", newline="")
+    def write_json(name: str, data: dict) -> None:
+        (out / name).write_text(json.dumps(data, indent=2, default=str),
+                                encoding="utf-8", newline="")
 
-    source = drive_session(claude, model, fixture, env, source_turns,
-                           out / "source_stream.jsonl", max_budget_usd,
-                           pause_before_turn=restore_at, on_pause=stage_now)
+    try:
+        # The arm. Both arms write the settings file, so its prior state is
+        # never a confound: the baseline removes the hooks rather than
+        # assuming they are absent.
+        setup = _run([velra, "enable" if arm == "velra" else "disable"],
+                     env=env, cwd=str(fixture))
+        (out / "arm_setup.txt").write_text(
+            f"velra {'enable' if arm == 'velra' else 'disable'}\n"
+            f"exit={setup.returncode}\n{setup.stdout}\n{setup.stderr}\n",
+            encoding="utf-8", newline="")
+        # After the arm, because `velra enable`/`disable` rewrite the file.
+        setting_applied = isolation.apply_memory_setting(settings)
+        controls["before_source"] = isolation.controls_state(env, settings)
+        scans["before_source"] = isolation.scan_memory(memory, terms, markers)
 
-    # For a `new_session` transition there is no mid-script pause: the source
-    # session simply ends, and the restore happens after it, which is when a
-    # developer who has walked away would run it.
-    if arm == "velra" and restore is None:
-        restore = do_restore(velra, env, fixture, source["session_id"] or "",
-                             manifest)
-        restore["staged_before_turn_index"] = None
-        restore["staged_while_source_session_live"] = False
-        (out / "velra_restore.json").write_text(
-            json.dumps(restore, indent=2), encoding="utf-8", newline="")
+        isolated = (controls["before_source"]["auto_memory_disabled"]
+                    and scans["before_source"]["clean"])
 
-    # -- the destination session -----------------------------------------
-    destination = drive_session(claude, model, fixture, env,
-                                [scenario.continuation_prompt],
-                                out / "stream.jsonl", max_budget_usd)
+        def stage_now(session_id: str | None) -> None:
+            """Run `velra restore` against the still-running source session."""
+            nonlocal restore
+            if arm != "velra" or restore is not None:
+                return
+            restore = do_restore(velra, env, fixture, session_id or "", manifest)
+            restore["staged_before_turn_index"] = restore_at
+            restore["staged_while_source_session_live"] = True
+            write_json("velra_restore.json", restore)
+
+        def at_transition(session_id: str | None) -> bool:
+            """Both arms: validate the handoff, then (Velra only) stage."""
+            nonlocal handoff
+            handoff = isolation.validate_handoff(fixture, manifest)
+            handoff["validated_at"] = "pause before the transition turn"
+            write_json("source_handoff.json", handoff)
+            if not handoff["source_handoff_valid"]:
+                return False
+            stage_now(session_id)
+            return True
+
+        if isolated:
+            # -- the source session, and where the transition sits in it --
+            #
+            # For a `clear` transition the restore MUST happen before the
+            # `/clear` turn is sent: `SessionStart(source="clear")` bumps the
+            # session epoch and a restore issued after it renders the new,
+            # empty epoch (`RestoreError::NoState`). It is also the honest
+            # workflow -- a developer stages what they mean to carry first --
+            # and it has to happen inside the live source process, because
+            # `/clear` is a turn sent to a running session.
+            source = drive_session(claude, model, fixture, env, source_turns,
+                                   out / "source_stream.jsonl", max_budget_usd,
+                                   pause_before_turn=restore_at,
+                                   on_pause=at_transition)
+            if handoff is None:
+                # `new_session`: the source simply ended; this is the handoff.
+                handoff = isolation.validate_handoff(fixture, manifest)
+                handoff["validated_at"] = "after the source session ended"
+                write_json("source_handoff.json", handoff)
+
+        controls["before_destination"] = isolation.controls_state(env, settings)
+        scans["before_destination"] = isolation.scan_memory(memory, terms,
+                                                            markers)
+        auto_memory_disabled = all(c["auto_memory_disabled"]
+                                   for c in controls.values())
+        memory_scan_clean = all(s["clean"] for s in scans.values())
+        validity = isolation.trial_validity(
+            auto_memory_disabled=auto_memory_disabled,
+            memory_scan_clean=memory_scan_clean, handoff=handoff)
+
+        if validity["valid"]:
+            # For a `new_session` transition there is no mid-script pause: the
+            # source session simply ends, and the restore happens after it,
+            # which is when a developer who has walked away would run it.
+            if arm == "velra" and restore is None:
+                restore = do_restore(velra, env, fixture,
+                                     source["session_id"] or "", manifest)
+                restore["staged_before_turn_index"] = None
+                restore["staged_while_source_session_live"] = False
+                write_json("velra_restore.json", restore)
+            # -- the destination session: a new process, both arms ---------
+            destination = drive_session(claude, model, fixture, env,
+                                        [scenario.continuation_prompt],
+                                        out / "stream.jsonl", max_budget_usd)
+            scans["after_destination"] = isolation.scan_memory(memory, terms,
+                                                               markers)
+    finally:
+        # The trial's own settings round-trip, byte for byte, whatever
+        # happened above. `run.phase_live` restores the run-level snapshot
+        # as well.
+        if settings_bytes is None:
+            settings.unlink(missing_ok=True)
+        else:
+            settings.write_bytes(settings_bytes)
 
     transcript_src = None
-    projects = pathlib.Path(os.path.expanduser("~/.claude/projects"))
-    if destination["session_id"] and projects.exists():
+    projects = isolation.claude_config_dir() / "projects"
+    if destination and destination["session_id"] and projects.exists():
         for candidate in projects.rglob(f"{destination['session_id']}.jsonl"):
             transcript_src = candidate
             shutil.copy2(candidate, out / "transcript.jsonl")
             break
 
     final_state = capture_final_state(fixture, manifest)
-    (out / "final_state.json").write_text(
-        json.dumps(final_state, indent=2), encoding="utf-8", newline="")
+    write_json("final_state.json", final_state)
 
+    handoff = handoff or {}
     meta = {
         "scenario": scenario_name,
         "arm": arm,
@@ -521,19 +606,46 @@ def run_trial(*, scenario_name: str, arm: str, pair_id: str, replicate: int,
             "permission_mode": "bypassPermissions",
             "context_ladder_rung": rung,
         },
+        # -- validity, machine-readable, top level ---------------------------
+        "auto_memory_disabled": auto_memory_disabled,
+        "memory_scan_clean": memory_scan_clean,
+        "source_handoff_valid": handoff.get("source_handoff_valid", False),
+        "source_handoff_reason": handoff.get(
+            "source_handoff_reason", "not validated: the trial stopped before "
+                                     "the source session"),
+        "target_status_at_handoff": handoff.get("target_status_at_handoff"),
+        "invariant_status_at_handoff": handoff.get(
+            "invariant_status_at_handoff"),
+        "invalidation_reason": validity["invalidation_reason"],
+        "trial_validity": validity,
+        "memory_isolation": {
+            "controls": {isolation.MEMORY_ENV: isolation.MEMORY_ENV_VALUE,
+                         isolation.MEMORY_SETTING: False},
+            "setting_applied": setting_applied,
+            "effective": controls,
+            "memory_dir": str(memory),
+            "quarantined_prior_memory": quarantined,
+            "scans": scans,
+            "settings_restored_after_trial": True,
+            "identical_for_both_arms": True,
+        },
+        "source_handoff": handoff or None,
+        "destination_skipped": destination is None,
+        # ---------------------------------------------------------------------
         "model": model,
-        "session_id": destination["session_id"],
-        "source_session_id": source["session_id"],
-        "destination_session_id": destination["session_id"],
+        "session_id": destination["session_id"] if destination else None,
+        "source_session_id": source["session_id"] if source else None,
+        "destination_session_id": (destination["session_id"]
+                                   if destination else None),
         "source_session": {
-            "session_id": source["session_id"],
-            "turns": source["turns_sent"],
+            "session_id": source["session_id"] if source else None,
+            "turns": source["turns_sent"] if source else 0,
             "transition": scenario.transition,
-            "turn_marks": source["turn_marks"],
+            "turn_marks": source["turn_marks"] if source else [],
         },
         "destination_session": {
-            "turns": destination["turns_sent"],
-            "turn_marks": destination["turn_marks"],
+            "turns": destination["turns_sent"] if destination else 0,
+            "turn_marks": destination["turn_marks"] if destination else [],
         },
         "repo_provenance": provenance,
         # Which arm ran first in this pair, recorded so the analysis can ask
@@ -560,12 +672,13 @@ def run_trial(*, scenario_name: str, arm: str, pair_id: str, replicate: int,
         "claude_binary": str(claude),
         "claude_version": claude_version(claude),
         "velra_binary": str(velra),
-        "wall_seconds": source["wall_seconds"] + destination["wall_seconds"],
-        "stderr": (source["stderr"][-2000:] + destination["stderr"][-2000:]),
+        "wall_seconds": ((source["wall_seconds"] if source else 0)
+                         + (destination["wall_seconds"] if destination else 0)),
+        "stderr": ((source["stderr"][-2000:] if source else "")
+                   + (destination["stderr"][-2000:] if destination else "")),
         **prereg.stamp(),
     }
-    (out / "trial_meta.json").write_text(
-        json.dumps(meta, indent=2, default=str), encoding="utf-8", newline="")
+    write_json("trial_meta.json", meta)
     return meta
 
 

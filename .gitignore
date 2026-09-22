@@ -35,6 +35,8 @@
 /bench/results/v0.1.2/tokenburn/trials/*/source_stream.jsonl
 /bench/results/v0.1.2/tokenburn/trials/*/transcript.jsonl
 /bench/results/v0.1.2/tokenburn/trials/*/velra_home/
+# An earlier run's auto-memory, moved aside before a trial (never deleted).
+/bench/results/v0.1.2/tokenburn/trials/*/memory_quarantine-*/
 /bench/results/v0.1.2/tokenburn/quarantine/*/*/stream.jsonl
 /bench/results/v0.1.2/tokenburn/quarantine/*/*/source_stream.jsonl
 /bench/results/v0.1.2/tokenburn/quarantine/*/*/transcript.jsonl

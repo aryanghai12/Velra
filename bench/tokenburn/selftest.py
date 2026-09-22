@@ -36,7 +36,16 @@ The eighteen cases §2 of the Phase 3 specification requires
 16   telemetry unavailable (none at all)          INCONCLUSIVE
 17   incomplete causal chain (capture failure)    INCONCLUSIVE CAPTURE_FAILURE
 18   baseline legitimately reconstructing state   TIE, baseline correct
+19   auto-memory holds state (baseline arm)       dropped INVALID_TRIAL
+20   source solved the target before handoff      dropped INVALID_TRIAL
+21   memory controls not in force (both arms)     dropped INVALID_TRIAL
+22   source mutated the worktree (baseline arm)   dropped INVALID_TRIAL
 ===  ===========================================  ==========================
+
+Cases 19-22 are preregistration 1.1.0's ``trial_validity``. The same check runs
+on either arm, and an invalid trial on *either* arm drops the pair: a valid
+baseline paired with an invalid Velra trial is no more a comparison than the
+reverse.
 
 Case 18 is the one that keeps the benchmark honest. A baseline that works the
 state out for itself is a *baseline success*, and the pipeline has to report it
@@ -248,6 +257,24 @@ def cases() -> tuple[list[MockSpec], dict]:
         "verdict": verdict_mod.TIE,
         "baseline_correct": True,
         "velra_correct": True}
+
+    # 19-22 -- trials that are not trials of the scenario. Each must be
+    #          dropped whole, named INVALID_TRIAL, and scored nowhere.
+    specs += pair("case19-memory-leak", B, baseline=dict(EVEN, memory_leak=True),
+                  velra=EVEN)
+    expect["case19-memory-leak"] = {"dropped": "INVALID_TRIAL"}
+    specs += pair("case20-source-solved", A, baseline=EVEN,
+                  velra=dict(EVEN, handoff_target="PASS"))
+    expect["case20-source-solved"] = {"dropped": "INVALID_TRIAL"}
+    specs += pair("case21-memory-controls-off", A,
+                  baseline=dict(EVEN, auto_memory_disabled=False),
+                  velra=dict(EVEN, auto_memory_disabled=False))
+    expect["case21-memory-controls-off"] = {"dropped": "INVALID_TRIAL"}
+    specs += pair("case22-worktree-mutated", B,
+                  baseline=dict(EVEN, handoff_worktree_violations=(
+                      "tracked file changed (M): src/payments/reconcile.py",)),
+                  velra=EVEN)
+    expect["case22-worktree-mutated"] = {"dropped": "INVALID_TRIAL"}
 
     return specs, expect
 

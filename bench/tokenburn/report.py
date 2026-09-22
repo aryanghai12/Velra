@@ -152,6 +152,7 @@ def markdown(result: dict) -> str:
         out += ["## Pairs dropped", "",
                 _table([{"pair_id": d["pair_id"], "reason": d["reason"],
                          "detail": str(d.get("differences")
+                                       or d.get("invalid_arms")
                                        or d.get("missing_arms"))[:160]}
                         for d in result["pairing"]["dropped"]],
                        ("pair_id", "reason", "detail")), ""]

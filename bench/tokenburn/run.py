@@ -59,6 +59,7 @@ if __package__ in (None, ""):
     import aggregate  # type: ignore[no-redef]
     import capsule_probe  # type: ignore[no-redef]
     import context_fixture  # type: ignore[no-redef]
+    import isolation  # type: ignore[no-redef]
     import leakscan  # type: ignore[no-redef]
     import prereg  # type: ignore[no-redef]
     import safety  # type: ignore[no-redef]
@@ -67,8 +68,8 @@ if __package__ in (None, ""):
     import smoke as smoke_mod  # type: ignore[no-redef]
     import telemetry  # type: ignore[no-redef]
 else:
-    from . import (aggregate, capsule_probe, context_fixture, leakscan,
-                   prereg, safety, scenarios, telemetry)
+    from . import (aggregate, capsule_probe, context_fixture, isolation,
+                   leakscan, prereg, safety, scenarios, telemetry)
     from . import selftest as selftest_mod
     from . import smoke as smoke_mod
 
@@ -565,6 +566,20 @@ def phase_capsule_provenance(rep: Report, names) -> dict:
     return info
 
 
+def phase_isolation(rep: Report, args) -> dict:
+    """Memory isolation and handoff validation, proven offline."""
+    step("Trial validity preflight: memory isolation and source handoff")
+    result = isolation.preflight()
+    for c in result["checks"]:
+        print(f"  [{'PASS' if c['ok'] else 'FAIL'}] {c['check']}", flush=True)
+    failed = [c["check"] for c in result["checks"] if not c["ok"]]
+    rep.add("isolation", "auto-memory isolated and handoff enforced, both arms",
+            result["ok"], "; ".join(failed) or
+            f"{len(result['checks'])} checks")
+    return {"ok": result["ok"], "checks": result["checks"],
+            "failed": failed}
+
+
 def phase_smoke(rep: Report, args) -> dict:
     step("Offline restore -> SessionStart smoke test")
     with tempfile.TemporaryDirectory() as tmp:
@@ -836,6 +851,10 @@ def main() -> int:
     mode.add_argument("--smoke", action="store_true",
                       help="restore -> SessionStart against the real binary. "
                            "Offline, always, in this phase.")
+    mode.add_argument("--preflight", action="store_true",
+                      help="trial-validity controls only: memory isolation, "
+                           "leak scan, handoff validation. Offline; writes "
+                           "nothing under bench/results.")
     mode.add_argument("--live", action="store_true",
                       help="the expensive evaluation. Needs "
                            f"{safety.LIVE_ENV}=1 as well.")
@@ -867,6 +886,10 @@ def main() -> int:
     if args.smoke:
         safety.assert_offline(safety.MODE_SMOKE)
         return subprocess.run([sys.executable, str(HERE / "smoke.py")]).returncode
+    if args.preflight:
+        safety.assert_offline(safety.MODE_SMOKE)
+        return subprocess.run([sys.executable, str(HERE / "isolation.py"),
+                               "--preflight"]).returncode
 
     names = list(args.only or scenarios.DEFAULT_ORDER)
     started = time.time()
@@ -913,6 +936,7 @@ def main() -> int:
     readiness["mock_adapter"] = phase_mock(rep, args)
     readiness["capsule_provenance"] = phase_capsule_provenance(rep, names)
     readiness["smoke_test"] = phase_smoke(rep, args)
+    readiness["trial_validity_preflight"] = phase_isolation(rep, args)
     readiness["trial_plan"] = phase_plan(rep, args, names)
 
     step("Live safety gate")
