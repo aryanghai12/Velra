@@ -8,9 +8,11 @@ use crate::paths;
 use crate::reducer::{project_root, session_epoch};
 use crate::render::{
     AttemptView, CommandRef, ConstraintView, DeadEndView, FailureView, IntentView, NextTarget,
-    Snapshot, WorkingFileView,
+    Snapshot, TestStatusView, WorkingFileView,
 };
 use crate::shell;
+use crate::testids;
+use crate::text::names_identifier;
 use rusqlite::{params, Connection, OptionalExtension};
 use std::path::PathBuf;
 
@@ -30,6 +32,11 @@ const DEAD_ENDS_MAX: usize = 4;
 const CONSTRAINTS_MAX: usize = 3;
 const ATTEMPTS_MAX: usize = 4;
 const WORKING_MAX: usize = 8;
+/// Tests carried into a snapshot before the ladder trims them.
+pub const TESTS_MAX: usize = 6;
+/// Superseded messages searched, newest first, for an earlier one that names
+/// code (see [`earlier_message`]).
+const EARLIER_SCAN: i64 = 12;
 
 fn session_project(conn: &Connection, session_id: &str) -> rusqlite::Result<Option<String>> {
     let from_sessions = conn
@@ -73,6 +80,16 @@ pub struct FileStat {
     pub first_touch_ms: i64,
     /// Named by a dead end, a live attempt, or the failing output.
     pub pinned: bool,
+    /// Stored as an absolute path, i.e. outside the workspace root: an agent's
+    /// own notes, a global config file, a sibling checkout.
+    pub outside: bool,
+}
+
+/// Whether a stored path lies outside the workspace. The reducer stores
+/// in-workspace paths relative to the root, so anything absolute or climbing
+/// out with `..` is outside it.
+pub fn is_outside_workspace(path: &str) -> bool {
+    paths::is_absolute_str(path) || path.starts_with("../") || path.starts_with("..\\")
 }
 
 /// Rank of a file in `[FILE_ACTIVITY]`, highest first.
@@ -102,6 +119,13 @@ pub fn working_score(s: &FileStat) -> u32 {
 
 /// Sorts `stats` into `[FILE_ACTIVITY]` order, highest rank first.
 ///
+/// Files inside the workspace always rank above files outside it. In the
+/// v0.1.2 Token-Burn qualification the agent wrote Claude Code memory notes
+/// under `~/.claude/projects/…/memory/` in six of eight source sessions, and
+/// those notes took two of the eight working-file slots and both surviving
+/// `[RECENT_EDITS]` slots from the source files the task was about. They are
+/// still listed, below every workspace file.
+///
 /// Recency decides nothing but the very last tie, and deliberately in the
 /// *older* direction. Ranking ties by "most recently touched" hands the whole
 /// list to whatever the agent did last: in the v0.1 benchmark an audit sweep
@@ -114,8 +138,9 @@ pub fn working_score(s: &FileStat) -> u32 {
 /// alone and can be tested without a database.
 pub fn rank(stats: &mut [FileStat]) {
     stats.sort_by(|a, b| {
-        working_score(b)
-            .cmp(&working_score(a))
+        a.outside
+            .cmp(&b.outside)
+            .then(working_score(b).cmp(&working_score(a)))
             .then(b.edits.cmp(&a.edits))
             .then(b.reads.cmp(&a.reads))
             .then(a.first_touch_ms.cmp(&b.first_touch_ms))
@@ -135,6 +160,164 @@ pub fn split_excerpt(excerpt: &str) -> (Option<String>, Option<String>) {
         }
     }
     (minus, plus)
+}
+
+/// Per-test status across the epoch's test runs, highest focus first, at most
+/// [`TESTS_MAX`].
+///
+/// Runs are replayed in order. A failing run sets every test its output names
+/// to failing; a passing run clears every tracked test it covers
+/// ([`testids::run_covers`]). The result is the one fact the capsule used to
+/// lose: which *tests* were failing, which of them the session got passing, and
+/// their exact identifiers — independent of which command happened to run last.
+///
+/// Ranking is by focus: each run that observed a test adds 2 when the run
+/// named it (its file, its node id, a filter it matches) and 1 when it only
+/// covered it through a directory or the whole suite ([`testids::run_names`]). A test the session kept running on purpose therefore
+/// outranks a pre-existing failure that only shows up in full-suite runs.
+/// Ties go to the test still failing, then the most recent failure, then the
+/// first one seen.
+pub fn test_statuses(
+    conn: &Connection,
+    session_id: &str,
+    epoch: i64,
+) -> rusqlite::Result<Vec<TestStatusView>> {
+    struct Acc {
+        view: TestStatusView,
+        runner: String,
+        focus: u32,
+        first_seen: usize,
+    }
+    let rows: Vec<(i64, String, String, Option<String>, i64)> = conn
+        .prepare_cached(
+            "SELECT id, command_text, outcome, excerpt, ts_ms FROM commands \
+             WHERE session_id = ?1 AND epoch = ?2 AND kind = 'test' ORDER BY ts_ms, id",
+        )?
+        .query_map(params![session_id, epoch], |r| {
+            Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?))
+        })?
+        .collect::<rusqlite::Result<_>>()?;
+
+    let mut acc: Vec<Acc> = Vec::new();
+    for (id, command, outcome, excerpt, ts_ms) in rows {
+        let Some(run) = testids::test_run(&command) else {
+            continue;
+        };
+        let reference = CommandRef {
+            id,
+            command: shell::display_command(&command).to_string(),
+            outcome: Outcome::parse(&outcome).unwrap_or(Outcome::Unknown),
+        };
+        match reference.outcome {
+            Outcome::Fail => {
+                let lines: Vec<&str> = excerpt.as_deref().unwrap_or("").lines().collect();
+                for t in testids::failing_tests(&lines) {
+                    let slot = match acc.iter().position(|a| a.view.id == t.id) {
+                        Some(i) => i,
+                        None => {
+                            acc.push(Acc {
+                                view: TestStatusView {
+                                    id: t.id.clone(),
+                                    failing: true,
+                                    detail: None,
+                                    last_fail: reference.clone(),
+                                    last_fail_ms: ts_ms,
+                                    passed: None,
+                                    passed_ms: None,
+                                },
+                                runner: run.runner.clone(),
+                                focus: 0,
+                                first_seen: acc.len(),
+                            });
+                            acc.len() - 1
+                        }
+                    };
+                    let a = &mut acc[slot];
+                    a.view.failing = true;
+                    if t.detail.is_some() {
+                        a.view.detail = t.detail;
+                    }
+                    a.view.last_fail = reference.clone();
+                    a.view.last_fail_ms = ts_ms;
+                    a.view.passed = None;
+                    a.view.passed_ms = None;
+                    a.runner = run.runner.clone();
+                    a.focus += if testids::run_names(&run, &run.runner, &t.id) {
+                        2
+                    } else {
+                        1
+                    };
+                }
+            }
+            Outcome::Pass => {
+                for a in acc.iter_mut() {
+                    if testids::run_covers(&run, &a.runner, &a.view.id) {
+                        a.view.failing = false;
+                        a.view.passed = Some(reference.clone());
+                        a.view.passed_ms = Some(ts_ms);
+                        a.focus += if testids::run_names(&run, &a.runner, &a.view.id) {
+                            2
+                        } else {
+                            1
+                        };
+                    }
+                }
+            }
+            Outcome::Interrupted | Outcome::Unknown => {}
+        }
+    }
+    acc.sort_by(|a, b| {
+        b.focus
+            .cmp(&a.focus)
+            .then(b.view.failing.cmp(&a.view.failing))
+            .then(b.view.last_fail_ms.cmp(&a.view.last_fail_ms))
+            .then(a.first_seen.cmp(&b.first_seen))
+    });
+    Ok(acc.into_iter().take(TESTS_MAX).map(|a| a.view).collect())
+}
+
+/// The most recent earlier user message that names code, when the latest one
+/// does not.
+///
+/// The intent model keeps one `LATEST` message and supersedes it with every
+/// new prompt of three characters or more. That is right for "what was I just
+/// asked", and wrong when the last thing said is a sign-off: in the v0.1.2
+/// Token-Burn qualification "Right. The next thing to look at is retry_backoff
+/// …" was superseded one prompt later by "I'm going to leave this session
+/// here", and the only statement of the next action never reached the
+/// snapshot. The superseded row was still in the ledger.
+///
+/// So when the latest message names no identifier ([`names_identifier`]), the
+/// newest superseded `LATEST`/`SUBTASK` message that does is carried alongside
+/// it. Nothing is carried when the latest message already names code, which
+/// keeps the section from turning into a transcript.
+pub fn earlier_message(
+    conn: &Connection,
+    session_id: &str,
+    epoch: i64,
+    latest: Option<&IntentView>,
+    exclude: &[&str],
+) -> rusqlite::Result<Option<IntentView>> {
+    let Some(latest) = latest.filter(|l| !names_identifier(&l.text)) else {
+        return Ok(None);
+    };
+    let rows: Vec<IntentView> = conn
+        .prepare_cached(
+            "SELECT id, text, created_ms FROM intents \
+             WHERE session_id = ?1 AND epoch = ?2 AND level IN ('LATEST', 'SUBTASK') \
+             AND superseded_ms IS NOT NULL AND id < ?3 ORDER BY id DESC LIMIT ?4",
+        )?
+        .query_map(params![session_id, epoch, latest.id, EARLIER_SCAN], |r| {
+            Ok(IntentView {
+                id: r.get(0)?,
+                text: r.get(1)?,
+                ts_ms: r.get(2)?,
+            })
+        })?
+        .collect::<rusqlite::Result<_>>()?;
+    Ok(rows.into_iter().find(|v| {
+        names_identifier(&v.text) && v.text != latest.text && !exclude.contains(&v.text.as_str())
+    }))
 }
 
 /// Builds the snapshot for `session_id`'s current epoch.
@@ -181,6 +364,13 @@ pub fn build(
             }
         }
     }
+
+    let shown: Vec<&str> = root
+        .iter()
+        .chain(subtask.iter())
+        .map(|v: &IntentView| v.text.as_str())
+        .collect();
+    let earlier = earlier_message(conn, sid, epoch, latest.as_ref(), &shown)?;
 
     // Constraints (schema v3). Oldest first: the order the user stated them in
     // is the only ordering the log supports, and a later sentence never
@@ -268,6 +458,8 @@ pub fn build(
         }
     });
 
+    let tests = test_statuses(conn, sid, epoch)?;
+
     // Dead ends.
     let dead_rows: Vec<(i64, String, String, String, Option<String>, i64, Option<i64>)> = conn
         .prepare_cached(
@@ -341,13 +533,17 @@ pub fn build(
         )?
         .query_map(params![sid, epoch], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?, r.get(5)?)))?
         .collect::<rusqlite::Result<_>>()?;
+    // Workspace files first, most recent first within each group; see `rank`
+    // for why edits outside the workspace go last.
+    let mut attempt_rows: Vec<_> = attempt_rows
+        .into_iter()
+        .filter(|row| !dead_ends.iter().any(|d| d.path == row.1))
+        .collect();
+    attempt_rows.sort_by_key(|row| is_outside_workspace(&row.1));
     let mut attempts = Vec::new();
     for (edit_id, path, added, removed, ts_ms, agent) in attempt_rows {
         if attempts.len() >= ATTEMPTS_MAX {
             break;
-        }
-        if dead_ends.iter().any(|d| d.path == path) {
-            continue;
         }
         let after_id = conn
             .prepare_cached(
@@ -393,6 +589,7 @@ pub fn build(
                 in_failure: r.get::<_, i64>(3)? != 0,
                 first_touch_ms: r.get(5)?,
                 pinned: false,
+                outside: false,
             })
         })?
         .collect::<rusqlite::Result<_>>()?;
@@ -401,6 +598,7 @@ pub fn build(
     }
     for s in &mut stats {
         s.pinned = pinned.contains(s.path.as_str());
+        s.outside = is_outside_workspace(&s.path);
     }
     rank(&mut stats);
     let working_files: Vec<WorkingFileView> = stats
@@ -456,11 +654,13 @@ pub fn build(
         constraints,
         subtask,
         latest,
+        earlier,
         git,
         edit_count: edit_count as u32,
         last_test,
         failure,
         failing_count: failing_count as u32,
+        tests,
         dead_ends,
         dead_end_total,
         attempts,

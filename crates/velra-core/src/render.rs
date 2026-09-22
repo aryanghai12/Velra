@@ -170,6 +170,23 @@ pub struct WorkingFileView {
     pub in_failure: bool,
 }
 
+/// One test's status across the session's runs (see `crate::testids`).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TestStatusView {
+    /// Exact identifier as the runner printed it, e.g. `tests/x.py::test_y`.
+    pub id: String,
+    /// The latest run that covered it reported it failing.
+    pub failing: bool,
+    /// The runner's one-line reason from the most recent failure.
+    pub detail: Option<String>,
+    /// The most recent run that reported it failing.
+    pub last_fail: CommandRef,
+    pub last_fail_ms: i64,
+    /// When no longer failing: the passing run that covered it.
+    pub passed: Option<CommandRef>,
+    pub passed_ms: Option<i64>,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NextTarget {
     /// `failure-location` or `last-active-edit`.
@@ -196,12 +213,17 @@ pub struct Snapshot {
     pub constraints: Vec<ConstraintView>,
     pub subtask: Option<IntentView>,
     pub latest: Option<IntentView>,
+    /// The most recent superseded message that names code, carried only when
+    /// `latest` names none (`snapshot::earlier_message`).
+    pub earlier: Option<IntentView>,
     pub git: Option<GitInfo>,
     pub edit_count: u32,
     pub last_test: Option<CommandRef>,
     pub failure: Option<FailureView>,
     /// Distinct test/build/lint signatures whose latest run failed.
     pub failing_count: u32,
+    /// Per-test status, highest focus first (`snapshot::test_statuses`).
+    pub tests: Vec<TestStatusView>,
     pub dead_ends: Vec<DeadEndView>,
     /// All non-reapplied dead ends in the epoch (`dead_ends` holds at most 4).
     pub dead_end_total: u32,
@@ -230,10 +252,18 @@ struct Limits {
     next_target: bool,
     latest: bool,
     subtask: bool,
+    tests_max: usize,
+    test_detail: bool,
+    earlier: bool,
+    earlier_chars: usize,
 }
 
 impl Limits {
     const FULL: Limits = Limits {
+        tests_max: 6,
+        test_detail: true,
+        earlier: true,
+        earlier_chars: 200,
         working_max: 8,
         constraints_max: 3,
         constraint_chars: 200,
@@ -400,6 +430,18 @@ fn render_with(s: &Snapshot, lim: &Limits, trace: bool) -> String {
         );
         o.push(truncate_chars(&st.text, lim.subtask_chars), &src);
     }
+    // Chronological: the earlier message is printed above the latest one.
+    if let Some(e) = s.earlier.as_ref().filter(|_| lim.earlier) {
+        let src = format!("intents:{}", e.id);
+        o.push(
+            format!(
+                "[EARLIER_MESSAGE] (OBSERVED | user prompt | {})",
+                hh_mm(e.ts_ms, tz)
+            ),
+            &src,
+        );
+        o.push(truncate_chars(&e.text, lim.earlier_chars), &src);
+    }
     if let Some(l) = s
         .latest
         .as_ref()
@@ -449,6 +491,57 @@ fn render_with(s: &Snapshot, lim: &Limits, trace: bool) -> String {
         &status_src,
     );
 
+    // Exact test identifiers, each with its latest covered status. This is the
+    // section the ladder protects longest among the failure detail: an
+    // identifier is what lets the next session run the one test that matters,
+    // and it costs a line where the excerpt that used to carry it costs eight.
+    let tests: Vec<&TestStatusView> = s.tests.iter().take(lim.tests_max).collect();
+    if !tests.is_empty() {
+        let mut cmd_ids: Vec<i64> = Vec::new();
+        for t in &tests {
+            for id in std::iter::once(t.last_fail.id).chain(t.passed.as_ref().map(|p| p.id)) {
+                if !cmd_ids.contains(&id) {
+                    cmd_ids.push(id);
+                }
+            }
+        }
+        o.push(
+            "[TEST_STATUS] (OBSERVED | latest run covering each)",
+            &ids("commands", &cmd_ids),
+        );
+        for t in &tests {
+            let line = if t.failing {
+                let detail = match (&t.detail, lim.test_detail) {
+                    (Some(d), true) => format!(" | {}", truncate_chars(d, 60)),
+                    _ => String::new(),
+                };
+                format!("- FAIL {}{detail}", path(&t.id))
+            } else {
+                let how = match (&t.passed, lim.test_detail) {
+                    (Some(p), true) => {
+                        format!(
+                            " in `{}`",
+                            truncate_chars(&p.command, lim.command_chars.min(60))
+                        )
+                    }
+                    _ => String::new(),
+                };
+                format!(
+                    "- PASS {} | failed {}, then passed {}{how}",
+                    path(&t.id),
+                    hh_mm(t.last_fail_ms, tz),
+                    t.passed_ms
+                        .map_or_else(|| "?".to_string(), |ms| hh_mm(ms, tz)),
+                )
+            };
+            let src = match &t.passed {
+                Some(p) if !t.failing => format!("commands:{},commands:{}", t.last_fail.id, p.id),
+                _ => format!("commands:{}", t.last_fail.id),
+            };
+            o.push(line, &src);
+        }
+    }
+
     if let Some(f) = &s.failure {
         let src = format!("commands:{}", f.id);
         o.push(
@@ -470,49 +563,97 @@ fn render_with(s: &Snapshot, lim: &Limits, trace: bool) -> String {
             },
             &src,
         );
-        let n = f.excerpt.len();
-        for line in &f.excerpt[n.saturating_sub(lim.failure_lines)..] {
+        // A line that only names a test already listed under [TEST_STATUS]
+        // says nothing new; the budget goes to the assertion context instead.
+        let excerpt: Vec<&String> = f
+            .excerpt
+            .iter()
+            .filter(|line| {
+                let line = line.replace('\\', "/");
+                !tests.iter().any(|t| line.contains(t.id.as_str()))
+            })
+            .collect();
+        let n = excerpt.len();
+        for line in &excerpt[n.saturating_sub(lim.failure_lines)..] {
             o.push(format!("  {line}"), &src);
         }
     }
 
-    let dead_ends: Vec<&DeadEndView> = s.dead_ends.iter().take(lim.dead_ends_max).collect();
-    if !dead_ends.is_empty() {
-        let all: Vec<i64> = dead_ends.iter().map(|d| d.id).collect();
+    // One line per path. Several reverted attempts on the same file used to
+    // cost a full line each -- path, count, mechanism and time -- so a file
+    // retried three times spent three headers saying the same path. Grouping
+    // keeps every attempt's excerpt and observation; only the header is shared.
+    let mut groups: Vec<Vec<(usize, &DeadEndView)>> = Vec::new();
+    for (i, d) in s.dead_ends.iter().enumerate() {
+        match groups.iter_mut().find(|g| g[0].1.path == d.path) {
+            Some(g) => g.push((i, d)),
+            None => groups.push(vec![(i, d)]),
+        }
+    }
+    groups.truncate(lim.dead_ends_max);
+    if !groups.is_empty() {
+        let all: Vec<i64> = groups.iter().flatten().map(|(_, d)| d.id).collect();
         o.push("[REVERTED_EDITS] (OBSERVED)", &ids("dead_ends", &all));
-        let n = dead_ends.len();
-        for (i, d) in dead_ends.iter().enumerate() {
-            let src = format!("dead_ends:{},{}", d.id, ids("edits", &d.edit_ids));
-            o.push(
-                format!(
-                    "- {}{} | {} edit(s) | {} at {}",
-                    path(&d.path),
-                    if d.subagent { " (subagent)" } else { "" },
-                    d.edit_ids.len(),
-                    mechanism_text(d, lim.command_chars),
-                    hh_mm(d.resolved_ms, tz)
-                ),
-                &src,
+        let n = s.dead_ends.len();
+        for group in &groups {
+            let (_, last) = group[0];
+            let member_ids: Vec<i64> = group.iter().map(|(_, d)| d.id).collect();
+            let edit_ids: Vec<i64> = group
+                .iter()
+                .flat_map(|(_, d)| d.edit_ids.iter().copied())
+                .collect();
+            let src = format!(
+                "{},{}",
+                ids("dead_ends", &member_ids),
+                ids("edits", &edit_ids)
             );
-            // Dead ends are listed most recent first; excerpts are removed oldest first.
-            let excerpt_removed = n - i <= lim.dead_excerpts_removed;
-            if !excerpt_removed {
-                if let Some(m) = &d.minus {
-                    o.push(format!("    - {m}"), &src);
+            let subagent = if group.iter().any(|(_, d)| d.subagent) {
+                " (subagent)"
+            } else {
+                ""
+            };
+            let header = if group.len() == 1 {
+                format!(
+                    "- {}{subagent} | {} edit(s) | {} at {}",
+                    path(&last.path),
+                    edit_ids.len(),
+                    mechanism_text(last, lim.command_chars),
+                    hh_mm(last.resolved_ms, tz)
+                )
+            } else {
+                format!(
+                    "- {}{subagent} | {} reverts, {} edit(s) | last {} at {}",
+                    path(&last.path),
+                    group.len(),
+                    edit_ids.len(),
+                    mechanism_text(last, lim.command_chars),
+                    hh_mm(last.resolved_ms, tz)
+                )
+            };
+            o.push(header, &src);
+            for (i, d) in group {
+                let member_src = format!("dead_ends:{},{}", d.id, ids("edits", &d.edit_ids));
+                // Dead ends are listed most recent first; excerpts are removed
+                // oldest first, counted across every dead end, not per group.
+                let excerpt_removed = n - i <= lim.dead_excerpts_removed;
+                if !excerpt_removed {
+                    if let Some(m) = &d.minus {
+                        o.push(format!("    - {m}"), &member_src);
+                    }
+                    if let Some(p) = &d.plus {
+                        o.push(format!("    + {p}"), &member_src);
+                    }
                 }
-                if let Some(p) = &d.plus {
-                    o.push(format!("    + {p}"), &src);
+                if let (true, Some(c)) = (lim.observed, &d.observed_after) {
+                    o.push(
+                        format!(
+                            "  Observed afterward: `{}` {}. Causal link: UNCONFIRMED.",
+                            truncate_chars(&c.command, lim.command_chars.min(80)),
+                            outcome_word(c.outcome)
+                        ),
+                        &format!("dead_ends:{},commands:{}", d.id, c.id),
+                    );
                 }
-            }
-            if let (true, Some(c)) = (lim.observed, &d.observed_after) {
-                o.push(
-                    format!(
-                        "  Observed afterward: `{}` {}. Causal link: UNCONFIRMED.",
-                        truncate_chars(&c.command, lim.command_chars.min(80)),
-                        outcome_word(c.outcome)
-                    ),
-                    &format!("dead_ends:{},commands:{}", d.id, c.id),
-                );
             }
         }
     }
@@ -591,34 +732,99 @@ fn render_with(s: &Snapshot, lim: &Limits, trace: bool) -> String {
     o.lines.join("\n")
 }
 
-type Step = fn(&mut Limits, &Snapshot) -> bool;
+/// One rung of the truncation ladder: a name for diagnostics, and a move that
+/// returns false when it can no longer change anything (so the loop moves on).
+struct Rung {
+    name: &'static str,
+    apply: fn(&mut Limits, &Snapshot) -> bool,
+}
 
-/// Spec truncation order (§16.3). Each step returns false when it can no
-/// longer change anything (so the loop moves on).
-const SPEC_STEPS: &[Step] = &[
-    |l, _| std::mem::replace(&mut l.working_max, 4) != 4,
-    |l, _| std::mem::replace(&mut l.attempts_max, 2) != 2,
-    |l, s| {
-        // Remove one more dead end's excerpt lines, oldest first.
-        if l.dead_excerpts_removed < s.dead_ends.len() {
-            l.dead_excerpts_removed += 1;
-            true
-        } else {
-            false
-        }
+/// Spec truncation order (§16.3), revised in v0.1.2 for identifier retention.
+///
+/// The ladder removes the least information per token first. The v0.1.2
+/// Token-Burn qualification showed the old order doing the opposite: all four
+/// restored capsules kept "Observed afterward" lines' worth of budget and the
+/// inferred `[FAILURE_LOCATION]` right up to the ceiling ladder, while
+/// `[FILE_ACTIVITY]` went to zero and the failure excerpt -- the only place the
+/// failing test's name lived -- went from eight lines to none. Two of the
+/// moves that follow were ceiling-only before and now run here: prose that an
+/// agent can regenerate (the observed-afterward lines, the inferred location,
+/// excerpt context whose identifiers `[TEST_STATUS]` already carries) goes
+/// before any exact identifier does. See DECISIONS.md, D64.
+const SPEC_STEPS: &[Rung] = &[
+    Rung {
+        name: "working_files 8->4",
+        apply: |l, _| std::mem::replace(&mut l.working_max, 4) != 4,
     },
-    |l, _| std::mem::replace(&mut l.failure_lines, 3) != 3,
-    |l, _| std::mem::replace(&mut l.latest_chars, 120) != 120,
-    |l, _| std::mem::replace(&mut l.root_chars, 160) != 160,
+    Rung {
+        name: "recent_edits 4->2",
+        apply: |l, _| std::mem::replace(&mut l.attempts_max, 2) != 2,
+    },
+    Rung {
+        name: "reverted_edits excerpt, oldest first",
+        apply: |l, s| {
+            if l.dead_excerpts_removed < s.dead_ends.len() {
+                l.dead_excerpts_removed += 1;
+                true
+            } else {
+                false
+            }
+        },
+    },
+    Rung {
+        name: "test_result excerpt 8->3",
+        apply: |l, _| std::mem::replace(&mut l.failure_lines, 3) != 3,
+    },
+    Rung {
+        name: "latest_message 200->120 chars",
+        apply: |l, _| std::mem::replace(&mut l.latest_chars, 120) != 120,
+    },
+    Rung {
+        name: "first_message 240->160 chars",
+        apply: |l, _| std::mem::replace(&mut l.root_chars, 160) != 160,
+    },
+    Rung {
+        name: "observed_afterward off",
+        apply: |l, _| std::mem::replace(&mut l.observed, false),
+    },
+    Rung {
+        name: "test_result excerpt 3->0",
+        apply: |l, _| std::mem::replace(&mut l.failure_lines, 0) != 0,
+    },
+    Rung {
+        name: "failure_location off",
+        apply: |l, _| std::mem::replace(&mut l.next_target, false),
+    },
     // The rung that used to be missing. Before v0.1.2 the ladder stepped
     // `working_max` from 4 straight to 0, so `[FILE_ACTIVITY]` went from four
     // files to none in one move -- and section 18 of the v0.1 report records the
     // result: the section absent from 4 of 4 delivered capsules, every one of
     // them well under the ceiling. Two files is most of what the section is
     // worth and costs two lines.
-    |l, _| std::mem::replace(&mut l.working_max, 2) != 2,
-    |l, _| std::mem::replace(&mut l.constraint_chars, 140) != 140,
-    |l, _| std::mem::replace(&mut l.working_max, 0) != 0,
+    Rung {
+        name: "working_files 4->2",
+        apply: |l, _| std::mem::replace(&mut l.working_max, 2) != 2,
+    },
+    Rung {
+        name: "constraints 200->140 chars",
+        apply: |l, _| std::mem::replace(&mut l.constraint_chars, 140) != 140,
+    },
+    Rung {
+        name: "test_status detail off",
+        apply: |l, _| std::mem::replace(&mut l.test_detail, false),
+    },
+    Rung {
+        name: "recent_edits 2->0",
+        apply: |l, _| std::mem::replace(&mut l.attempts_max, 0) != 0,
+    },
+    Rung {
+        name: "earlier_message 200->120 chars",
+        apply: |l, _| std::mem::replace(&mut l.earlier_chars, 120) != 120,
+    },
+    Rung {
+        name: "test_status 6->3",
+        apply: |l, _| std::mem::replace(&mut l.tests_max, 3) != 3,
+    },
 ];
 
 /// Additional steps applied only above the hard ceiling (see DECISIONS.md).
@@ -631,25 +837,95 @@ const SPEC_STEPS: &[Step] = &[
 /// character, so four dead-end lines at 200 characters each are 800 tokens on
 /// their own. Narrowing the section to its most recent entry keeps the header
 /// and one example, which is what the section is protected for.
-const CEILING_STEPS: &[Step] = &[
-    |l, _| std::mem::replace(&mut l.observed, false),
-    |l, _| std::mem::replace(&mut l.next_target, false),
-    |l, _| std::mem::replace(&mut l.attempts_max, 0) != 0,
-    |l, _| std::mem::replace(&mut l.failure_lines, 0) != 0,
-    |l, _| std::mem::replace(&mut l.subtask_chars, 80) != 80,
-    |l, _| std::mem::replace(&mut l.path_chars, 60) != 60,
-    |l, _| std::mem::replace(&mut l.command_chars, 80) != 80,
-    |l, _| std::mem::replace(&mut l.latest, false),
-    |l, _| std::mem::replace(&mut l.constraints_max, 2) != 2,
-    |l, _| std::mem::replace(&mut l.root_chars, 100) != 100,
-    |l, _| std::mem::replace(&mut l.constraint_chars, 100) != 100,
-    |l, _| std::mem::replace(&mut l.constraints_max, 1) != 1,
-    |l, _| std::mem::replace(&mut l.dead_ends_max, 2) != 2,
-    |l, _| std::mem::replace(&mut l.subtask, false),
-    |l, _| std::mem::replace(&mut l.dead_ends_max, 1) != 1,
-    |l, _| std::mem::replace(&mut l.path_chars, 40) != 40,
-    |l, _| std::mem::replace(&mut l.command_chars, 40) != 40,
-    |l, _| std::mem::replace(&mut l.root_chars, 60) != 60,
+///
+/// The last working files, the last test identifier and the earlier message go
+/// before the latest message and the constraints: those two are the user's own
+/// words about what to do next and what not to do.
+const CEILING_STEPS: &[Rung] = &[
+    Rung {
+        name: "subtask 200->80 chars",
+        apply: |l, _| std::mem::replace(&mut l.subtask_chars, 80) != 80,
+    },
+    Rung {
+        name: "paths 200->60 chars",
+        apply: |l, _| std::mem::replace(&mut l.path_chars, 60) != 60,
+    },
+    Rung {
+        name: "commands 160->80 chars",
+        apply: |l, _| std::mem::replace(&mut l.command_chars, 80) != 80,
+    },
+    Rung {
+        name: "reverted_edits 4->2 files",
+        apply: |l, _| std::mem::replace(&mut l.dead_ends_max, 2) != 2,
+    },
+    Rung {
+        name: "working_files 2->0",
+        apply: |l, _| std::mem::replace(&mut l.working_max, 0) != 0,
+    },
+    Rung {
+        name: "test_status 3->1",
+        apply: |l, _| std::mem::replace(&mut l.tests_max, 1) != 1,
+    },
+    Rung {
+        name: "first_message 160->100 chars",
+        apply: |l, _| std::mem::replace(&mut l.root_chars, 100) != 100,
+    },
+    // Shorten a message before dropping it: a whole message is 50-90 tokens,
+    // and the ladder is rarely more than a few dozen over by this point.
+    Rung {
+        name: "latest_message 120->80 chars",
+        apply: |l, _| std::mem::replace(&mut l.latest_chars, 80) != 80,
+    },
+    Rung {
+        name: "earlier_message 120->100 chars",
+        apply: |l, _| std::mem::replace(&mut l.earlier_chars, 100) != 100,
+    },
+    // An earlier message exists only when the latest one names no code, so of
+    // the two it is the latest that carries less a later session can act on.
+    Rung {
+        name: "latest_message off (an earlier message names code)",
+        apply: |l, s| s.earlier.is_some() && std::mem::replace(&mut l.latest, false),
+    },
+    Rung {
+        name: "constraints 3->2",
+        apply: |l, _| std::mem::replace(&mut l.constraints_max, 2) != 2,
+    },
+    Rung {
+        name: "constraints 140->100 chars",
+        apply: |l, _| std::mem::replace(&mut l.constraint_chars, 100) != 100,
+    },
+    Rung {
+        name: "earlier_message off",
+        apply: |l, _| std::mem::replace(&mut l.earlier, false),
+    },
+    Rung {
+        name: "latest_message off",
+        apply: |l, _| std::mem::replace(&mut l.latest, false),
+    },
+    Rung {
+        name: "constraints 2->1",
+        apply: |l, _| std::mem::replace(&mut l.constraints_max, 1) != 1,
+    },
+    Rung {
+        name: "subtask off",
+        apply: |l, _| std::mem::replace(&mut l.subtask, false),
+    },
+    Rung {
+        name: "reverted_edits 2->1 files",
+        apply: |l, _| std::mem::replace(&mut l.dead_ends_max, 1) != 1,
+    },
+    Rung {
+        name: "paths 60->40 chars",
+        apply: |l, _| std::mem::replace(&mut l.path_chars, 40) != 40,
+    },
+    Rung {
+        name: "commands 80->40 chars",
+        apply: |l, _| std::mem::replace(&mut l.command_chars, 40) != 40,
+    },
+    Rung {
+        name: "first_message 100->60 chars",
+        apply: |l, _| std::mem::replace(&mut l.root_chars, 60) != 60,
+    },
 ];
 
 /// Last-resort guarantee that the block never exceeds `ceiling` (E2).
@@ -745,13 +1021,22 @@ fn hard_trim(text: &str, ceiling: u32, max_chars: usize) -> String {
     build(lo)
 }
 
+/// One point on the way from full detail to the rendered capsule: the rung
+/// just applied and the text it produced. See [`render_ladder`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LadderStep {
+    pub rung: &'static str,
+    pub text: String,
+}
+
 fn run_steps(
     s: &Snapshot,
     lim: &mut Limits,
-    steps: &[Step],
+    steps: &[Rung],
     target: u32,
     trace: bool,
     applied: &mut u32,
+    mut trail: Option<&mut Vec<LadderStep>>,
 ) -> String {
     let mut text = render_with(s, lim, trace);
     for step in steps {
@@ -759,34 +1044,76 @@ fn run_steps(
             if estimate_tokens(&text) <= target {
                 return text;
             }
-            if !step(lim, s) {
+            if !(step.apply)(lim, s) {
                 break;
             }
             *applied += 1;
             text = render_with(s, lim, trace);
+            if let Some(t) = trail.as_deref_mut() {
+                t.push(LadderStep {
+                    rung: step.name,
+                    text: text.clone(),
+                });
+            }
         }
     }
     text
 }
 
-fn render_impl(s: &Snapshot, cfg: &RenderConfig, trace: bool) -> Rendered {
+fn render_impl(
+    s: &Snapshot,
+    cfg: &RenderConfig,
+    trace: bool,
+    mut trail: Option<&mut Vec<LadderStep>>,
+) -> Rendered {
     let target = cfg
         .budget_tokens
         .clamp(MIN_BUDGET_TOKENS, HARD_CEILING_TOKENS);
     let mut lim = Limits::FULL;
+    if let Some(t) = trail.as_deref_mut() {
+        t.push(LadderStep {
+            rung: "full detail",
+            text: render_with(s, &lim, trace),
+        });
+    }
     let mut steps = 0;
-    let mut text = run_steps(s, &mut lim, SPEC_STEPS, target, trace, &mut steps);
+    let mut text = run_steps(
+        s,
+        &mut lim,
+        SPEC_STEPS,
+        target,
+        trace,
+        &mut steps,
+        trail.as_deref_mut(),
+    );
     // Both ladders now run against the caller's target rather than against the
     // ceiling. Before v0.1.2 the second ladder was skipped unless the text was
     // already above 1,000 estimated tokens, so anything between the target and
     // the ceiling was shipped untouched and `budget_tokens` meant nothing once
     // the first ladder ran out of rungs.
     if estimate_tokens(&text) > target || text.chars().count() > ABSOLUTE_MAX_CHARS {
-        text = run_steps(s, &mut lim, CEILING_STEPS, target, trace, &mut steps);
+        text = run_steps(
+            s,
+            &mut lim,
+            CEILING_STEPS,
+            target,
+            trace,
+            &mut steps,
+            trail.as_deref_mut(),
+        );
     }
     // The hard stop. After this line the text is at or below `target` estimated
     // tokens and at or below ABSOLUTE_MAX_CHARS characters, for every input.
+    let before = text.len();
     text = enforce_ceiling(text, target, ABSOLUTE_MAX_CHARS);
+    if let Some(t) = trail {
+        if text.len() != before {
+            t.push(LadderStep {
+                rung: "hard stop (whole lines from the end)",
+                text: text.clone(),
+            });
+        }
+    }
     debug_assert!(estimate_tokens(&text) <= target);
     Rendered {
         tokens: estimate_tokens(&text),
@@ -797,12 +1124,22 @@ fn render_impl(s: &Snapshot, cfg: &RenderConfig, trace: bool) -> Rendered {
 
 /// Renders the capsule within budget (§16.3).
 pub fn render(s: &Snapshot, cfg: &RenderConfig) -> Rendered {
-    render_impl(s, cfg, false)
+    render_impl(s, cfg, false, None)
 }
 
 /// Debug render annotating each derived line with its source rows (E4).
 pub fn render_traced(s: &Snapshot, cfg: &RenderConfig) -> Rendered {
-    render_impl(s, cfg, true)
+    render_impl(s, cfg, true, None)
+}
+
+/// Every intermediate text of one render, in order: full detail first, then
+/// the text after each rung the budget forced. The last entry is exactly what
+/// [`render`] returns. This is what `velra inspect --trace` walks to say which
+/// rung removed a line; it is not on any hook path.
+pub fn render_ladder(s: &Snapshot, cfg: &RenderConfig) -> Vec<LadderStep> {
+    let mut trail = Vec::new();
+    render_impl(s, cfg, false, Some(&mut trail));
+    trail
 }
 
 fn plural(n: u32, one: &str, many: &str) -> String {
@@ -859,11 +1196,13 @@ mod tests {
             constraints: vec![],
             subtask: None,
             latest: None,
+            earlier: None,
             git: None,
             edit_count: 0,
             last_test: None,
             failure: None,
             failing_count: 0,
+            tests: vec![],
             dead_ends: vec![],
             dead_end_total: 0,
             attempts: vec![],

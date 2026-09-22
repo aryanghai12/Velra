@@ -528,11 +528,13 @@ fn empty_snapshot() -> Snapshot {
         constraints: vec![],
         subtask: None,
         latest: None,
+        earlier: None,
         git: None,
         edit_count: 0,
         last_test: None,
         failure: None,
         failing_count: 0,
+        tests: vec![],
         dead_ends: vec![],
         dead_end_total: 0,
         attempts: vec![],
@@ -597,6 +599,7 @@ fn worst_case_snapshot() -> Snapshot {
             text: "l".repeat(600),
             ts_ms: common::BASE_MS,
         }),
+        earlier: None,
         git: Some(GitInfo {
             branch: Some(format!("feature/{}", "x".repeat(300))),
             head: Some("a".repeat(40)),
@@ -618,6 +621,7 @@ fn worst_case_snapshot() -> Snapshot {
             ts_ms: common::BASE_MS,
         }),
         failing_count: 12,
+        tests: vec![],
         dead_ends: (0..6)
             .map(|i| DeadEndView {
                 id: i,

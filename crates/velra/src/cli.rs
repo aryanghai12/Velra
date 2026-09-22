@@ -72,6 +72,11 @@ enum Command {
         /// Full detail for one section: dead-ends, failure, files, attempts.
         #[arg(long)]
         section: Option<String>,
+        /// Trace a string (a test name, symbol, path) through every layer from
+        /// the recorded events to the capsule, and report where it was lost.
+        /// Repeatable.
+        #[arg(long, value_name = "MARKER")]
+        trace: Vec<String>,
         #[arg(long)]
         json: bool,
     },
@@ -215,8 +220,9 @@ pub fn run() -> i32 {
             last,
             checkpoint,
             section,
+            trace,
             json,
-        } => cmd_inspect(session, last, checkpoint, section, json),
+        } => cmd_inspect(session, last, checkpoint, section, trace, json),
         Command::Doctor { json } => cmd_doctor(json),
         Command::Restore {
             session,
@@ -616,6 +622,7 @@ fn cmd_inspect(
     last: bool,
     checkpoint: Option<String>,
     section: Option<String>,
+    trace: Vec<String>,
     json: bool,
 ) -> i32 {
     let Some(home) = require_home() else { return 1 };
@@ -699,6 +706,25 @@ fn cmd_inspect(
         return 1;
     };
     let now = velra_core::time::now_ms();
+    if !trace.is_empty() {
+        return match inspect::trace(&db.conn, &home, &session_id, now, &config.render(), &trace) {
+            Ok(traces) => {
+                if json {
+                    let all: Vec<serde_json::Value> = traces.iter().map(|t| t.to_json()).collect();
+                    println!("{}", serde_json::to_string_pretty(&all).unwrap_or_default());
+                } else {
+                    for t in &traces {
+                        println!("{}", t.report());
+                    }
+                }
+                0
+            }
+            Err(e) => {
+                println!("{} {e}", fail_mark());
+                1
+            }
+        };
+    }
     let snapshot = match inspect::preview(&db.conn, &session_id, now) {
         Ok(s) => s,
         Err(e) => {

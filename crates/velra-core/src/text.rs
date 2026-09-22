@@ -75,6 +75,84 @@ pub fn collapse_whitespace(s: &str) -> String {
     out
 }
 
+/// Whether `text` names something exact in code: a path, a file, a
+/// `snake_case` or `camelCase` symbol, a `module::item`, a `call()` or a
+/// back-quoted span.
+///
+/// This is what separates "Next step is in_window in reconcile.py" from "I'm
+/// going to leave this session here": both are user messages, only one of them
+/// tells a later session where to look. It is a lexical test on purpose. It
+/// says nothing about what the message means, only whether it carries an
+/// identifier a reader could act on, and it is the same test for every session.
+///
+/// Plain English rarely trips it: prose has no underscores, no `::`, and the
+/// path rule needs a file extension or two separators, so `and/or` is not a
+/// path. Abbreviations like `e.g.` are excluded by requiring a stem of at least
+/// two characters and an extension containing a letter.
+pub fn names_identifier(text: &str) -> bool {
+    if text.matches('`').count() >= 2 {
+        return true;
+    }
+    text.split_whitespace().any(word_is_identifier)
+}
+
+fn word_is_identifier(raw: &str) -> bool {
+    let w = raw.trim_matches(|c: char| {
+        matches!(
+            c,
+            '"' | '\'' | ',' | ';' | '!' | '?' | '(' | '[' | '{' | '<' | '>' | ']' | '}'
+        )
+    });
+    let w = w.trim_end_matches(['.', ':']);
+    let symbol_char = |c: char| c.is_alphanumeric() || c == '_';
+    // Before the closing parenthesis is trimmed as punctuation below.
+    if let Some(name) = w.strip_suffix("()") {
+        if name.chars().count() >= 2 && name.chars().all(|c| symbol_char(c) || c == '.') {
+            return true;
+        }
+    }
+    let w = w.trim_end_matches(['.', ':', ')']);
+    if w.chars().count() < 3 {
+        return false;
+    }
+    if w.contains("::") {
+        return true;
+    }
+    let has_extension = |s: &str| {
+        s.rsplit_once('.').is_some_and(|(stem, ext)| {
+            stem.chars().filter(|c| c.is_alphanumeric()).count() >= 2
+                && (1..=8).contains(&ext.len())
+                && ext.chars().all(|c| c.is_ascii_alphanumeric())
+                && ext.chars().any(|c| c.is_ascii_alphabetic())
+        })
+    };
+    let separators = w.matches(['/', '\\']).count();
+    if separators > 0 {
+        let last = w.rsplit(['/', '\\']).next().unwrap_or("");
+        return separators >= 2 || has_extension(last) || w.starts_with(['.', '~']);
+    }
+    if w.chars().all(symbol_char) {
+        // snake_case: an underscore with a letter or digit on each side.
+        let chars: Vec<char> = w.chars().collect();
+        if chars
+            .windows(3)
+            .any(|t| t[0].is_alphanumeric() && t[1] == '_' && t[2].is_alphanumeric())
+        {
+            return true;
+        }
+        // camelCase / PascalCase: an upper-case letter directly after a
+        // lower-case one.
+        if chars
+            .windows(2)
+            .any(|p| p[0].is_lowercase() && p[1].is_uppercase())
+        {
+            return true;
+        }
+        return false;
+    }
+    has_extension(w) && !w.contains(char::is_whitespace)
+}
+
 /// Number of lines in `s` ("" → 0, "a" → 1, "a\n" → 1, "a\nb" → 2).
 pub fn line_count(s: &str) -> u32 {
     if s.is_empty() {
@@ -266,6 +344,32 @@ pub fn estimate_tokens(s: &str) -> u32 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn identifiers_are_told_apart_from_prose() {
+        for yes in [
+            "Next step is in_window in reconcile.py. Don't change it yet.",
+            "look at retry_backoff next",
+            "check src/payments/",
+            "open logs/build-01.log",
+            "is makeKey pure?",
+            "call parse() first",
+            "run tests/test_a.py::test_x",
+            "the `strict` flag",
+            "rename HttpClient",
+        ] {
+            assert!(names_identifier(yes), "{yes}");
+        }
+        for no in [
+            "I'm going to leave this session here. Summarise nothing \u{2014} just stop.",
+            "thanks, that is enough for today",
+            "e.g. the and/or case, etc.",
+            "version 3.14 is out",
+            "ok",
+        ] {
+            assert!(!names_identifier(no), "{no}");
+        }
+    }
 
     #[test]
     fn truncation_respects_char_boundaries() {

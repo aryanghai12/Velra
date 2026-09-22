@@ -6,6 +6,31 @@ All notable changes to Velra are documented here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- **Exact continuation state survives restore.** The v0.1.2 Token-Burn
+  qualification restored four sessions and every capsule lost an identifier
+  the next session needed, although the ledger held all of them (D64-D66):
+  - a new `[TEST_STATUS]` section names each tracked test by its exact id
+    (`tests/x.py::test_y`, `mod::tests::name`, `TestName`, ...) with its latest
+    covered status, including tests the session got passing;
+  - when the latest message names no code, `[EARLIER_MESSAGE]` carries the
+    most recent one that does, so "next, look at `parse_header`" survives a
+    closing "that's all for today";
+  - the truncation ladder now drops regenerable prose (observed-afterward
+    lines, excerpt context, the inferred failure location) before exact
+    identifiers, and shortens a message before dropping it;
+  - repeated reverts of one file share a `[REVERTED_EDITS]` header, and files
+    outside the workspace rank below workspace files.
+
+  On the four frozen qualification ledgers the declared markers carried go
+  from 8/14 to 14/14, every capsule still at or under the 740-token target.
+
+### Added
+
+- `velra inspect --trace <MARKER>` (repeatable, `--json`): where a string was
+  lost between the recorded events and the capsule, and why (D67).
+
 ### Added
 
 - **Staged capsules are delivered at `SessionStart`.** `velra restore` stages
