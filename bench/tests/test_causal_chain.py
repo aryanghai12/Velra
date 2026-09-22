@@ -18,6 +18,8 @@ import pytest
 REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(REPO_ROOT / "bench"))
 sys.path.insert(0, str(REPO_ROOT / "bench" / "harness"))
+# The S1/S2/S3 scenarios were archived into bench/legacy in v0.1.2 Phase 3.
+sys.path.insert(0, str(REPO_ROOT / "bench" / "legacy"))
 
 import stages  # noqa: E402
 from scenarios import leaks, registry  # noqa: E402

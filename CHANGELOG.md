@@ -8,6 +8,93 @@ All notable changes to Velra are documented here. The format follows
 
 ### Added
 
+- **Staged capsules are delivered at `SessionStart`.** `velra restore` stages
+  state; a brand-new Claude Code session in that workspace now picks it up.
+  That closes the loop the product is named for: leave the conversation, keep
+  the state, carry on.
+
+  Which session start may consume a capsule is decided by the capsule, not by
+  the hook. Each staged record carries an `intent` and a `deliver_on` list, and
+  `claim_with` tests the incoming `SessionStart` source for membership in that
+  list — no source name appears anywhere in the staging logic. A `velra
+  restore` capsule declares `new_session` / `["startup"]`, so it is delivered
+  to a genuinely new session and is left completely untouched by `clear`,
+  `resume`, `compact` and `fork`: not consumed, not discarded, not counted
+  against anything. Those four are all continuations of a conversation that is
+  still running — `resume` and `compact` already belong to the in-session
+  continuation path, and consuming a capsule on `clear` or `fork` would spend
+  state staged for the *next* session on the one the user is still sitting in.
+  A source this build has never heard of is refused on the same rule, so the
+  default is always "do not deliver".
+
+  A future clear- or resume-handoff workflow is therefore a new constant and a
+  different value in one field; `deliver_on_is_data_not_code` stages a capsule
+  for a source no shipped intent uses and watches it deliver, so the seam stays
+  open.
+
+  `claim_with` calls its `emit` closure while the capsule is still on disk and
+  deletes it only once emit reports success, mirroring `continuation::deliver`.
+  Without that ordering a capsule would be consumed by a delivery that never
+  happened — the hook refuses a second JSON object per process, so it is a real
+  case rather than a hypothetical one.
+- `SessionStart` fixtures for Claude Code 2.1.272 (`startup`, `clear`,
+  `resume`, `compact`, `fork`, and a minimal one), replayed by the existing
+  fixture-contract test and by the delivery matrix. The minimal fixture carries
+  only `session_id`, `hook_event_name` and `source`, because that is what the
+  installed runtime actually sends: Velra's own event log for 2.1.272 holds
+  `SessionStart` payloads consisting of nothing but `{"source":"startup"}`, so
+  `model` and `transcript_path` are genuinely absent and must not be required.
+- `velra status` now reports a staged capsule for the current workspace: what
+  it is, how large, which session it came from and which `SessionStart` source
+  will consume it. It is one file outside the repository and was otherwise
+  invisible.
+
+- **`velra restore` — explicit cross-session restore.** The problem this
+  answers: a Claude Code conversation grows until it is worth leaving, and
+  leaving it costs the small amount of operational state needed to carry on —
+  what the task was, which constraint was stated once in turn 0, which approach
+  was already tried and reverted, which test is currently failing. `velra
+  restore` lets you pick a previous session of this workspace and stages that
+  session's state so a brand-new session can pick it up. Clear the context,
+  keep the state.
+
+  The ownership model this required is a change of shape rather than of
+  schema. A workspace is now the durable boundary and holds many sessions, each
+  with its own state; the source session stays a first-class identity and is
+  recorded in the staged artifact; the destination session inherits nothing but
+  the capsule text. Automatic delivery is unchanged and still never crosses a
+  session — `continuations_never_cross_sessions_without_an_explicit_restore`
+  now states both halves of that as one claim. `/clear` still expires the live
+  continuation and now demonstrably does *not* expire the state behind it
+  (`d7_clear_expires_the_continuation_but_never_the_state`).
+
+  No new dependency. No LLM anywhere in the path: the capsule is a query over
+  the existing ledger, rendered by the existing renderer under the existing
+  token budget, and the picker's labels are strings already on disk.
+- `velra-core::transcript` — discovery of historical sessions from
+  `~/.claude/projects/<project>/<session>.jsonl`. The transcript is Claude
+  Code's own journal and not a published interface, so the parser assumes
+  nothing: every line is parsed as a free-form value, unknown record types and
+  unknown fields cost nothing, an unparseable line is skipped rather than
+  fatal, and the trailing partial line of a bounded read is always discarded so
+  a session being written to right now cannot contribute a truncated string.
+  Only the first 256 KiB of a transcript is ever read — the files on the
+  development machine run to 4 MB and the picker needs a label, not a
+  conversation. A session whose transcript yields no usable label is still
+  selectable, shown by id and last activity.
+- `velra-core::staging` — the staged capsule, at
+  `$VELRA_HOME/staged/<workspace_id>/staged_capsule`. Written atomically
+  (temp file, fsync, rename), so an interrupted stage leaves the previous
+  capsule intact rather than a half-written replacement. Claimed with a
+  `rename`, not a read-then-delete: two processes racing the same capsule are
+  serialised by the operating system and exactly one wins, which is the case a
+  read-then-delete injects twice. A claim that fails validation — stale beyond
+  seven days, failing its content hash, or carrying another workspace's id —
+  is refused and left on disk as evidence rather than silently consumed.
+  Consumption at `SessionStart` is deliberately not wired up yet.
+- `velra restore --list`, `--session`, `--dry-run`, `--clear` and `--json`, so
+  the command is usable from a script and testable without a terminal.
+
 - **A v0.1.1 efficacy benchmark** (`python bench/run_efficacy_benchmark.py`),
   built to answer the question the v0.1 benchmark could not: does the
   continuation capsule change what the agent *does* after compaction? Three
@@ -40,6 +127,21 @@ All notable changes to Velra are documented here. The format follows
 
 ### Fixed
 
+- **The hook and the CLI could disagree about which workspace they were in.**
+  `hook.rs::project_root` honoured `CLAUDE_PROJECT_DIR`; `cli.rs::workspace_for_cwd`
+  did not. Their tails were identical character for character, but wherever
+  that variable pointed somewhere other than the repository root the two
+  produced different `workspace_id`s for the same directory — so `velra
+  restore` would stage under one key and `SessionStart` would look under
+  another. The failure mode is the worst available: a missing staged capsule is
+  indistinguishable from nothing having been staged, so restore would simply
+  never deliver, without an error anywhere. Both now call
+  `velra_core::workspace::resolve`, and the CLI honours `CLAUDE_PROJECT_DIR`
+  as the hook always has. Agreement is now a property of there being one
+  implementation; `the_cli_and_the_hook_agree_even_from_a_subdirectory` drives
+  the real binary with the project dir, the CLI's cwd and the hook's reported
+  cwd all set to three different strings.
+
 - **`velra --version` could report a stale commit.** `build.rs` declared
   `rerun-if-changed` on `.git/HEAD`, which on a branch holds `ref:
   refs/heads/<name>` and does not change when you commit — only the ref file
@@ -61,6 +163,67 @@ All notable changes to Velra are documented here. The format follows
   are left exactly as they were measured.
 
 ### Changed
+
+- **The efficacy benchmark now measures the workflow v0.1.2 actually ships.**
+  S1, S2 and S3 are within-session experiments about compaction; nothing in
+  them crosses a session boundary, which is the whole of what cross-session
+  restore does. They are archived under `bench/legacy/`, still runnable as
+  regression tests, and they contribute nothing to the v0.1.2 scorecard. Every
+  historical result tree, `BENCHMARK_REPORT.md` and both earlier
+  pre-registrations are untouched; the one rename is
+  `bench/results/v0.1.2/readiness.json` to `readiness_hardened.json`, because
+  the new benchmark's readiness report takes that path.
+
+  The replacement, `bench/tokenburn/`, asks whether leaving a large
+  conversation behind and restoring a bounded capsule into a fresh session
+  costs less input and still does the work correctly. Two benchmarks — a cold
+  continuation and a `/clear` — over one realistic payments fixture with three
+  genuinely failing tests, where nothing in the tree says which one is the live
+  task, what was decided about it, or which approach was already tried and
+  reverted. The abandoned approach is never committed, so `git log`, `git
+  reflog` and `git stash list` carry no trace of it, and all three are fatal
+  leak-scan surfaces alongside `CLAUDE.md`, `.claude/`, the environment and the
+  post-transition prompt.
+
+  Three properties the old system did not have. Every metric carries its
+  source, the artifact it was read from and whether it was measured, proxied or
+  unavailable — and a metric that was not observed stays `null` through every
+  arithmetic operation instead of becoming a zero that would flatter Velra. A
+  `MockClaudeAdapter` writes synthetic trials in the live artifact shape and
+  feeds the production parser, metrics, pairing, causal chain and verdict, so
+  eighteen scripted cases exercise the real evaluator offline. Of the seventeen
+  matched pairs they produce, three are Velra wins and fourteen are not — two
+  baseline wins, six ties and six inconclusive — including a baseline that
+  reconstructs the state for itself and is scored as a success. And live execution is gated in executable code: `--live`
+  plus `VELRA_ALLOW_LIVE_BENCHMARK=1` plus a terminal that is not inside Claude
+  Code, checked twice, with structural tests that fail the build if the runner
+  acquires any other path to the live driver.
+
+  A pre-qualification audit then found three defects that would have made the
+  first paid run meaningless, all fixed before anything was authorised. Claude
+  Code reports a turn's usage twice — once on the assistant event, once on the
+  result event — and the parser was summing both, reporting exactly double the
+  true input and not by the same factor on both arms; usage records now carry a
+  class and exactly one class is believed. `SessionStart(clear)` bumps the
+  session epoch and `restore::build` reads the current one, so the `/clear`
+  benchmark's restore, issued after the clear, returned `NoState` — measured
+  against the release binary, not inferred — and the restore now runs before
+  the clear turn with the source session still live, which is also what a
+  developer would do. And the readiness gate counted its own output as an
+  uncommitted change, so producing the artifact was what made the tree dirty.
+
+  No live trial has been run. `bench/results/v0.1.2/readiness.json` says so,
+  and `docs/ARCHITECTURE_AUDIT_TOKEN_STATE.md` records the measurement
+  limitations — including that Claude Code may not expose the cache token
+  fields at all, in which case the benchmark's primary question reports
+  INCONCLUSIVE rather than an estimate.
+
+- The development version is now `0.1.2`. The post-release bump after the
+  `v0.1.1` tag had never been made, so the workspace manifest, the
+  `velra-core` path dependency, the npm package and `velra --version` all still
+  reported `0.1.1` while the source and the benchmark pre-registration had
+  moved on. Historical `v0.1.1` references in reports and benchmark artifacts
+  are untouched — they describe a released version and a collected dataset.
 
 - **Quickstart commands no longer carry shell traps.** The primary Windows line
   is now the native `irm ... | iex`, with the `powershell -ExecutionPolicy

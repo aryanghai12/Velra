@@ -66,15 +66,19 @@ import tempfile
 import time
 
 HERE = pathlib.Path(__file__).resolve().parent
-REPO_ROOT = HERE.parent
-HARNESS = HERE / "harness"
+# This runner was archived into bench/legacy in v0.1.2 Phase 3. Its results,
+# harness and binary paths still resolve against the original bench/ tree so
+# that every historical artifact keeps the path it was recorded under.
+BENCH = HERE.parent
+REPO_ROOT = BENCH.parent
+HARNESS = BENCH / "harness"
 sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(HARNESS))
 
 import prereg  # noqa: E402
 from scenarios import registry  # noqa: E402
 
-RESULTS = HERE / "results" / "v0.1.1"
+RESULTS = BENCH / "results" / "v0.1.1"
 TRIALS = RESULTS / "trials"
 QUARANTINE = RESULTS / "quarantine"
 LOG = RESULTS / "resume_log.json"

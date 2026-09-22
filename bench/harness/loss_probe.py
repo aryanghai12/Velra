@@ -52,6 +52,9 @@ HERE = pathlib.Path(__file__).resolve().parent
 REPO_ROOT = HERE.parent.parent
 sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(REPO_ROOT / "bench"))
+# The S1/S2/S3 scenarios are archived under bench/legacy (v0.1.2 Phase 3);
+# `from scenarios import ...` still resolves because their home is on the path.
+sys.path.insert(0, str(REPO_ROOT / "bench" / "legacy"))
 
 import claude_binary  # noqa: E402
 import prereg  # noqa: E402

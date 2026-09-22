@@ -350,6 +350,26 @@ impl Log {
         }
     }
 
+    /// Switches the session every subsequent event is recorded against.
+    ///
+    /// One workspace, several sessions, is the shape the restore work is
+    /// about, and it is a shape `Log` could not express before: a test that
+    /// wants session A's state and session B's state in the same ledger builds
+    /// both here, against one `project_id`, and the separation it then asserts
+    /// is the product's, not the harness's.
+    ///
+    /// The clock is nudged forward so the two sessions' rows never interleave
+    /// ambiguously on `(ts_ms, id)`.
+    pub fn switch_session(&mut self, session_id: &str) {
+        self.env.session = session_id.to_string();
+        self.ts += 1_000;
+    }
+
+    /// The session events are currently recorded against.
+    pub fn session(&self) -> String {
+        self.env.session.clone()
+    }
+
     /// Closes the setup connection and hands back the `Env`.
     ///
     /// `Env` owns the temp dir, so dropping a whole `Log` deletes the database

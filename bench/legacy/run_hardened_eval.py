@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """The v0.1.2 hardened efficacy evaluation.
 
-    python bench/run_hardened_eval.py --dry-run      # free: prove readiness
-    python bench/run_hardened_eval.py --live         # spends money
+    python bench/legacy/run_hardened_eval.py --dry-run      # free: prove readiness
+    python bench/legacy/run_hardened_eval.py --live         # spends money
 
 Nothing in this script spends an API token unless ``--live`` is given. That is
 the whole shape of it: every check that can be made offline is made offline,
@@ -67,23 +67,27 @@ import tempfile
 import time
 
 HERE = pathlib.Path(__file__).resolve().parent
-REPO_ROOT = HERE.parent
-HARNESS = HERE / "harness"
+# This runner was archived into bench/legacy in v0.1.2 Phase 3. Its results,
+# harness and binary paths still resolve against the original bench/ tree so
+# that every historical artifact keeps the path it was recorded under.
+BENCH = HERE.parent
+REPO_ROOT = BENCH.parent
+HARNESS = BENCH / "harness"
 sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(HARNESS))
 
 import prereg  # noqa: E402
 from scenarios import leaks, registry  # noqa: E402
 
-RESULTS = HERE / "results" / "v0.1.2"
+RESULTS = BENCH / "results" / "v0.1.2"
 TRIALS = RESULTS / "trials"
 CONTROLS = RESULTS / "controls"
 STAGES = RESULTS / "stages"
 QUARANTINE = RESULTS / "quarantine"
 
 #: Results directories that are historical record and must never be written to.
-IMMUTABLE = (HERE / "results" / "v0.1.1", HERE / "results" / "trials",
-             HERE / "results" / "superseded")
+IMMUTABLE = (BENCH / "results" / "v0.1.1", BENCH / "results" / "trials",
+             BENCH / "results" / "superseded")
 
 #: The portable MinGW toolchain this machine uses for the release build. Absent
 #: elsewhere, in which case the normal toolchain is already fine.
@@ -645,7 +649,13 @@ def main() -> int:
     readiness["plan"] = phase_plan(rep, args, scenarios, args.pairs)
     readiness.update(rep.to_json())
 
-    out = RESULTS / "readiness.json"
+    # v0.1.2 Phase 3 gave `readiness.json` to the Token-Burn benchmark, which
+    # is the v0.1.2 efficacy scorecard and the single authoritative current
+    # readiness artifact. This archived runner writes into its own directory so
+    # that it can overwrite neither that artifact nor the frozen snapshot of
+    # its own last run, which sits beside this path under a timestamped name.
+    out = RESULTS / "hardened" / "readiness.json"
+    out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(readiness, indent=2, default=str),
                    encoding="utf-8", newline="")
 

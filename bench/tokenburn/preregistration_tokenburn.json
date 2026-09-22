@@ -1,0 +1,109 @@
+{
+  "id": "velra-tokenburn",
+  "version": "1.0.0",
+  "registered": "2026-09-22",
+  "applies_to": "Velra v0.1.2 cross-session restore",
+  "supersedes_for_scorecard": [
+    "bench/harness/preregistration.json",
+    "bench/harness/preregistration_v2.json"
+  ],
+  "note": "The two superseded files stay byte-for-byte on disk because the v0.1.1 and v0.1.2-hardened artifacts carry their hashes. They score the archived S1/S2/S3 scenarios in bench/legacy and contribute nothing to this scorecard.",
+
+  "thesis": "A developer can leave a large Claude Code conversation behind, start a brand-new session, restore a small bounded operational state, and continue the work without rehydrating the old conversation.",
+
+  "benchmarks": {
+    "A_cold_continuation": {
+      "question": "Does a large native continuation cost more input than a fresh session plus a bounded capsule, and does the fresh session still do the work correctly?",
+      "baseline": "a legitimate native Claude Code continuation of the large session, with full repository access",
+      "velra": "velra restore, then a brand-new session whose only extra state is the staged capsule delivered at SessionStart(startup)",
+      "primary_metrics": ["total_input_tokens", "final_correctness"],
+      "secondary_metrics": ["input_tokens", "cache_read_input_tokens", "cache_creation_input_tokens", "output_tokens", "turns", "tool_calls", "file_reads", "steps_to_first_correct_action"]
+    },
+    "B_clear_survival": {
+      "question": "After /clear, does the restored operational state let the work continue, and how much effort does a fresh native session need to get back to the same point?",
+      "baseline": "a genuine native post-/clear session with normal repository inspection allowed",
+      "velra": "velra restore, fresh destination session, capsule delivered at SessionStart(startup)",
+      "primary_metrics": ["steps_to_first_correct_action", "final_correctness"],
+      "secondary_metrics": ["turns", "tool_calls", "file_reads", "searches", "total_input_tokens"]
+    }
+  },
+
+  "trial_plan": {
+    "qualification": {
+      "pairs_per_benchmark": 2,
+      "purpose": "prove the scenario creates the claimed pain, the baseline behaves legitimately, restore works, the capsule arrives, telemetry works and correctness is measurable",
+      "redesign_allowed": true,
+      "counts_toward_scorecard": false
+    },
+    "formal": {
+      "pairs_per_benchmark": 4,
+      "total_pairs": 8,
+      "total_sessions": 16,
+      "redesign_allowed": false,
+      "scenario_frozen_before_first_formal_trial": true
+    }
+  },
+
+  "verdict_rules": {
+    "values": ["VELRA_WIN", "BASELINE_WIN", "TIE", "INCONCLUSIVE"],
+    "material_burden_change_pct": 25.0,
+    "material_effort_change_steps": 2,
+    "correctness_is_primary": true,
+    "order": [
+      "an unpaired or identity-mismatched pair is INCONCLUSIVE(INVALID_PAIR)",
+      "an unusable capture on either arm is INCONCLUSIVE(UNUSABLE_CAPTURE)",
+      "a broken causal link A, B or H on the baseline arm other than H is INCONCLUSIVE and names the link",
+      "a broken causal link A-F on the Velra arm is INCONCLUSIVE and names the failure class",
+      "if the Velra arm is incorrect and the baseline is correct, BASELINE_WIN regardless of token telemetry",
+      "otherwise a verdict requires total_input_tokens MEASURED on both arms; if either is unavailable the pair is INCONCLUSIVE(TELEMETRY_UNAVAILABLE)",
+      "VELRA_WIN requires the Velra arm correct and a burden reduction of at least material_burden_change_pct",
+      "BASELINE_WIN otherwise requires the baseline correct and a burden increase on the Velra arm of at least material_burden_change_pct",
+      "both arms correct and a burden change smaller than the threshold is a TIE"
+    ],
+    "failure_classes": {
+      "A_large_state": "NO_LARGE_STATE",
+      "B_absent_natively": "SCENARIO_LEAK",
+      "C_retained": "CAPTURE_FAILURE",
+      "D_staged": "STAGING_FAILURE",
+      "E_delivered": "DELIVERY_FAILURE",
+      "F_received": "RECEIPT_FAILURE",
+      "G_used": "UTILISATION_FAILURE",
+      "H_correct": "TASK_FAILURE"
+    }
+  },
+
+  "pair_identity_invariants": [
+    "benchmark",
+    "scenario",
+    "pair_id",
+    "fixture_seed",
+    "model",
+    "claude_version",
+    "git_head",
+    "turn_script_hash",
+    "permission_mode",
+    "context_ladder_rung"
+  ],
+
+  "fairness": [
+    "same Claude Code version, model, repository fixture, permissions, tools, initial task, transition point and post-transition prompt on both arms",
+    "the only intended difference is the availability of the Velra-restored operational state",
+    "the baseline keeps full repository access and every native feature",
+    "a baseline that legitimately reconstructs the state is recorded as a baseline success",
+    "UNKNOWN cache condition is never reported as EXPIRED",
+    "scenarios are frozen before the first formal trial and are not selected after results are seen"
+  ],
+
+  "telemetry_rules": [
+    "every reported metric carries metric_name, value, unit, source, raw_artifact_reference and measurement_status",
+    "cache_read_input_tokens and cache_creation_input_tokens are UNAVAILABLE unless explicitly present in structured data",
+    "no metric is ever recovered from terminal, stdout, stderr or status-line text",
+    "missing telemetry is never zero",
+    "a synthetic fixture size is never reported as an observed Claude context size"
+  ],
+
+  "context_ladder": [100000, 250000, 500000, 700000, 800000, 900000],
+
+  "minimum_source_turns": 15,
+  "capsule_token_ceiling": 800
+}

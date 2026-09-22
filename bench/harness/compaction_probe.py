@@ -103,7 +103,7 @@ def main() -> int:
 
     fixture = pathlib.Path(args.fixture).resolve()
     mk = subprocess.run(
-        [sys.executable, str(REPO_ROOT / "bench" / "fixture" / "make_fixture.py"),
+        [sys.executable, str(REPO_ROOT / "bench" / "legacy" / "fixture" / "make_fixture.py"),
          str(fixture), "--noise"], capture_output=True, text=True,
         encoding="utf-8", errors="replace")
     if mk.returncode != 0:

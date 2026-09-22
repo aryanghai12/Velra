@@ -12,6 +12,7 @@ mod hook;
 mod inspect;
 mod log;
 mod normalize;
+mod restore;
 mod settings;
 
 fn main() {

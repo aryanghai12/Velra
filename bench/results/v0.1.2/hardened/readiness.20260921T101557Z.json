@@ -1,0 +1,736 @@
+{
+  "at": "20260921T101557Z",
+  "mode": "live",
+  "scenarios": [
+    "s1-dead-end-pair",
+    "s2-hidden-constraint",
+    "s3-working-set"
+  ],
+  "replicates": 4,
+  "results_dir": "C:\\Users\\aryan\\Videos\\Velra\\bench\\results\\v0.1.2",
+  "preregistration_version": "2.0.0",
+  "preregistration_sha256": "e04451827574b0daacc3a039c10490affecba786020943cb5c5b0ca884a1176e",
+  "minimum_replicates_per_arm": 4,
+  "environment": {
+    "python": "3.14.0",
+    "platform": "win32",
+    "cwd": "C:\\Users\\aryan\\Videos\\Velra",
+    "cargo": "cargo 1.98.1 (797e8a9bc 2026-08-05)",
+    "claude_binary": "C:\\Users\\aryan\\.vscode\\extensions\\anthropic.claude-code-2.1.272-win32-x64\\resources\\native-binary\\claude.exe",
+    "claude_version": "2.1.272",
+    "nested_session_vars": [],
+    "preregistration": {
+      "preregistration_version": "2.0.0",
+      "preregistration_sha256": "e04451827574b0daacc3a039c10490affecba786020943cb5c5b0ca884a1176e",
+      "minimum_replicates_per_arm": 4
+    },
+    "preregistration_v1_sha256": "4658a1a538411e0f15bf9c5d57ee50ede85bcd2d7929b8c7045262732c2eb1ad"
+  },
+  "provenance": {
+    "git_head": "4b68b6b7cc82c94d420377afcd1200622700123b",
+    "git_branch": "main",
+    "working_tree_changes": [],
+    "working_tree_clean": true
+  },
+  "build": {
+    "built": true,
+    "binary": "C:\\Users\\aryan\\Videos\\Velra\\target\\release\\velra.exe",
+    "reported_version": "velra 0.1.1 (4b68b6b7c, x86_64-pc-windows-gnu)",
+    "bytes": 5399040,
+    "provenance": {
+      "binary": "C:\\Users\\aryan\\Videos\\Velra\\target\\release\\velra.exe",
+      "binary_bytes": 5399040,
+      "reported_version": "velra 0.1.1 (4b68b6b7c, x86_64-pc-windows-gnu)",
+      "embedded_commit": "4b68b6b7c",
+      "git_head": "4b68b6b7cc82c94d420377afcd1200622700123b",
+      "git_head_short9": "4b68b6b7c",
+      "git_branch": "main",
+      "git_describe": "v0.1.1-benchmark-baseline-7-g4b68b6b",
+      "working_tree_clean": true,
+      "working_tree_changes": [],
+      "commit_matches_binary": true,
+      "host": {
+        "platform": "Windows-11-10.0.26200-SP0",
+        "machine": "AMD64",
+        "python": "3.14.0",
+        "processor": "Intel64 Family 6 Model 183 Stepping 1, GenuineIntel",
+        "cpu_count": 20
+      },
+      "agent": {
+        "binary": "C:\\Users\\aryan\\.vscode\\extensions\\anthropic.claude-code-2.1.272-win32-x64\\resources\\native-binary\\claude.exe",
+        "version": "2.1.272"
+      },
+      "warnings": []
+    }
+  },
+  "tests": {
+    "cargo_test_exit": 0,
+    "bench_pytest_exit": 0,
+    "selftest_exit": 0
+  },
+  "fixtures": {
+    "s1-dead-end-pair": {
+      "ground_truth": {
+        "as_generated": "red",
+        "dead_end_money_round_half_even": "red",
+        "dead_end_surcharges_collapse_the_loop": "red",
+        "true_fix_promos_collapse_the_loop": "green",
+        "both_collapsed_is_still_green": "green"
+      },
+      "fixture_seed": "48819ce65e3bca90",
+      "repo": "C:\\Users\\aryan\\AppData\\Local\\Temp\\velra-hardened-fixtures\\readiness-s1-dead-end-pair"
+    },
+    "s2-hidden-constraint": {
+      "ground_truth": {
+        "as_generated": "red",
+        "natural_fix_violates_the_constraint": "green",
+        "required_fix_honours_the_constraint": "green"
+      },
+      "fixture_seed": "34d069ee44f64929",
+      "repo": "C:\\Users\\aryan\\AppData\\Local\\Temp\\velra-hardened-fixtures\\readiness-s2-hidden-constraint"
+    },
+    "s3-working-set": {
+      "ground_truth": {
+        "as_generated": "green"
+      },
+      "fixture_seed": "8b1dfed4efd60e13",
+      "repo": "C:\\Users\\aryan\\AppData\\Local\\Temp\\velra-hardened-fixtures\\readiness-s3-working-set"
+    }
+  },
+  "leak_scans": {
+    "s1-dead-end-pair": {
+      "clean": true,
+      "terms": [
+        "not of each line",
+        "per line item",
+        "each line item",
+        "discount the subtotal",
+        "subtotal once",
+        "discount_for(subtotal)",
+        "round once",
+        "rounds three times",
+        "discount_total is",
+        "promos is the",
+        "handling_total is correct",
+        "surcharges is correct",
+        "not surcharges",
+        "not promos"
+      ],
+      "surfaces_scanned": [
+        "tree",
+        "filenames",
+        "pre_prompts",
+        "post_prompt",
+        "environment"
+      ],
+      "fatal_surfaces": [
+        "tree",
+        "filenames",
+        "post_prompt",
+        "environment"
+      ],
+      "hits_by_surface": {
+        "pre_prompts": 1
+      },
+      "fatal_hits": [],
+      "hits": [
+        {
+          "surface": "pre_prompts",
+          "where": "turn 4",
+          "term": "round once",
+          "context": "er-line aggregators is rounding three times where it should round once. Try src/ledger/surcharges.py first \u2014 edit handling_total s"
+        }
+      ]
+    },
+    "s2-hidden-constraint": {
+      "clean": true,
+      "terms": [
+        "not of each line",
+        "per line item",
+        "each line item",
+        "discount the subtotal",
+        "subtotal once",
+        "discount_for(subtotal)",
+        "round once",
+        "rounds three times",
+        "finance reconciles",
+        "keep iterating"
+      ],
+      "surfaces_scanned": [
+        "tree",
+        "filenames",
+        "pre_prompts",
+        "post_prompt",
+        "environment"
+      ],
+      "fatal_surfaces": [
+        "tree",
+        "filenames",
+        "post_prompt",
+        "environment"
+      ],
+      "hits_by_surface": {
+        "pre_prompts": 2
+      },
+      "fatal_hits": [],
+      "hits": [
+        {
+          "surface": "pre_prompts",
+          "where": "turn 0",
+          "term": "finance reconciles",
+          "context": "keep iterating invoice.items when it computes the discount; finance reconciles the per-line figures. Now run `python -m pytest -q` and tel"
+        },
+        {
+          "surface": "pre_prompts",
+          "where": "turn 0",
+          "term": "keep iterating",
+          "context": "Constraint for this whole task: engine.settle must keep iterating invoice.items when it computes the discount; finance reconc"
+        }
+      ]
+    },
+    "s3-working-set": {
+      "clean": true,
+      "terms": [
+        "splits on whitespace even though",
+        "should be a tab",
+        "the bug we are going to fix",
+        "agreed to fix",
+        "TODO(importers)",
+        "the module we agreed",
+        "v2 is the one",
+        "fix v2"
+      ],
+      "surfaces_scanned": [
+        "tree",
+        "filenames",
+        "pre_prompts",
+        "post_prompt",
+        "environment"
+      ],
+      "fatal_surfaces": [
+        "tree",
+        "filenames",
+        "post_prompt",
+        "environment"
+      ],
+      "hits_by_surface": {
+        "pre_prompts": 3
+      },
+      "fatal_hits": [],
+      "hits": [
+        {
+          "surface": "pre_prompts",
+          "where": "turn 3",
+          "term": "splits on whitespace even though",
+          "context": "Right. src/ledger/importers/legacy_tsv_v2.py splits on whitespace even though it is a tab-separated importer, and that is the bug we are"
+        },
+        {
+          "surface": "pre_prompts",
+          "where": "turn 3",
+          "term": "should be a tab",
+          "context": "ter, and that is the bug we are going to fix: its DELIMITER should be a tab, like its siblings. Do not change anything yet \u2014 I want the"
+        },
+        {
+          "surface": "pre_prompts",
+          "where": "turn 3",
+          "term": "the bug we are going to fix",
+          "context": "ace even though it is a tab-separated importer, and that is the bug we are going to fix: its DELIMITER should be a tab, like its siblings. Do not c"
+        }
+      ]
+    }
+  },
+  "manifests": {
+    "s1-dead-end-pair": {
+      "checks": {
+        "declares_target_facts": true,
+        "boundary_inside_turn_script": true,
+        "measured_turn_after_boundary": true,
+        "compact_turn_is_a_compact_command": true,
+        "measured_prompt_is_identical_for_both_arms": true,
+        "target_facts_carry_probes": true,
+        "target_facts_carry_ledger_queries": true,
+        "target_facts_carry_capsule_markers": true,
+        "target_facts_justify_necessity": true
+      },
+      "failed": [],
+      "measured_prompt": "Fix the remaining test failure.",
+      "target_facts": [
+        "s1-burned-twin"
+      ],
+      "fixture_seed": "48819ce65e3bca90"
+    },
+    "s2-hidden-constraint": {
+      "checks": {
+        "declares_target_facts": true,
+        "boundary_inside_turn_script": true,
+        "measured_turn_after_boundary": true,
+        "compact_turn_is_a_compact_command": true,
+        "measured_prompt_is_identical_for_both_arms": true,
+        "target_facts_carry_probes": true,
+        "target_facts_carry_ledger_queries": true,
+        "target_facts_carry_capsule_markers": true,
+        "target_facts_justify_necessity": true
+      },
+      "failed": [],
+      "measured_prompt": "Fix the remaining test failure.",
+      "target_facts": [
+        "s2-turn-zero-constraint"
+      ],
+      "fixture_seed": "34d069ee44f64929"
+    },
+    "s3-working-set": {
+      "checks": {
+        "declares_target_facts": true,
+        "boundary_inside_turn_script": true,
+        "measured_turn_after_boundary": true,
+        "compact_turn_is_a_compact_command": true,
+        "measured_prompt_is_identical_for_both_arms": true,
+        "target_facts_carry_probes": true,
+        "target_facts_carry_ledger_queries": true,
+        "target_facts_carry_capsule_markers": true,
+        "target_facts_justify_necessity": true
+      },
+      "failed": [],
+      "measured_prompt": "Now make that fix.",
+      "target_facts": [
+        "s3-agreed-file"
+      ],
+      "fixture_seed": "8b1dfed4efd60e13"
+    }
+  },
+  "plan": {
+    "pairs": [
+      {
+        "pair_id": "s1-dead-end-pair#r1",
+        "scenario": "s1-dead-end-pair",
+        "replicate": 1,
+        "arms": {
+          "baseline": {
+            "trial": "s1-dead-end-pair-baseline-r1",
+            "dir": "C:\\Users\\aryan\\Videos\\Velra\\bench\\results\\v0.1.2\\trials\\s1-dead-end-pair-baseline-r1"
+          },
+          "velra": {
+            "trial": "s1-dead-end-pair-velra-r1",
+            "dir": "C:\\Users\\aryan\\Videos\\Velra\\bench\\results\\v0.1.2\\trials\\s1-dead-end-pair-velra-r1"
+          }
+        },
+        "already_on_disk": {
+          "baseline": false,
+          "velra": false
+        }
+      },
+      {
+        "pair_id": "s1-dead-end-pair#r2",
+        "scenario": "s1-dead-end-pair",
+        "replicate": 2,
+        "arms": {
+          "baseline": {
+            "trial": "s1-dead-end-pair-baseline-r2",
+            "dir": "C:\\Users\\aryan\\Videos\\Velra\\bench\\results\\v0.1.2\\trials\\s1-dead-end-pair-baseline-r2"
+          },
+          "velra": {
+            "trial": "s1-dead-end-pair-velra-r2",
+            "dir": "C:\\Users\\aryan\\Videos\\Velra\\bench\\results\\v0.1.2\\trials\\s1-dead-end-pair-velra-r2"
+          }
+        },
+        "already_on_disk": {
+          "baseline": false,
+          "velra": false
+        }
+      },
+      {
+        "pair_id": "s1-dead-end-pair#r3",
+        "scenario": "s1-dead-end-pair",
+        "replicate": 3,
+        "arms": {
+          "baseline": {
+            "trial": "s1-dead-end-pair-baseline-r3",
+            "dir": "C:\\Users\\aryan\\Videos\\Velra\\bench\\results\\v0.1.2\\trials\\s1-dead-end-pair-baseline-r3"
+          },
+          "velra": {
+            "trial": "s1-dead-end-pair-velra-r3",
+            "dir": "C:\\Users\\aryan\\Videos\\Velra\\bench\\results\\v0.1.2\\trials\\s1-dead-end-pair-velra-r3"
+          }
+        },
+        "already_on_disk": {
+          "baseline": false,
+          "velra": false
+        }
+      },
+      {
+        "pair_id": "s1-dead-end-pair#r4",
+        "scenario": "s1-dead-end-pair",
+        "replicate": 4,
+        "arms": {
+          "baseline": {
+            "trial": "s1-dead-end-pair-baseline-r4",
+            "dir": "C:\\Users\\aryan\\Videos\\Velra\\bench\\results\\v0.1.2\\trials\\s1-dead-end-pair-baseline-r4"
+          },
+          "velra": {
+            "trial": "s1-dead-end-pair-velra-r4",
+            "dir": "C:\\Users\\aryan\\Videos\\Velra\\bench\\results\\v0.1.2\\trials\\s1-dead-end-pair-velra-r4"
+          }
+        },
+        "already_on_disk": {
+          "baseline": false,
+          "velra": false
+        }
+      },
+      {
+        "pair_id": "s2-hidden-constraint#r1",
+        "scenario": "s2-hidden-constraint",
+        "replicate": 1,
+        "arms": {
+          "baseline": {
+            "trial": "s2-hidden-constraint-baseline-r1",
+            "dir": "C:\\Users\\aryan\\Videos\\Velra\\bench\\results\\v0.1.2\\trials\\s2-hidden-constraint-baseline-r1"
+          },
+          "velra": {
+            "trial": "s2-hidden-constraint-velra-r1",
+            "dir": "C:\\Users\\aryan\\Videos\\Velra\\bench\\results\\v0.1.2\\trials\\s2-hidden-constraint-velra-r1"
+          }
+        },
+        "already_on_disk": {
+          "baseline": false,
+          "velra": false
+        }
+      },
+      {
+        "pair_id": "s2-hidden-constraint#r2",
+        "scenario": "s2-hidden-constraint",
+        "replicate": 2,
+        "arms": {
+          "baseline": {
+            "trial": "s2-hidden-constraint-baseline-r2",
+            "dir": "C:\\Users\\aryan\\Videos\\Velra\\bench\\results\\v0.1.2\\trials\\s2-hidden-constraint-baseline-r2"
+          },
+          "velra": {
+            "trial": "s2-hidden-constraint-velra-r2",
+            "dir": "C:\\Users\\aryan\\Videos\\Velra\\bench\\results\\v0.1.2\\trials\\s2-hidden-constraint-velra-r2"
+          }
+        },
+        "already_on_disk": {
+          "baseline": false,
+          "velra": false
+        }
+      },
+      {
+        "pair_id": "s2-hidden-constraint#r3",
+        "scenario": "s2-hidden-constraint",
+        "replicate": 3,
+        "arms": {
+          "baseline": {
+            "trial": "s2-hidden-constraint-baseline-r3",
+            "dir": "C:\\Users\\aryan\\Videos\\Velra\\bench\\results\\v0.1.2\\trials\\s2-hidden-constraint-baseline-r3"
+          },
+          "velra": {
+            "trial": "s2-hidden-constraint-velra-r3",
+            "dir": "C:\\Users\\aryan\\Videos\\Velra\\bench\\results\\v0.1.2\\trials\\s2-hidden-constraint-velra-r3"
+          }
+        },
+        "already_on_disk": {
+          "baseline": false,
+          "velra": false
+        }
+      },
+      {
+        "pair_id": "s2-hidden-constraint#r4",
+        "scenario": "s2-hidden-constraint",
+        "replicate": 4,
+        "arms": {
+          "baseline": {
+            "trial": "s2-hidden-constraint-baseline-r4",
+            "dir": "C:\\Users\\aryan\\Videos\\Velra\\bench\\results\\v0.1.2\\trials\\s2-hidden-constraint-baseline-r4"
+          },
+          "velra": {
+            "trial": "s2-hidden-constraint-velra-r4",
+            "dir": "C:\\Users\\aryan\\Videos\\Velra\\bench\\results\\v0.1.2\\trials\\s2-hidden-constraint-velra-r4"
+          }
+        },
+        "already_on_disk": {
+          "baseline": false,
+          "velra": false
+        }
+      },
+      {
+        "pair_id": "s3-working-set#r1",
+        "scenario": "s3-working-set",
+        "replicate": 1,
+        "arms": {
+          "baseline": {
+            "trial": "s3-working-set-baseline-r1",
+            "dir": "C:\\Users\\aryan\\Videos\\Velra\\bench\\results\\v0.1.2\\trials\\s3-working-set-baseline-r1"
+          },
+          "velra": {
+            "trial": "s3-working-set-velra-r1",
+            "dir": "C:\\Users\\aryan\\Videos\\Velra\\bench\\results\\v0.1.2\\trials\\s3-working-set-velra-r1"
+          }
+        },
+        "already_on_disk": {
+          "baseline": false,
+          "velra": false
+        }
+      },
+      {
+        "pair_id": "s3-working-set#r2",
+        "scenario": "s3-working-set",
+        "replicate": 2,
+        "arms": {
+          "baseline": {
+            "trial": "s3-working-set-baseline-r2",
+            "dir": "C:\\Users\\aryan\\Videos\\Velra\\bench\\results\\v0.1.2\\trials\\s3-working-set-baseline-r2"
+          },
+          "velra": {
+            "trial": "s3-working-set-velra-r2",
+            "dir": "C:\\Users\\aryan\\Videos\\Velra\\bench\\results\\v0.1.2\\trials\\s3-working-set-velra-r2"
+          }
+        },
+        "already_on_disk": {
+          "baseline": false,
+          "velra": false
+        }
+      },
+      {
+        "pair_id": "s3-working-set#r3",
+        "scenario": "s3-working-set",
+        "replicate": 3,
+        "arms": {
+          "baseline": {
+            "trial": "s3-working-set-baseline-r3",
+            "dir": "C:\\Users\\aryan\\Videos\\Velra\\bench\\results\\v0.1.2\\trials\\s3-working-set-baseline-r3"
+          },
+          "velra": {
+            "trial": "s3-working-set-velra-r3",
+            "dir": "C:\\Users\\aryan\\Videos\\Velra\\bench\\results\\v0.1.2\\trials\\s3-working-set-velra-r3"
+          }
+        },
+        "already_on_disk": {
+          "baseline": false,
+          "velra": false
+        }
+      },
+      {
+        "pair_id": "s3-working-set#r4",
+        "scenario": "s3-working-set",
+        "replicate": 4,
+        "arms": {
+          "baseline": {
+            "trial": "s3-working-set-baseline-r4",
+            "dir": "C:\\Users\\aryan\\Videos\\Velra\\bench\\results\\v0.1.2\\trials\\s3-working-set-baseline-r4"
+          },
+          "velra": {
+            "trial": "s3-working-set-velra-r4",
+            "dir": "C:\\Users\\aryan\\Videos\\Velra\\bench\\results\\v0.1.2\\trials\\s3-working-set-velra-r4"
+          }
+        },
+        "already_on_disk": {
+          "baseline": false,
+          "velra": false
+        }
+      }
+    ],
+    "sessions": 24,
+    "controls": 6
+  },
+  "checks": [
+    {
+      "phase": "environment",
+      "check": "python >= 3.11",
+      "ok": true,
+      "detail": "3.14.0",
+      "fatal": true
+    },
+    {
+      "phase": "environment",
+      "check": "cargo available",
+      "ok": true,
+      "detail": "cargo 1.98.1 (797e8a9bc 2026-08-05)",
+      "fatal": true
+    },
+    {
+      "phase": "environment",
+      "check": "MinGW toolchain on PATH",
+      "ok": true,
+      "detail": "C:\\Users\\aryan\\AppData\\Local\\Programs\\winlibs-mingw64\\mingw64\\bin",
+      "fatal": false
+    },
+    {
+      "phase": "environment",
+      "check": "Claude Code binary resolved",
+      "ok": true,
+      "detail": "2.1.272 at C:\\Users\\aryan\\.vscode\\extensions\\anthropic.claude-code-2.1.272-win32-x64\\resources\\native-binary\\claude.exe",
+      "fatal": true
+    },
+    {
+      "phase": "environment",
+      "check": "not running inside a Claude Code session",
+      "ok": true,
+      "detail": "",
+      "fatal": true
+    },
+    {
+      "phase": "environment",
+      "check": "preregistration v2 loads and hashes",
+      "ok": true,
+      "detail": "e04451827574b0da",
+      "fatal": true
+    },
+    {
+      "phase": "environment",
+      "check": "preregistration v1 unchanged",
+      "ok": true,
+      "detail": "4658a1a538411e0f",
+      "fatal": true
+    },
+    {
+      "phase": "provenance",
+      "check": "working tree clean",
+      "ok": true,
+      "detail": "",
+      "fatal": true
+    },
+    {
+      "phase": "provenance",
+      "check": "historical results untouched: v0.1.1",
+      "ok": true,
+      "detail": "",
+      "fatal": true
+    },
+    {
+      "phase": "provenance",
+      "check": "historical results untouched: trials",
+      "ok": true,
+      "detail": "",
+      "fatal": true
+    },
+    {
+      "phase": "provenance",
+      "check": "historical results untouched: superseded",
+      "ok": true,
+      "detail": "",
+      "fatal": true
+    },
+    {
+      "phase": "build",
+      "check": "cargo build --release -p velra",
+      "ok": true,
+      "detail": "",
+      "fatal": true
+    },
+    {
+      "phase": "build",
+      "check": "binary exists",
+      "ok": true,
+      "detail": "C:\\Users\\aryan\\Videos\\Velra\\target\\release\\velra.exe",
+      "fatal": true
+    },
+    {
+      "phase": "build",
+      "check": "binary was built from HEAD",
+      "ok": true,
+      "detail": "4b68b6b7c vs 4b68b6b7c",
+      "fatal": true
+    },
+    {
+      "phase": "tests",
+      "check": "cargo test --workspace --features fault-injection",
+      "ok": true,
+      "detail": "",
+      "fatal": true
+    },
+    {
+      "phase": "tests",
+      "check": "pytest bench/tests",
+      "ok": true,
+      "detail": "",
+      "fatal": true
+    },
+    {
+      "phase": "tests",
+      "check": "harness selftest (synthetic end-to-end pipeline)",
+      "ok": true,
+      "detail": "",
+      "fatal": true
+    },
+    {
+      "phase": "fixtures",
+      "check": "s1-dead-end-pair: ground truth verified by running pytest",
+      "ok": true,
+      "detail": "{\"as_generated\": \"red\", \"dead_end_money_round_half_even\": \"red\", \"dead_end_surcharges_collapse_the_loop\": \"red\", \"true_fix_promos_collapse_the_loop\": \"green\", \"both_collapsed_is_still_green\": \"green\"}",
+      "fatal": true
+    },
+    {
+      "phase": "fixtures",
+      "check": "s2-hidden-constraint: ground truth verified by running pytest",
+      "ok": true,
+      "detail": "{\"as_generated\": \"red\", \"natural_fix_violates_the_constraint\": \"green\", \"required_fix_honours_the_constraint\": \"green\"}",
+      "fatal": true
+    },
+    {
+      "phase": "fixtures",
+      "check": "s3-working-set: ground truth verified by running pytest",
+      "ok": true,
+      "detail": "{\"as_generated\": \"green\"}",
+      "fatal": true
+    },
+    {
+      "phase": "leaks",
+      "check": "s1-dead-end-pair: no fatal leak on any surface",
+      "ok": true,
+      "detail": "leak scan clean across 5 surfaces (non-fatal: {'pre_prompts': 1})",
+      "fatal": true
+    },
+    {
+      "phase": "leaks",
+      "check": "s2-hidden-constraint: no fatal leak on any surface",
+      "ok": true,
+      "detail": "leak scan clean across 5 surfaces (non-fatal: {'pre_prompts': 2})",
+      "fatal": true
+    },
+    {
+      "phase": "leaks",
+      "check": "s3-working-set: no fatal leak on any surface",
+      "ok": true,
+      "detail": "leak scan clean across 5 surfaces (non-fatal: {'pre_prompts': 3})",
+      "fatal": true
+    },
+    {
+      "phase": "manifests",
+      "check": "s1-dead-end-pair: manifest complete",
+      "ok": true,
+      "detail": "",
+      "fatal": true
+    },
+    {
+      "phase": "manifests",
+      "check": "s2-hidden-constraint: manifest complete",
+      "ok": true,
+      "detail": "",
+      "fatal": true
+    },
+    {
+      "phase": "manifests",
+      "check": "s3-working-set: manifest complete",
+      "ok": true,
+      "detail": "",
+      "fatal": true
+    },
+    {
+      "phase": "plan",
+      "check": "every pair schedules both arms",
+      "ok": true,
+      "detail": "12 pairs, 24 sessions",
+      "fatal": true
+    },
+    {
+      "phase": "plan",
+      "check": "replicates meet the registered minimum",
+      "ok": true,
+      "detail": "--replicates 4",
+      "fatal": false
+    }
+  ],
+  "blocking": [],
+  "warnings": [],
+  "ready": true
+}

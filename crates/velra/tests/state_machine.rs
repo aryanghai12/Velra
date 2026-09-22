@@ -215,13 +215,54 @@ fn d6_duplicate_delivery_key_reemits_without_a_new_injection() {
     assert_eq!(attach, 1, "attach_count unchanged");
 }
 
+/// `/clear` ends the *delivery* of a continuation. It does not end the state.
+///
+/// Before v0.1.2 that distinction did not need making, because the only way a
+/// capsule could reach the agent was the automatic in-session path this test
+/// covers, and `/clear` closed it. The product now turns on the opposite being
+/// true as well: "clear the context, keep the state" is only honest if the
+/// checkpoint outlives the clear and stays explicitly restorable afterwards.
+///
+/// So the original assertion is kept exactly as it was — clearing really must
+/// stop automatic delivery — and the stronger half is added underneath it.
 #[test]
-fn d7_clear_expires_the_continuation() {
+fn d7_clear_expires_the_continuation_but_never_the_state() {
     let mut log = pending();
-    continuation::expire_live(&log.db.conn, &log.env.session.clone(), log.ts + 1).expect("expire");
+    let session = log.env.session.clone();
+    let checkpoint: String = log
+        .db
+        .conn
+        .query_row("SELECT checkpoint_id FROM continuations", [], |r| r.get(0))
+        .expect("checkpoint");
+
+    continuation::expire_live(&log.db.conn, &session, log.ts + 1).expect("expire");
     assert_eq!(state(&log), None);
     let ts = log.ts + 2;
     assert!(deliver(&mut log, Channel::SessionStart, "after-clear", ts).is_none());
+
+    // The checkpoint is still there, still immutable, still carrying its
+    // capsule: `/clear` expired a delivery, not a record.
+    let stored = velra_core::checkpoint::load(&log.db.conn, &checkpoint)
+        .expect("load")
+        .expect("the checkpoint survives /clear");
+    assert!(stored.capsule.contains("[FIRST_MESSAGE]"));
+
+    // And the state is reachable by explicit restore, which is the whole
+    // point of leaving a session behind.
+    let workspace = log.env.project_id();
+    let staged = velra_core::restore::build(
+        &log.db.conn,
+        &velra_core::restore::RestoreRequest {
+            workspace_id: &workspace,
+            workspace_root: "/workspace",
+            source_session_id: &session,
+            now_ms: ts + 1_000,
+        },
+        &velra_core::render::RenderConfig::default(),
+    )
+    .expect("a cleared session is still restorable");
+    assert_eq!(staged.source_session_id, session);
+    assert!(staged.capsule.contains("[FIRST_MESSAGE]"));
 }
 
 #[test]
@@ -258,9 +299,21 @@ fn a_second_compaction_supersedes_the_older_continuation() {
     assert_eq!(delivered.checkpoint_id, second);
 }
 
+/// Automatic delivery never crosses a session boundary.
+///
+/// This test predates the cross-session restore work and survives it intact,
+/// because what it forbids is exactly what must still be forbidden: session B
+/// asking for its own continuation must never be handed session A's, however
+/// many sessions share a workspace and a database. Restore does not relax this
+/// rule, it adds a second path with a precondition this path cannot have — a
+/// person named the source session by hand.
+///
+/// The second half states that positively, so the pair reads as one claim:
+/// state crosses sessions *only* by explicit selection.
 #[test]
-fn continuations_never_cross_sessions() {
+fn continuations_never_cross_sessions_without_an_explicit_restore() {
     let mut log = pending();
+    let source = log.env.session.clone();
     let session = "a-different-session";
     let req = DeliveryRequest {
         session_id: session,
@@ -272,6 +325,26 @@ fn continuations_never_cross_sessions() {
         .expect("deliver")
         .is_none());
     assert_eq!(state(&log), Some(ContinuationState::Pending), "untouched");
+
+    // The other session has no state of its own to restore either: being in
+    // the same workspace grants it nothing.
+    let workspace = log.env.project_id();
+    let cfg = velra_core::render::RenderConfig::default();
+    let request = |id| velra_core::restore::RestoreRequest {
+        workspace_id: workspace.as_str(),
+        workspace_root: "/workspace",
+        source_session_id: id,
+        now_ms: log.ts + 2,
+    };
+    assert!(
+        velra_core::restore::build(&log.db.conn, &request(session), &cfg).is_err(),
+        "an unrecorded session must not resolve to anyone else's state"
+    );
+
+    // Naming the source session explicitly is the one thing that does work.
+    let staged = velra_core::restore::build(&log.db.conn, &request(source.as_str()), &cfg)
+        .expect("explicit restore of a real session");
+    assert_eq!(staged.source_session_id, source);
 }
 
 #[test]

@@ -178,7 +178,7 @@ def main() -> int:
     velra_bin = pathlib.Path(args.velra_binary).resolve()
 
     # ---- 1. a fresh fixture repository, identical for every trial ---------
-    mk = run([sys.executable, str(REPO_ROOT / "bench" / "fixture" / "make_fixture.py"),
+    mk = run([sys.executable, str(REPO_ROOT / "bench" / "legacy" / "fixture" / "make_fixture.py"),
               str(fixture)] + (["--noise"] if use_noise else []))
     if mk.returncode != 0:
         print(mk.stdout, mk.stderr, file=sys.stderr)

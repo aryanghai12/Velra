@@ -27,6 +27,8 @@ BENCH = HERE.parent
 REPO_ROOT = BENCH.parent
 sys.path.insert(0, str(BENCH))
 sys.path.insert(0, str(BENCH / "harness"))
+# The S1/S2/S3 scenarios were archived into bench/legacy in v0.1.2 Phase 3.
+sys.path.insert(0, str(BENCH / "legacy"))
 
 import behaviour  # noqa: E402
 import prereg  # noqa: E402

@@ -296,8 +296,8 @@ impl<'a> Ctx<'a> {
         let cwd = input.cwd.clone();
         let root = project_root(cwd.as_deref());
         let canonical = paths::canonical(&root).unwrap_or_else(|| root.clone());
-        let root_str = paths::normalize_abs(&canonical.to_string_lossy());
-        let project_id = hash::hex_prefix(paths::identity(&root_str).as_bytes(), 16);
+        let root_str = velra_core::workspace::root_string(&canonical);
+        let project_id = velra_core::workspace::id(&root_str);
         let is_git = git::git_dir(&canonical).is_some();
         Ctx {
             home,
@@ -537,6 +537,90 @@ impl<'a> Ctx<'a> {
         }
     }
 
+    /// Attempts to deliver this workspace's staged capsule (`velra restore`).
+    ///
+    /// The workspace key is `self.project_id`, which comes from
+    /// `velra_core::workspace` — the very same function `velra restore` used
+    /// to decide where to write. The lookup is therefore a path join, not a
+    /// search, and the two cannot drift apart.
+    ///
+    /// Eligibility is not decided here. `claim_with` compares `source` against
+    /// the capsule's own `deliver_on`, so a record staged for a source this
+    /// build has never heard of is left alone rather than mis-delivered.
+    ///
+    /// Fail-open throughout: nothing below can change the exit code, write to
+    /// stderr, or put anything on stdout except the one delivery object.
+    fn deliver_staged(&self, source: &str) {
+        use velra_core::staging::ClaimError;
+        let now = self.ts_ms;
+
+        // Set by the emit closure so the outcome can tell "Claude Code would
+        // have truncated this" apart from "something else already emitted".
+        let oversized = std::cell::Cell::new(false);
+
+        let emit_staged = |c: &velra_core::staging::StagedCapsule| {
+            // A capsule this large would be cut off by Claude Code's hook
+            // output limit, and half a capsule is worse than none. `velra
+            // restore` cannot produce one — the renderer enforces the token
+            // budget — so this means a tampered file or a foreign build.
+            let chars = c.capsule.chars().count();
+            if chars > crate::compat::CAPSULE_MAX_CHARS {
+                oversized.set(true);
+                log::warn(
+                    Some(self.home),
+                    &self.label,
+                    Some(&self.session_id),
+                    format!(
+                        "staged capsule is {chars} chars, above the {} char margin under \
+                         Claude Code's {} char hook output limit; not delivered",
+                        crate::compat::CAPSULE_MAX_CHARS,
+                        crate::compat::HOOK_OUTPUT_MAX_CHARS
+                    ),
+                );
+                return false;
+            }
+            // The only write to stdout in this path, and the only one the
+            // process permits at all: `emit` holds a once-guard.
+            emit(&staged_delivery_json(c))
+        };
+
+        match velra_core::staging::claim_with(self.home, &self.project_id, source, now, emit_staged)
+        {
+            Ok(c) => log::debug(
+                Some(self.home),
+                &self.label,
+                Some(&self.session_id),
+                format!(
+                    "restored staged capsule from session {} ({} tokens, {})",
+                    c.source_session_id, c.tokens, c.content_hash
+                ),
+            ),
+            // Routine, and silent by design. Nothing staged is the overwhelming
+            // majority of session starts; a capsule waiting for another source
+            // is every `/clear`, compaction and resume in between. Logging
+            // either would turn the log into noise and hide the rest.
+            Err(ClaimError::Empty) | Err(ClaimError::NotForThisSource { .. }) => {}
+            // Someone else is mid-claim, or we declined to emit. Both leave the
+            // capsule staged and recoverable on the next session start.
+            Err(ClaimError::Busy) => {}
+            Err(ClaimError::NotEmitted) if oversized.get() => {}
+            Err(ClaimError::NotEmitted) => log::debug(
+                Some(self.home),
+                &self.label,
+                Some(&self.session_id),
+                "staged capsule not emitted; another object had already been written".to_string(),
+            ),
+            // Stale, malformed, corrupt or filed under another workspace. Worth
+            // a line in the log, and nothing else: the session still starts.
+            Err(e) => log::warn(
+                Some(self.home),
+                &self.label,
+                Some(&self.session_id),
+                format!("staged capsule not delivered: {e}"),
+            ),
+        }
+    }
+
     fn reconcile(&self, db: &mut Db) {
         if let Err(e) = continuation::reconcile(&mut db.conn, &self.session_id, self.ts_ms) {
             log::debug(
@@ -549,16 +633,43 @@ impl<'a> Ctx<'a> {
     }
 }
 
+/// The delivery JSON for a staged capsule (§8.4), one line, no trailing
+/// newline.
+///
+/// Identical in shape to `continuation::delivery_json` — Claude Code must not
+/// be able to tell the two apart, because they are the same kind of thing
+/// arriving by a different route. Only the `systemMessage` differs, and only
+/// because the user deserves to be told *which* session this came out of:
+/// they chose it by hand, possibly days ago.
+fn staged_delivery_json(c: &velra_core::staging::StagedCapsule) -> String {
+    let short: String = c.source_session_id.chars().take(8).collect();
+    serde_json::json!({
+        "hookSpecificOutput": {
+            "hookEventName": he::SESSION_START,
+            "additionalContext": c.capsule,
+        },
+        "systemMessage": if c.summary.is_empty() {
+            format!(
+                "\u{26a1} Velra restored task state from session {short} ({} tokens)",
+                c.tokens
+            )
+        } else {
+            format!(
+                "\u{26a1} Velra restored: {} \u{2014} from session {short} ({} tokens)",
+                c.summary, c.tokens
+            )
+        },
+    })
+    .to_string()
+}
+
 /// §8.2: `CLAUDE_PROJECT_DIR`, else the first ancestor with `.git`, else cwd.
+///
+/// Delegates to `velra_core::workspace` so the hook and `velra restore` cannot
+/// drift apart about which project this is — see that module for why the
+/// consequence of drift would be silent.
 fn project_root(cwd: Option<&str>) -> PathBuf {
-    if let Some(dir) = std::env::var_os("CLAUDE_PROJECT_DIR").filter(|v| !v.is_empty()) {
-        return PathBuf::from(dir);
-    }
-    let start = cwd
-        .map(PathBuf::from)
-        .or_else(|| std::env::current_dir().ok())
-        .unwrap_or_else(|| PathBuf::from("."));
-    git::find_repo_root(&start).unwrap_or(start)
+    velra_core::workspace::root(cwd)
 }
 
 /// Hashes the files edited in this session's current epoch (§8.3), including
@@ -603,21 +714,37 @@ fn session_start(ctx: &Ctx<'_>) -> Result<(), String> {
         ..Default::default()
     };
     let ev = ctx.new_event(payload);
-    let Some(mut db) = ctx.store(ev, Role::HookDelivery) else {
-        return Ok(());
-    };
-    match source.as_str() {
-        // T6
-        "clear" => {
-            let _ = continuation::expire_live(&db.conn, &ctx.session_id, ctx.ts_ms);
+    // Channel 1: the in-session continuation, which needs the ledger.
+    if let Some(mut db) = ctx.store(ev, Role::HookDelivery) {
+        match source.as_str() {
+            // T6
+            "clear" => {
+                let _ = continuation::expire_live(&db.conn, &ctx.session_id, ctx.ts_ms);
+            }
+            "compact" | "resume" => {
+                ctx.reconcile(&mut db);
+                ctx.deliver(&mut db, Channel::SessionStart);
+            }
+            _ => {}
         }
-        // Channel 1
-        "compact" | "resume" => {
-            ctx.reconcile(&mut db);
-            ctx.deliver(&mut db, Channel::SessionStart);
-        }
-        _ => {}
     }
+    // Channel 1b: a capsule the user staged with `velra restore`.
+    //
+    // Deliberately outside the block above. Staged delivery reads one file and
+    // touches no table, so a database that is locked, missing or unopenable
+    // must not take it down with it — the event itself has already gone to the
+    // spool by this point, and the user's restore is the last thing that should
+    // be lost to a lock they will never hear about.
+    //
+    // It runs *after* the continuation so that on `compact`/`resume`, where
+    // both could in principle fire, the in-session path wins: its exactly-once
+    // accounting lives in the database, whereas a staged capsule that loses the
+    // race is simply left staged by the `emit` refusal.
+    //
+    // Which sources are eligible is not decided here. `claim_with` compares the
+    // source against the capsule's own `deliver_on`, so the three arms above
+    // leave a `velra restore` capsule — which names `startup` — untouched.
+    ctx.deliver_staged(&source);
     Ok(())
 }
 

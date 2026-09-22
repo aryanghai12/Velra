@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Scenario lookup, and a CLI for generating one fixture.
 
-    python bench/scenarios/registry.py --list
-    python bench/scenarios/registry.py s1-dead-end-pair /tmp/fx
+    python bench/legacy/scenarios/registry.py --list
+    python bench/legacy/scenarios/registry.py s1-dead-end-pair /tmp/fx
 
 Generating a fixture runs its ground-truth verification and its leak scan, so
 this command is also how the scenarios are checked without spending anything

@@ -28,6 +28,23 @@
 /bench/results/v0.1.1/quarantine/*/*/stream.jsonl
 /bench/results/v0.1.1/quarantine/*/*/transcript.jsonl
 /bench/results/v0.1.1/quarantine/*/*/velra_home/
+# The v0.1.2 Token-Burn benchmark writes into its own subtree. Derived
+# measurements are tracked; raw captures and generated load fixtures are not.
+# A single 900K ladder rung is 3.2 MB and every trial regenerates its own.
+/bench/results/v0.1.2/tokenburn/trials/*/stream.jsonl
+/bench/results/v0.1.2/tokenburn/trials/*/source_stream.jsonl
+/bench/results/v0.1.2/tokenburn/trials/*/transcript.jsonl
+/bench/results/v0.1.2/tokenburn/trials/*/velra_home/
+/bench/results/v0.1.2/tokenburn/quarantine/*/*/stream.jsonl
+/bench/results/v0.1.2/tokenburn/quarantine/*/*/source_stream.jsonl
+/bench/results/v0.1.2/tokenburn/quarantine/*/*/transcript.jsonl
+/bench/results/v0.1.2/tokenburn/quarantine/*/*/velra_home/
+/bench/results/v0.1.2/tokenburn/fixtures/
+# Generated context-load fixtures, wherever a run drops them.
+**/logs/build-[0-9][0-9].log
+**/logs/test-[0-9][0-9].log
+**/logs/fixture.meta.json
+
 # The v0.1.2 re-run writes into its own tree on the same terms.
 /bench/results/v0.1.2/trials/*/stream.jsonl
 /bench/results/v0.1.2/trials/*/transcript.jsonl
@@ -47,6 +64,13 @@
 !/npm/velra/bin/velra.js
 /npm/**/node_modules/
 /npm/**/*.tgz
+
+# The staged capsule (`velra restore`). Velra writes it to
+# $VELRA_HOME/staged/<workspace_id>/ precisely so it can never be committed,
+# but a manual `VELRA_HOME=. velra restore` would drop the tree here, and the
+# `.velra/` path is the one the earlier design used.
+/.velra/
+/staged/
 
 # Local databases. Velra's own state lives in ~/.velra, but a stray trial or a
 # manual `VELRA_HOME=. velra enable` can drop one in the tree.
@@ -69,6 +93,7 @@
 !/bench/results/trials/*/velra_debug.log
 !/bench/results/v0.1.1/trials/*/velra_debug.log
 !/bench/results/v0.1.2/trials/*/velra_debug.log
+!/bench/results/v0.1.2/tokenburn/trials/*/velra_debug.log
 
 # Credentials and key material. Nothing here is tracked and nothing should be:
 # Velra's redaction treats these paths as sensitive at runtime too (§J2).

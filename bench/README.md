@@ -1,203 +1,151 @@
 # Velra benchmarks
 
-Three benchmark systems live here. They measure different things and they do
-not share results.
+Two things live here. One is the current efficacy benchmark; the other is an
+archive that is kept working and kept out of the scorecard.
 
 | | What it answers | Runner | Results |
 |---|---|---|---|
-| **v0.1** | Is the capsule delivered, bounded and deterministic? Do the hooks stay out of the way? | `bench/run_full_benchmark.py` | `bench/results/` |
-| **v0.1.1 efficacy** | Does the capsule change what the agent *does* after compaction? | `bench/run_efficacy_benchmark.py` | `bench/results/v0.1.1/` |
-| **v0.1.2 hardened** | Does it change what the agent does *because* it preserved state compaction lost? | `bench/run_hardened_eval.py` | `bench/results/v0.1.2/` |
+| **v0.1.2 Token-Burn** | Does leaving a large conversation behind and restoring a bounded capsule into a fresh session cost less input — and still do the work correctly? | `bench/tokenburn/run.py` | `bench/results/v0.1.2/tokenburn/` |
+| **archive** (v0.1, v0.1.1, v0.1.2-hardened) | Historical. Did the capsule change what the agent did *after compaction*? | `bench/legacy/` | `bench/results/` |
 
-The v0.1 report ([`BENCHMARK_REPORT.md`](../BENCHMARK_REPORT.md)) settled the
-first question and could not settle the second: its control measured Claude
-Code's compaction as *not lossy* on its task, so both of its behavioural
-hypotheses came out INCONCLUSIVE. The v0.1.1 system exists to answer the second
-question properly, and its design is a direct response to why the first one
-could not.
+The archive is described in [`legacy/README.md`](legacy/README.md). Nothing in
+it contributes to the Token-Burn scorecard: separate trials root, separate
+pre-registration, and a test that fails the build if a Token-Burn module so
+much as names a legacy artifact path.
 
-The v0.1.2 system exists because v0.1.1 answered the second question with a
-number that could not be interpreted. Its s1 and s2 both came out with the
-baseline at or above Velra, and nothing in the artifacts could say whether that
-was because the capsule did not help, because it never carried the thing it was
-supposed to, or because compaction had not destroyed that thing in the first
-place. Those need different fixes and it reported them as one result.
+---
 
-### What changed, and why
+## The Token-Burn benchmark
 
-**One number became five stages.** Every scenario now declares a *target fact*
-and the chain is evaluated a stage at a time: did compaction lose it (measured
-against the baseline, not assumed), did Velra's ledger hold it before the
-checkpoint, did the delivered bytes carry it, did the agent accept the block,
-did the outcome change. A stage that fails stops the chain and names the failure
-class. `bench/harness/stages.py`.
+The thesis, stated once:
 
-**The control probes the scenario, not a canary.** v0.1.1 asked whether
-compaction forgot *anything* — an incidental constant read in an early turn. It
-never asked whether compaction forgot the thing the scenario was about. A
-scenario whose target fact survives the boundary is now reported as
-**NOT CAUSALLY TESTABLE** and is counted as neither a win nor a loss.
+> A developer can intentionally leave a huge Claude Code conversation behind,
+> start a brand-new session, restore only a small bounded operational state,
+> and continue the work without rehydrating the entire old conversation.
 
-**Leak scanning covers every surface an agent can read**, not just generated
-files: contents, filenames, the post-compaction prompt and the environment. That
-is what caught s3 — `legacy_tsv_v2.py` was the only tab-named importer with
-`DELIMITER = None`, so the anaphor was resolvable by grep. All three legacy_tsv
-modules are now broken identically.
+```
+LARGE / EXPENSIVE CONVERSATIONAL STATE
+            ↓  intentional exit
+  NEW FRESH CLAUDE SESSION
+            ↓  velra restore → SessionStart(startup)
+  SMALL VELRA OPERATIONAL STATE
+            ↓
+       CONTINUE WORK
+```
 
-**Pairing is matched on recorded identity.** `trial_meta.json` carries a
-`pair_key` (fixture seed, model, Claude Code build, Velra commit, turn script
-shape) and a pair enters the comparison only when every field agrees on both
-arms. Mismatched and half-missing pairs are dropped whole and named.
+Two benchmarks, one fixture:
 
-**Correctness is the primary metric everywhere.** Tool-call counts are recorded
-and are never the verdict.
+| | Transition | The question |
+|---|---|---|
+| `A_cold_continuation` | end the session, start a new one | Does a large native continuation cost more input than a fresh session plus a bounded capsule? |
+| `B_clear_survival` | `/clear` | After `/clear`, what does a fresh native session have to spend to get back to where the work was? |
 
-The rules are frozen in
-[`harness/preregistration_v2.json`](harness/preregistration_v2.json), hashed
-into every artifact. `preregistration.json` (1.0.0) is left byte-for-byte alone
-because the v0.1.1 results carry its hash.
+The fixture is a small payments service with **three genuinely failing tests**.
+Nothing in the tree says which one the developer was working on, which approach
+they had already tried and reverted, or what they had decided about the fix —
+because those are facts about a conversation, not about a repository. A fresh
+session can read every file and still not know them, and it can also
+legitimately work them out, which is a baseline success and is scored as one.
+
+The abandoned approach is never committed. It is an edit made during the
+session and reverted with `git restore`, so `git log`, `git reflog` and
+`git stash list` carry no trace of it — and the leak scanner treats all three as
+fatal surfaces.
 
 ### Running it
 
 ```bash
-python bench/run_hardened_eval.py --dry-run   # free: build, tests, fixtures,
-                                              # leak scans, readiness gate
-python bench/run_hardened_eval.py --live      # the expensive part
+# The pipeline on synthetic trials. 18 scripted cases, ~5 s, spends nothing.
+python bench/tokenburn/run.py --selftest
+
+# Readiness: fixtures, ground truth, leak scans, the ladder, telemetry, the
+# smoke test and the plan. Writes bench/results/v0.1.2/readiness.json.
+python bench/tokenburn/run.py --dry-run
+
+# restore → SessionStart against the real binary. Offline; no Claude process.
+python bench/tokenburn/run.py --smoke
+
+# The expensive part. Refuses without VELRA_ALLOW_LIVE_BENCHMARK=1 as well,
+# and refuses outright from inside a Claude Code session.
+python bench/tokenburn/run.py --live
 ```
 
-The dry run spends nothing and ends in `READY FOR LIVE EVALUATION` or a list of
-blocking defects. `--resume`, `--only`, `--pairs` and `--force` make a partial
-run restartable without overwriting anything: a re-run quarantines the old trial
-rather than deleting it.
+`--resume`, `--only`, `--pairs` and `--force` make a partial run restartable
+without overwriting anything: a re-run quarantines the old trial rather than
+deleting it.
 
----
+The dry run ends in `READY FOR LIVE EVALUATION` or in a list of blockers.
 
-## Running the efficacy benchmark
+### Why the design looks like this
+
+**Every number carries its provenance.** A metric cannot exist without naming
+its source, the artifact it was read out of, and whether it was measured,
+proxied or simply unavailable. `bench/tokenburn/telemetry.py`.
+
+**Missing telemetry is never zero.** If `cache_read_input_tokens` is not
+explicitly present in structured data, it is `unavailable`, arithmetic over it
+returns `inconclusive`, and the pair's verdict is `INCONCLUSIVE`. It is never
+recovered by pattern-matching stdout, stderr or a status line —
+`scan_for_terminal_scraping` enforces that over the package's own source, and a
+test feeds it a deliberate offender to prove the guard fires.
+
+**A partial field is not a total.** If the cache fields are on eleven of twelve
+usage records, the sum of the eleven is reported `unavailable` with the count.
+Reporting it would understate a baseline's cached input, which is the direction
+that flatters Velra.
+
+**UNKNOWN is not EXPIRED.** A run whose cache state was not reported did not
+demonstrate a cache miss.
+
+**Correctness outranks tokens.** A Velra arm that spent a tenth of the input
+and wrote the wrong fix loses to a baseline that spent everything and got it
+right. The saving is still printed — that row is the most informative one the
+benchmark can produce — but the verdict goes against Velra.
+
+**A synthetic fixture's size is never a Claude observation.**
+`synthetic_context_size` and `achieved_context_size` are separate metrics with
+separate sources, and a test fails if they are ever the same reading.
+
+**Incomplete causal evidence rounds down.** Nine links, A to I; the first one
+that cannot be demonstrated makes the trial `INCONCLUSIVE` and names the
+failure class.
+
+**Pairs match on recorded identity.** Benchmark, scenario, pair id, fixture
+seed, model, Claude Code build, turn-script hash, permission mode and ladder
+rung. A pair that half-exists or disagrees is dropped whole and named.
+
+### The context-load ladder
+
+100K, 250K, 500K, 700K, 800K, 900K — **targets, not capability claims**.
+Generated programmatically by `bench/tokenburn/context_fixture.py` from a seed,
+streamed to disk, verified by re-reading. The generated text is realistic
+engineering output (build logs, pytest output, diffs, shell transcripts, tool
+results, source excerpts), not filler, and it is labelled
+`kind: synthetic_load_fixture` everywhere so its size can never be quoted as a
+property of a real session.
 
 ```bash
-python bench/run_efficacy_benchmark.py
+python bench/tokenburn/context_fixture.py --plan
+python bench/tokenburn/context_fixture.py --target 900000 --into /tmp/fx
 ```
 
-Run it from an ordinary terminal, **not** from inside a Claude Code session:
-the trials drive their own Claude Code processes and mutate the same
-user-level `settings.json` a nested session is reading.
+Fixtures are generated at run time and are not committed; a 900K rung is
+3.2 MB.
 
-Useful flags:
+### Trial counts
 
-```bash
-# Everything free: fixtures, ground truth, leak scan, cargo test, provenance.
-python bench/harness/regression_gate.py --binary target/release/velra.exe
+Two stages, registered in `preregistration_tokenburn.json`:
 
-# The whole analysis pipeline on synthetic captures. ~15 s, no API calls.
-python bench/harness/selftest.py
+* **qualification** — 2 matched pairs per benchmark. Its job is to find out
+  whether the scenario creates the claimed pain and whether everything measures.
+  A weak scenario is redesigned here. It does not count toward the scorecard.
+* **formal** — 4 matched pairs per benchmark, after the scenario is frozen.
+  8 pairs, 16 trials.
 
-# The harness's own unit tests, including checks against the recorded v0.1 captures.
-python -m pytest bench/tests -q
-
-# A cheaper live pass: one scenario, fewer replicates. Reports INCONCLUSIVE
-# for the behavioural hypothesis below four replicates, and says so up front.
-python bench/run_efficacy_benchmark.py --scenarios s1-dead-end-pair --replicates 2
-```
-
-### Cost
-
-Each replicate is two sessions of fourteen to seventeen turns. On Sonnet,
-budget roughly **$2.50–$3.50 per replicate per scenario**, plus about $3 per
-control replicate and about $0.50 per trial for the tokenizer measurements. The
-registered default — four replicates, three scenarios, two control replicates
-each — is on the order of **$40–60**. `--max-budget-usd` caps each individual
-session.
-
-### Prerequisites
-
-* Python 3.11+, `pytest`, Git, a Rust toolchain.
-* An authenticated Claude Code install. The harness finds it itself
-  (`bench/harness/claude_binary.py`); `$VELRA_BENCH_CLAUDE` pins a specific
-  build.
-* On a host whose default rustup toolchain cannot link (this one defaults to
-  MSVC with no MSVC linker installed), the gate auto-selects the toolchain
-  matching the release binary's target triple.
-  `$VELRA_BENCH_CARGO_TOOLCHAIN` overrides.
-
----
-
-## Why the design looks like this
-
-Every structural decision below is a response to something that went wrong in
-the v0.1 run, recorded so nobody re-litigates it.
-
-**Success criteria are pre-registered.**
-[`harness/preregistration.json`](harness/preregistration.json) names the
-hypotheses, the primary metric for each, the success and failure conditions,
-the valid-trial criteria and the replicate minimum. It is hashed into every
-artifact, and `scenario_verdict.py` refuses to evaluate an aggregate produced
-under a different hash. Changing it after a run invalidates the run rather than
-reinterpreting it.
-
-**Four replicates per arm is a floor, not a preference.** With a 2×N table and
-a perfect split, the one-sided Fisher exact p is `1/C(2n, n)`: 0.050 at n=3,
-0.014 at n=4. Below four, a clean sweep cannot clear p < 0.05 however
-convincing it looks, and the verdict script reports INCONCLUSIVE rather than
-rounding it up.
-
-**The control is per scenario, replicated, and runs the scenario's own turns.**
-The v0.1 probe ran one hand-written script, said "lossy" on 2026-09-13 and "not
-lossy" on 2026-09-14, and that reversal decided two hypotheses.
-`harness/loss_probe.py` replays the scenario's actual turns up to the boundary
-and takes a majority of valid runs.
-
-**Each scenario is unanswerable from the repository.** The v0.1 fixture's
-defect was recoverable from the failing assertion, so both arms scored 4/4 and
-nothing separated them. Worse, its failing test carried the docstring *"The
-discount is a property of the invoice, not of each line"* — the fix in one
-sentence — and a recorded replicate quotes it back as its reasoning.
-`scenarios/base.lint_tree` fails the build if a generated fixture contains a
-phrase naming its own fix, and the gate runs it before anything is paid for.
-The same leak is fixed in the v0.1 generator, so
-`bench/run_full_benchmark.py` no longer reproduces it either.
-
-**Ground truth is verified, not asserted.** `Scenario.build` runs the real
-pytest suite against the fixture as generated, against every declared dead end,
-and against every declared fix. A dead end that quietly becomes a fix fails the
-build.
-
-**Both sides of the size comparison use the same instrument.** The v0.1 report
-compares a real-tokenizer capsule against a `chars/4` estimate of the native
-summary. `harness/native_tokens.py` measures the summary the same way
-`measure_tokens.py` measures the capsule.
-
-**Provenance is taken from git, not from the binary.** `build.rs` declares
-`rerun-if-changed` on `.git/HEAD`, which does not change when you commit on a
-branch, so the embedded sha goes stale — the v0.1 four-replicate run is
-attributed to `e9f40151c` while the tree was several commits further on.
-`harness/provenance.py` records git's answer and flags the mismatch;
-`build.rs` now also watches the ref `HEAD` points at.
-
----
-
-## The scenarios
-
-Each targets one capsule section, and is built so the repository cannot answer
-it.
-
-| Scenario | Mechanism | The question only memory answers |
-|---|---|---|
-| `s1-dead-end-pair` | `[DEAD_ENDS]` | Two hypotheses were tried and reverted through git before compaction. Does the agent go back to burned ground? |
-| `s2-hidden-constraint` | `[ROOT_TASK_OBJECTIVE]` | Two fixes both make the suite green. A constraint stated once, in turn 0, decides which is right. |
-| `s3-working-set` | `[WORKING_FILES]` | "Now make that fix" — after 84 unrelated modules have been read. Nothing in the repo says which file. |
-
-`s3` is expected to be **hard for Velra as it stands**: §18 of the v0.1 report
-records `[WORKING_FILES]` absent from 4 of 4 delivered capsules, because the
-ladder steps `working_max` from four straight to zero. That expectation is
-written into the pre-registration so a failure is reported as a measurement,
-not a surprise, and
-`capsule.rs::the_working_files_ladder_still_steps_from_four_to_zero` pins the
-cliff so the planned `working_max = 2` rung has to flip it deliberately.
-
-```bash
-python bench/scenarios/registry.py --list
-python bench/scenarios/registry.py s1-dead-end-pair /tmp/fx   # build and verify one
-```
+Few and brutal rather than many and weak: the hypothesis is that continuing a
+500K-token conversation costs an order of magnitude more input than a fresh
+session plus an 800-token capsule. An effect that size is visible in four pairs
+or it is not there. The registered materiality threshold is 25%.
 
 ---
 
@@ -205,49 +153,63 @@ python bench/scenarios/registry.py s1-dead-end-pair /tmp/fx   # build and verify
 
 ```
 bench/
-  run_efficacy_benchmark.py     the v0.1.1 runner
-  run_full_benchmark.py         the v0.1 runner, unchanged
-  scenarios/
-    base.py                     shared ledger sources, ground truth, leak lint
-    s1_dead_end_pair.py         [DEAD_ENDS]
-    s2_hidden_constraint.py     [ROOT_TASK_OBJECTIVE]
-    s3_working_set.py           [WORKING_FILES]
-    registry.py                 lookup + a CLI for building one fixture
-  harness/
-    preregistration.json        hypotheses and criteria, fixed before the run
-    prereg.py                   loads it and pins it to a hash
-    regression_gate.py          RC1-RC4: everything free that must pass first
-    provenance.py               git truth, cross-checked against the binary
-    scenario_trial.py           drives one session, one arm
-    loss_probe.py               the per-scenario information-loss control
-    behaviour.py                the metrics; arm-blind by construction
-    validity.py                 valid-replicate rules
-    scenario_analyze.py         one trial -> analysis.json
-    native_tokens.py            the native summary, same tokenizer as the capsule
-    scenario_aggregate.py       pooling, grouped by scenario and arm
-    stats.py                    Fisher's exact, and what n can support
-    scenario_verdict.py         the verdicts, read out of the pre-registration
-    selftest.py                 the whole pipeline, offline, on scripted outcomes
-    measure_tokens.py           shared with v0.1
-    hook_overhead.py            shared with v0.1
-    verify_env.py               shared with v0.1
-    claude_binary.py            shared with v0.1
-  tests/
-    test_bench_units.py         the harness's own tests
+  tokenburn/          the v0.1.2 Token-Burn benchmark  (see __init__.py)
+  legacy/             S1/S2/S3 and their runners, archived and still working
+    scenarios/  fixture/  run_*.py
+  harness/            shared: claude_binary, provenance, measure_tokens,
+                      verify_env, plus the archive's own analysis modules
+                      (selftest.py, stages.py, scenario_*.py, loss_probe.py,
+                      behaviour.py, validity.py, verdict.py, aggregate.py,
+                      analyze.py, hardened_verdict.py, regression_gate.py,
+                      run_trial.py, compaction_probe.py, native_tokens.py,
+                      prereg.py, stats.py, make_*.py, hook_overhead.py)
+  tests/              pytest for both systems
+  results/            every result tree, historical ones untouched
 ```
+
+`bench/harness/` was deliberately not moved: it holds modules both systems use,
+and `python bench/harness/selftest.py` is still the archive's own offline
+check, named as such in the release checklist.
 
 ---
 
-## Reading the results
-
-Do not trust `verdicts.json` on its own. Every number in it is recomputable
-from the raw captures:
+## Tests
 
 ```bash
-python bench/harness/scenario_analyze.py --trial bench/results/v0.1.1/trials/<trial>
+python -m pytest bench/tests -q            # both systems, ~4 s without --slow
+python -m pytest bench/tests -q -m slow    # fixture builds and the 900K rung
+python bench/tokenburn/selftest.py         # the 18 scripted cases
+python bench/harness/selftest.py           # the archive's pipeline
+python bench/tokenburn/smoke.py            # restore → SessionStart, offline
 ```
 
-`analysis.json` is a pure function of `stream.jsonl`, `transcript.jsonl`,
-`final_state.json` and `velra.db`. The delivered capsule is written out
-verbatim as `delivered_capsule.txt` and the native summary as
-`native_summary.txt`, so both can be read rather than described.
+## Reading the results
+
+Do not trust a verdict on its own. Every number is recomputable from the raw
+captures:
+
+```bash
+python bench/tokenburn/parse.py --trial <trial-dir>
+python bench/tokenburn/aggregate.py --trials <trials-dir> --out <out-dir>
+```
+
+`analysis.json` is a pure function of `stream.jsonl`, `final_state.json`,
+`velra_restore.json` and `context_fixture.json`. In the report, `unavailable`
+means the structured data did not carry the field — not zero, and not something
+recovered from terminal output; `~n` means a proxy, and each trial's
+`analysis.json` says what it stands in for.
+
+---
+
+## The archive, in one paragraph
+
+The v0.1 report ([`BENCHMARK_REPORT.md`](../BENCHMARK_REPORT.md)) settled
+whether the capsule is delivered, bounded and deterministic, and could not
+settle whether it changes behaviour: its control measured compaction as *not
+lossy* on its task. v0.1.1 tried to settle that and produced a number nobody
+could interpret. v0.1.2-hardened broke that one number into five stages so a
+capture failure, a delivery failure and a task failure stopped being reported
+as the same result. All three are within-session experiments about compaction,
+and none of them crosses a session boundary — which is the whole of what
+v0.1.2 ships, and why the Token-Burn benchmark exists. See
+[`legacy/README.md`](legacy/README.md).

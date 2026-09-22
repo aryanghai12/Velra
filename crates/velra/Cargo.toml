@@ -55,7 +55,7 @@ serde_json = { version = "1.0.151", features = ["raw_value", "preserve_order"] }
 similar = "3.2.0"
 toml = "1.1.6"
 ulid = "3.0.0"
-velra-core = { version = "0.1.1", path = "../velra-core" }
+velra-core = { version = "0.1.2", path = "../velra-core" }
 
 [dev-dependencies]
 assert_cmd = "2.2.2"

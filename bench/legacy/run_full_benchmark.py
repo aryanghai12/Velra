@@ -36,9 +36,13 @@ import tempfile
 import time
 
 HERE = pathlib.Path(__file__).resolve().parent
-REPO_ROOT = HERE.parent
-HARNESS = HERE / "harness"
-RESULTS = HERE / "results"
+# This runner was archived into bench/legacy in v0.1.2 Phase 3. Its results,
+# harness and binary paths still resolve against the original bench/ tree so
+# that every historical artifact keeps the path it was recorded under.
+BENCH = HERE.parent
+REPO_ROOT = BENCH.parent
+HARNESS = BENCH / "harness"
+RESULTS = BENCH / "results"
 TRIALS = RESULTS / "trials"
 
 # The portable MinGW toolchain this machine uses for the release build. Absent

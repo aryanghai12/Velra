@@ -1,6 +1,6 @@
 {
   "name": "velra",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Lossless compaction for Claude Code: your task survives /compact.",
   "keywords": ["claude-code", "compaction", "hooks", "cli", "developer-tools"],
   "homepage": "https://github.com/aryanghai12/velra#readme",
