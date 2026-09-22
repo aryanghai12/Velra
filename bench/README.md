@@ -5,7 +5,7 @@ archive that is kept working and kept out of the scorecard.
 
 | | What it answers | Runner | Results |
 |---|---|---|---|
-| **v0.1.2 Token-Burn** | Does leaving a large conversation behind and restoring a bounded capsule into a fresh session cost less input — and still do the work correctly? | `bench/tokenburn/run.py` | `bench/results/v0.1.2/tokenburn/` |
+| **v0.1.2 Token-Burn** | Does leaving a large conversation behind and restoring a bounded capsule into a fresh session cost less input — and still do the work correctly? | `bench/tokenburn/run.py` | `--results-root <PATH>` (frozen v0.1.2 qualification: `bench/results/v0.1.2/`) |
 | **archive** (v0.1, v0.1.1, v0.1.2-hardened) | Historical. Did the capsule change what the agent did *after compaction*? | `bench/legacy/` | `bench/results/` |
 
 The archive is described in [`legacy/README.md`](legacy/README.md). Nothing in
@@ -55,20 +55,32 @@ fatal surfaces.
 ### Running it
 
 ```bash
-# The pipeline on synthetic trials. 18 scripted cases, ~5 s, spends nothing.
+# The pipeline on synthetic trials. 23 scripted cases, ~5 s, spends nothing.
 python bench/tokenburn/run.py --selftest
 
+# Memory isolation and source-handoff validation, proven offline.
+python bench/tokenburn/run.py --preflight
+
 # Readiness: fixtures, ground truth, leak scans, the ladder, telemetry, the
-# smoke test and the plan. Writes bench/results/v0.1.2/readiness.json.
-python bench/tokenburn/run.py --dry-run
+# smoke test, the preflight and the plan. Writes <root>/readiness.json.
+python bench/tokenburn/run.py --dry-run --results-root bench/results/<run>
 
 # restore → SessionStart against the real binary. Offline; no Claude process.
 python bench/tokenburn/run.py --smoke
 
 # The expensive part. Refuses without VELRA_ALLOW_LIVE_BENCHMARK=1 as well,
 # and refuses outright from inside a Claude Code session.
-python bench/tokenburn/run.py --live
+python bench/tokenburn/run.py --live --results-root bench/results/<run> --stage qualification
 ```
+
+A run writes everything it owns — `trials/`, `readiness.json`,
+`run_state.json`, `aggregate.json`, `verdicts.json`, `report.md`,
+`settings-backup/`, `quarantine/` — under its `--results-root`, and aggregates
+only that root's trials. Relative roots resolve against the current directory.
+`bench/results/v0.1.2/` is the frozen qualification evidence (7a09e65, tag
+`tokenburn-qualification-v0.1.2`): the runner refuses to write there, or to
+any root inside or containing it, and `--dry-run`/`--live` without a
+`--results-root` would write there, so they refuse too.
 
 `--resume`, `--only`, `--pairs` and `--force` make a partial run restartable
 without overwriting anything: a re-run quarantines the old trial rather than

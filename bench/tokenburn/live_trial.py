@@ -423,7 +423,8 @@ def run_trial(*, scenario_name: str, arm: str, pair_id: str, replicate: int,
               model: str, claude: pathlib.Path, velra: pathlib.Path,
               max_budget_usd: float, seed: int = 0,
               arm_order_index: int = 0,
-              arm_order: list | None = None) -> dict:
+              arm_order: list | None = None,
+              provenance_exclude: tuple = ()) -> dict:
     """One arm of one pair, start to finish. Requires an authorized live run.
 
     Validity is established before anything is spent on a continuation, and
@@ -446,7 +447,7 @@ def run_trial(*, scenario_name: str, arm: str, pair_id: str, replicate: int,
     out = pathlib.Path(out)
     out.mkdir(parents=True, exist_ok=True)
 
-    provenance = repo_provenance()
+    provenance = repo_provenance(provenance_exclude)
     settings = isolation.settings_path()
     settings_bytes = settings.read_bytes() if settings.exists() else None
     memory = isolation.memory_dir(fixture)
@@ -682,7 +683,7 @@ def run_trial(*, scenario_name: str, arm: str, pair_id: str, replicate: int,
     return meta
 
 
-def repo_provenance() -> dict:
+def repo_provenance(exclude: tuple = ()) -> dict:
     """The commit this trial is evidence about, recorded in the trial itself.
 
     Without it a trial directory is a set of numbers with no way back to the
@@ -694,12 +695,21 @@ def repo_provenance() -> dict:
     branch = _run(["git", "rev-parse", "--abbrev-ref", "HEAD"],
                   cwd=str(REPO_ROOT))
     status = _run(["git", "status", "--porcelain"], cwd=str(REPO_ROOT))
-    changes = [line for line in (status.stdout or "").splitlines()
-               if line.strip()]
+    lines = [line for line in (status.stdout or "").splitlines()
+             if line.strip()]
+    # Untracked output of this run (its results root, when inside the repo)
+    # is excluded, as the readiness gate excludes it; everything else counts,
+    # and the lines themselves are recorded, not only their number.
+    own = [line for line in lines if line.startswith("??")
+           and any(line[3:].strip().strip('"').replace(os.sep, "/")
+                   .startswith(p) for p in exclude)]
+    changes = [line for line in lines if line not in own]
     return {
         "git_head": (head.stdout or "").strip(),
         "git_branch": (branch.stdout or "").strip(),
         "working_tree_changes": len(changes),
+        "working_tree_change_lines": changes[:50],
+        "run_output_excluded": own[:20],
         "working_tree_clean": not changes,
         "captured_at_trial_start": True,
     }

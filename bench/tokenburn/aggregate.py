@@ -37,8 +37,10 @@ if __package__ in (None, ""):
     import parse  # type: ignore[no-redef]
     import prereg  # type: ignore[no-redef]
     import report as report_mod  # type: ignore[no-redef]
+    import runroot  # type: ignore[no-redef]
     import verdict as verdict_mod  # type: ignore[no-redef]
 else:
+    from . import runroot
     from . import causal, isolation, metrics, pairing, parse, prereg
     from . import report as report_mod
     from . import verdict as verdict_mod
@@ -87,9 +89,18 @@ def analyse_trial(trial_dir: pathlib.Path) -> tuple[dict, dict]:
 
 def run(trials_root: pathlib.Path, out_dir: pathlib.Path,
         *, write: bool = True) -> dict:
-    """The whole pipeline over one trials directory."""
+    """The whole pipeline over one trials directory.
+
+    Reads only ``trials_root`` -- nothing outside it is discovered -- and
+    with ``write`` refuses to touch protected evidence: aggregating writes
+    analysis.json and causal_chain.json into every trial directory, so
+    re-running it over frozen trials would regenerate the evidence.
+    """
     trials_root = pathlib.Path(trials_root)
     out_dir = pathlib.Path(out_dir)
+    if write:
+        runroot.assert_writable(trials_root, "per-trial analysis")
+        runroot.assert_writable(out_dir, "the aggregate")
     dirs = [p for p in sorted(trials_root.iterdir())
             if p.is_dir() and (p / "trial_meta.json").exists()] \
         if trials_root.is_dir() else []

@@ -83,7 +83,9 @@ def test_provenance_reports_both_counts():
 
 def test_every_trial_records_the_commit_it_is_evidence_about():
     text = _source("live_trial.py")
-    assert "def repo_provenance()" in text
+    # Takes the run's own output paths to exclude (--results-root inside the
+    # repository); called with no argument it behaves as before.
+    assert "def repo_provenance(exclude: tuple = ())" in text
     assert '"repo_provenance": provenance' in text
     assert '"git_head": provenance["git_head"]' in text
 
