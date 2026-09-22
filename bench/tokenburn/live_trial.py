@@ -274,6 +274,55 @@ def capture_final_state(fixture: pathlib.Path, manifest: dict) -> dict:
 # --------------------------------------------------------------------------
 
 
+#: The reducer's projections, and the text columns a marker can live in.
+LEDGER_COLUMNS = {
+    "intents": ("text",),
+    "constraints": ("text",),
+    "commands": ("command_text", "excerpt", "mentioned_paths"),
+    "file_stats": ("path",),
+    "edits": ("path", "excerpt"),
+    "dead_ends": ("path", "command_text"),
+}
+
+
+def ledger_scan(db: pathlib.Path | None, session: str, markers: list[str]) -> dict:
+    """Which declared markers the source session's ledger rows hold.
+
+    Read-only, and over the reducer's projections only -- raw hook payloads in
+    `events` are not the ledger. Superseded rows count: the question this
+    answers is whether Velra *captured* the state, not whether it selected it.
+    """
+    if db is None or not db.is_file():
+        return {"available": False, "why": f"no ledger at {db}"}
+    import sqlite3
+    try:
+        conn = sqlite3.connect(f"file:{db.as_posix()}?mode=ro", uri=True)
+    except sqlite3.Error as exc:
+        return {"available": False, "why": str(exc)}
+    where: dict[str, list[str]] = {m: [] for m in markers}
+    try:
+        for table, columns in LEDGER_COLUMNS.items():
+            cols = ", ".join(f"coalesce({c}, '')" for c in columns)
+            for row in conn.execute(
+                    f"SELECT rowid, {cols} FROM {table} WHERE session_id = ?",
+                    (session,)):
+                text = " ".join(row[1:]).replace("\\\\", "/").replace(
+                    "\\", "/").lower()
+                for m in markers:
+                    if m.replace("\\", "/").lower() in text:
+                        where[m].append(f"{table}:{row[0]}")
+    except sqlite3.Error as exc:
+        return {"available": False, "why": str(exc)}
+    finally:
+        conn.close()
+    return {
+        "available": True,
+        "markers_present": [m for m in markers if where[m]],
+        "markers_missing": [m for m in markers if not where[m]],
+        "rows": {m: rows[:10] for m, rows in where.items()},
+    }
+
+
 def do_restore(velra: pathlib.Path, env: dict, fixture: pathlib.Path,
                source_session: str, manifest: dict) -> dict:
     """Step 6: stage the source session's state, and record the whole lifecycle.
@@ -323,17 +372,25 @@ def do_restore(velra: pathlib.Path, env: dict, fixture: pathlib.Path,
     else:
         record["staged"] = None
 
-    # Link C: what the ledger actually held, checked against the scenario's
-    # declared markers, before anything was delivered.
+    # Link C: the declared markers checked against the staged capsule. The key
+    # keeps its historical name so frozen trials still parse, but it measures
+    # the *capsule*, and says so; `ledger_scan` below is the ledger itself.
+    # Before v0.1.2's qualification review only the capsule was scanned and
+    # the result was reported as what the ledger held, which turned three
+    # snapshot/renderer losses into "capture failures".
     capsule = ((record.get("staged") or {}).get("capsule") or "")
     markers = list(manifest.get("capsule_markers") or [])
     low = capsule.replace("\\", "/").lower()
     record["ledger_evidence"] = {
+        "measured_on": "staged_capsule",
         "markers_present": [m for m in markers
                             if m.replace("\\", "/").lower() in low],
         "markers_missing": [m for m in markers
                             if m.replace("\\", "/").lower() not in low],
     }
+    record["ledger_scan"] = ledger_scan(
+        pathlib.Path(env["VELRA_HOME"]) / "velra.db" if env.get("VELRA_HOME")
+        else None, source_session, markers)
     # The claim lifecycle is observed from the destination session's own hook
     # responses, not asserted here. One staging is one claimable capsule.
     record["claim"] = {"attempts": []}
