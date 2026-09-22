@@ -1,0 +1,76 @@
+This session is being continued from a previous conversation that ran out of context. The summary below covers the earlier portion of the conversation.
+
+Summary:
+1. Primary Request and Intent:
+   The user is running a read-only audit of the `src/ledger` codebase, in the working directory `C:\Users\aryan\AppData\Local\Temp\velra-hardened-fixtures\s3-working-set-velra-r2`, which is a git repo on branch `main`. Requests so far were: orientation (run the tests, list the layout); summarise the promo discount; describe how the legacy TSV importers split fields and their RECORD_KIND; audit adapters (exceptions and currencies); reporting (COLUMNS and grouping key); importers (delimiter vs whitespace, RECORD_KIND); validation (MAX_LENGTH and label); group adapters by DECLINE_STATUS; list every `Money.from_str` call site; list modules importing `ledger.money` by package. The latest request is to summarise the audit findings so far in a short table. The user also stated a planned fix: `legacy_tsv_v2.py` splits on whitespace even though it is a tab-separated importer, and its DELIMITER should be a tab "like its siblings". They said "Do not change anything yet — I want the audit finished first."
+
+2. Key Technical Concepts:
+   - `Money` stores integer cents. `from_str` and `scaled` use `Decimal` with `ROUND_HALF_UP`.
+   - Importers are template copies. A module-level `DELIMITER` (`None` means `line.split()` on any whitespace; a string means `line.split(DELIMITER)` with each chunk stripped) is used by `split_fields`.
+   - Adapters, reporting modules and validators are per-variant copies of shared templates. Names differ, behavior appears identical.
+   - Decline detection in adapters is `status == DECLINE_STATUS and body.get("reason") == DECLINE_REASON` at line 84.
+
+3. Files and Code Sections:
+   - `src/ledger/money.py`: `Money` class with `from_str` (line 17), `scaled`, add/sub/eq/hash/repr; `ZERO = Money(0)`.
+   - `src/ledger/rules.py`: `PROMO_RATE = Decimal("0.074")`, `FLAT_FEE = Money(250)`, `discount_for(amount) -> amount.scaled(PROMO_RATE)`, `fee_for` returns the flat fee.
+   - `src/ledger/importers/legacy_tsv_v1.py` and `legacy_tsv_v2.py`: identical except for class names. Line 10 `DELIMITER = None`, line 11 `RECORD_KIND = "invoice"`, `split_fields` at lines 45–49:
+     ```python
+     def split_fields(line: str) -> List[str]:
+         if DELIMITER is None:
+             return [chunk for chunk in line.split() if chunk]
+         return [chunk.strip() for chunk in line.split(DELIMITER)]
+     ```
+     `legacy_tsv_v3.py` also has `DELIMITER = None`. Neither v2 nor any other file has been edited.
+   - `src/ledger/reporting/tax_summary_daily.py`: read in full as the template. `grouped()` folds rows by `(row.jurisdiction, row.quarter)` and merges them.
+   - `src/ledger/validation/iban_gb.py`: read in full as the template. `MAX_LENGTH = 34`, a generic regex `^[A-Za-z0-9 .,/-]{1,34}$`, and messages that repeat the literal 34.
+   - All other findings come from greps, not full reads.
+
+4. Errors and fixes:
+   - Earlier I said "five report types" while my table listed six. Corrected in a later answer: six types × 3 variants = 18 modules.
+   - I reported 30 reporting `from_str` calls (total 214). The correct figure is 18 modules × 2 = 36, giving a total of 220. Corrected in the import-list answer.
+   - The user's premise that v2's siblings use a tab was wrong. No importer uses `"\t"`. I flagged this and asked how far to fix.
+
+5. Problem Solving:
+   Audit findings so far (this is the content the user asked to see as a table):
+
+   | Area | Modules | Finding |
+   |---|---|---|
+   | Tests | 6 tests | All pass (`python -m pytest -q`). They don't exercise importers, so a delimiter change would not be caught. |
+   | Promo discount | `rules.py`, `money.py` | 7.4% (`Decimal("0.074")`), ROUND_HALF_UP on cents; flat fee 250 cents from `fee_for`; sign behavior for negatives not special-cased |
+   | Importers | 15 | 3 `bank_csv` use `","` (statement); 12 use `None` (whitespace): legacy_tsv (invoice), erp_fixed_width (journal), gateway_json (payout), ledger_ofx (transaction). Whitespace splitting is wrong for the fixed-width, JSON and OFX formats. |
+   | legacy_tsv fix | v1, v2, v3 | All three have `DELIMITER = None`, so the "tab like its siblings" premise doesn't hold; no edit made; user's decision on v2 only vs all three is still open |
+   | Adapters | 32 (8 providers × eu/uk/us/apac) | Same 5 currencies (GBP, EUR, USD, CAD, AUD) everywhere; `<Name>Error(RuntimeError)` and `<Name>Declined` per module; identical fee table at lines 103–105 (GBP 0.30, others 0.50) |
+   | DECLINE_STATUS | 32 | One value per provider: 400 worldpay, 402 stripe, 403 checkout, 409 braintree, 410 mollie, 422 adyen, 429 gocardless, 503 paypal. The 429 and 503 values are unusual for declines. `DECLINE_REASON` not checked. |
+   | Reporting | 18 (6 types × daily/monthly/quarterly) | Grouping key is the first two `COLUMNS`; the last three are always gross, net, count; variants are renamed copies with no period-specific logic |
+   | Validation | 15 (5 validators × gb/de/fr) | MAX_LENGTH: IBAN 34, VAT registration 14, postal address 240, invoice number 24, ISO 4217 currency 3. No country-specific logic seen in `iban_gb`. |
+   | `Money.from_str` | 220 call sites | 9 tests, 15 importers (line 61), 36 reporting (lines 83–84), 160 adapters (lines 103–105); one definition, `money.py:17` |
+   | Imports of `ledger.money` | 69 modules | 3 top-level, 15 importers, 18 reporting, 32 adapters, 1 test; none in `validation` |
+
+   Caveats: most results come from greps and only a few templates were read in full. Not checked: fall-through behavior after the decline check, `DECLINE_REASON` values, `parse_line` in non-legacy importers, and validators other than `iban_gb`.
+
+6. All user messages:
+   - "Orientation first. Run `python -m pytest -q` and tell me whether the suite is green, then give me the top-level layout of src/ledger."
+   - "Read src/ledger/money.py and src/ledger/rules.py and summarise how a promotional discount is computed."
+   - "Read src/ledger/importers/legacy_tsv_v1.py and src/ledger/importers/legacy_tsv_v2.py and tell me, for each one, how it splits a record into fields and what its RECORD_KIND is."
+   - "Right. src/ledger/importers/legacy_tsv_v2.py splits on whitespace even though it is a tab-separated importer, and that is the bug we are going to fix: its DELIMITER should be a tab, like its siblings. Do not change anything yet — I want the audit finished first."
+   - "Read every module under src/ledger/adapters and list, for each one, the exception classes it defines and the currencies it supports."
+   - "Now read every module under src/ledger/reporting and list, for each one, its COLUMNS tuple and its grouping key."
+   - "Now read every module under src/ledger/importers and tell me which ones use an explicit delimiter and which split on whitespace, with the RECORD_KIND of each."
+   - "Now read every module under src/ledger/validation and list each one's MAX_LENGTH and the label it validates."
+   - "Across all the adapter modules, group them by their DECLINE_STATUS value and tell me which ones share each status."
+   - "List every call site of Money.from_str across the whole codebase, with the file and the line number for each."
+   - "Which modules import ledger.money directly? Give me the complete list, grouped by package."
+   - "Summarise the audit findings so far in a short table." (with instructions to respond text-only with an analysis and summary and no tool calls)
+
+7. Pending Tasks:
+   - The user must decide whether the tab-delimiter fix applies to `legacy_tsv_v2.py` only or to all three `legacy_tsv` importers. When approved, make the edit and add a test for tab-separated input.
+   - Continue the audit if the user gives further requests. No edits are permitted until the user says the audit is finished.
+
+8. Current Work:
+   Producing the summary of audit findings so far. Just before this, I finished the "which modules import ledger.money" listing (69 modules) and corrected earlier miscounts (six report types; 220 call sites). No files have been modified.
+
+9. Optional Next Step:
+   Present the findings table above to the user and re-raise the open decision: "should I change only v2, as you said, or all three `legacy_tsv` importers?" Make no edits until they say the audit is complete and confirm the scope.
+
+If you need specific details from before compaction (like exact code snippets, error messages, or content you generated), read the full transcript at: C:\Users\aryan\.claude\projects\C--Users-aryan-AppData-Local-Temp-velra-hardened-fixtures-s3-working-set-velra-r2\1eaf7069-7557-46c2-9c3c-4f375e7e19b6.jsonl
+Continue the conversation from where it left off without asking the user any further questions. Resume directly — do not acknowledge the summary, do not recap what was happening, do not preface with "I'll continue" or similar. Pick up the last task as if the break never happened.

@@ -1,0 +1,619 @@
+{
+  "scenario": "s3-working-set",
+  "arm": "velra",
+  "replicate": 4,
+  "pair_id": "s3-working-set#r4",
+  "pair_key": {
+    "scenario": "s3-working-set",
+    "pair_id": "s3-working-set#r4",
+    "fixture_seed": "8b1dfed4efd60e13",
+    "model": "sonnet",
+    "turn_count": 14,
+    "compact_turn_index": 12,
+    "measured_turn_index": 13,
+    "claude_version": "2.1.272",
+    "velra_commit": "4b68b6b7c"
+  },
+  "model": "sonnet",
+  "session_id": "026dc677-9371-41dc-857f-f3a5b692e93b",
+  "transcript_source": "C:\\Users\\aryan\\.claude\\projects\\C--Users-aryan-AppData-Local-Temp-velra-hardened-fixtures-s3-working-set-velra-r4\\026dc677-9371-41dc-857f-f3a5b692e93b.jsonl",
+  "fixture": "C:\\Users\\aryan\\AppData\\Local\\Temp\\velra-hardened-fixtures\\s3-working-set-velra-r4",
+  "velra_home": "C:\\Users\\aryan\\Videos\\Velra\\bench\\results\\v0.1.2\\trials\\s3-working-set-velra-r4\\velra_home",
+  "wall_seconds": 11.089,
+  "turns_sent": 14,
+  "turns_expected": 14,
+  "compact_turn_index": 12,
+  "measured_turn_index": 13,
+  "compact_status": {
+    "compact_result": "failed",
+    "compact_error": "Error during compaction: You've hit your session limit \u00b7 resets 9:40pm (Asia/Kolkata)",
+    "at_turn": 12
+  },
+  "turn_marks": [
+    {
+      "turn": 0,
+      "elapsed_s": 1.913,
+      "duration_ms": 807,
+      "total_cost_usd": 0,
+      "num_turns": 1,
+      "subtype": "success",
+      "usage": {
+        "output_tokens_details": {
+          "thinking_tokens": 0
+        },
+        "input_tokens": 0,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 0,
+        "output_tokens": 0,
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 0,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "",
+        "iterations": [],
+        "speed": "standard"
+      }
+    },
+    {
+      "turn": 1,
+      "elapsed_s": 2.619,
+      "duration_ms": 703,
+      "total_cost_usd": 0,
+      "num_turns": 1,
+      "subtype": "success",
+      "usage": {
+        "output_tokens_details": {
+          "thinking_tokens": 0
+        },
+        "input_tokens": 0,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 0,
+        "output_tokens": 0,
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 0,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "",
+        "iterations": [],
+        "speed": "standard"
+      }
+    },
+    {
+      "turn": 2,
+      "elapsed_s": 3.159,
+      "duration_ms": 530,
+      "total_cost_usd": 0,
+      "num_turns": 1,
+      "subtype": "success",
+      "usage": {
+        "output_tokens_details": {
+          "thinking_tokens": 0
+        },
+        "input_tokens": 0,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 0,
+        "output_tokens": 0,
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 0,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "",
+        "iterations": [],
+        "speed": "standard"
+      }
+    },
+    {
+      "turn": 3,
+      "elapsed_s": 3.851,
+      "duration_ms": 688,
+      "total_cost_usd": 0,
+      "num_turns": 1,
+      "subtype": "success",
+      "usage": {
+        "output_tokens_details": {
+          "thinking_tokens": 0
+        },
+        "input_tokens": 0,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 0,
+        "output_tokens": 0,
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 0,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "",
+        "iterations": [],
+        "speed": "standard"
+      }
+    },
+    {
+      "turn": 4,
+      "elapsed_s": 4.401,
+      "duration_ms": 546,
+      "total_cost_usd": 0,
+      "num_turns": 1,
+      "subtype": "success",
+      "usage": {
+        "output_tokens_details": {
+          "thinking_tokens": 0
+        },
+        "input_tokens": 0,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 0,
+        "output_tokens": 0,
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 0,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "",
+        "iterations": [],
+        "speed": "standard"
+      }
+    },
+    {
+      "turn": 5,
+      "elapsed_s": 5.082,
+      "duration_ms": 676,
+      "total_cost_usd": 0,
+      "num_turns": 1,
+      "subtype": "success",
+      "usage": {
+        "output_tokens_details": {
+          "thinking_tokens": 0
+        },
+        "input_tokens": 0,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 0,
+        "output_tokens": 0,
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 0,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "",
+        "iterations": [],
+        "speed": "standard"
+      }
+    },
+    {
+      "turn": 6,
+      "elapsed_s": 5.823,
+      "duration_ms": 735,
+      "total_cost_usd": 0,
+      "num_turns": 1,
+      "subtype": "success",
+      "usage": {
+        "output_tokens_details": {
+          "thinking_tokens": 0
+        },
+        "input_tokens": 0,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 0,
+        "output_tokens": 0,
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 0,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "",
+        "iterations": [],
+        "speed": "standard"
+      }
+    },
+    {
+      "turn": 7,
+      "elapsed_s": 6.53,
+      "duration_ms": 704,
+      "total_cost_usd": 0,
+      "num_turns": 1,
+      "subtype": "success",
+      "usage": {
+        "output_tokens_details": {
+          "thinking_tokens": 0
+        },
+        "input_tokens": 0,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 0,
+        "output_tokens": 0,
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 0,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "",
+        "iterations": [],
+        "speed": "standard"
+      }
+    },
+    {
+      "turn": 8,
+      "elapsed_s": 7.162,
+      "duration_ms": 629,
+      "total_cost_usd": 0,
+      "num_turns": 1,
+      "subtype": "success",
+      "usage": {
+        "output_tokens_details": {
+          "thinking_tokens": 0
+        },
+        "input_tokens": 0,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 0,
+        "output_tokens": 0,
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 0,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "",
+        "iterations": [],
+        "speed": "standard"
+      }
+    },
+    {
+      "turn": 9,
+      "elapsed_s": 7.75,
+      "duration_ms": 579,
+      "total_cost_usd": 0,
+      "num_turns": 1,
+      "subtype": "success",
+      "usage": {
+        "output_tokens_details": {
+          "thinking_tokens": 0
+        },
+        "input_tokens": 0,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 0,
+        "output_tokens": 0,
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 0,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "",
+        "iterations": [],
+        "speed": "standard"
+      }
+    },
+    {
+      "turn": 10,
+      "elapsed_s": 8.286,
+      "duration_ms": 531,
+      "total_cost_usd": 0,
+      "num_turns": 1,
+      "subtype": "success",
+      "usage": {
+        "output_tokens_details": {
+          "thinking_tokens": 0
+        },
+        "input_tokens": 0,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 0,
+        "output_tokens": 0,
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 0,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "",
+        "iterations": [],
+        "speed": "standard"
+      }
+    },
+    {
+      "turn": 11,
+      "elapsed_s": 9.038,
+      "duration_ms": 750,
+      "total_cost_usd": 0,
+      "num_turns": 1,
+      "subtype": "success",
+      "usage": {
+        "output_tokens_details": {
+          "thinking_tokens": 0
+        },
+        "input_tokens": 0,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 0,
+        "output_tokens": 0,
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 0,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "",
+        "iterations": [],
+        "speed": "standard"
+      }
+    },
+    {
+      "turn": 12,
+      "elapsed_s": 9.838,
+      "duration_ms": 799,
+      "total_cost_usd": 0,
+      "num_turns": 0,
+      "subtype": "success",
+      "usage": {
+        "output_tokens_details": {
+          "thinking_tokens": 0
+        },
+        "input_tokens": 0,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 0,
+        "output_tokens": 0,
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 0,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "",
+        "iterations": [],
+        "speed": "standard"
+      }
+    },
+    {
+      "turn": 13,
+      "elapsed_s": 10.5,
+      "duration_ms": 658,
+      "total_cost_usd": 0,
+      "num_turns": 1,
+      "subtype": "success",
+      "usage": {
+        "output_tokens_details": {
+          "thinking_tokens": 0
+        },
+        "input_tokens": 0,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 0,
+        "output_tokens": 0,
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 0,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "",
+        "iterations": [],
+        "speed": "standard"
+      }
+    }
+  ],
+  "final_pytest_exit": 0,
+  "stderr": "",
+  "manifest": {
+    "failing_test": null,
+    "failing_assertion_line": null,
+    "true_fix_file": "src/ledger/importers/legacy_tsv_v2.py",
+    "true_fix_symbol": "DELIMITER",
+    "required_final_state": [
+      {
+        "file": "src/ledger/importers/legacy_tsv_v2.py",
+        "contains": "DELIMITER = \"\\t\""
+      }
+    ],
+    "sibling_files": [
+      "src/ledger/importers/legacy_tsv_v1.py",
+      "src/ledger/importers/legacy_tsv_v3.py"
+    ],
+    "decoy_count": 2,
+    "dead_end_files": [],
+    "dead_end_file": null,
+    "anaphor": "the module we agreed to fix",
+    "uncommitted_files": [],
+    "noise_module_count": 84,
+    "suite_must_stay_green": true,
+    "scenario": "s3-working-set",
+    "title": "The file we agreed on, after eighty-four others",
+    "mechanism": "[WORKING_FILES]",
+    "repo": "C:\\Users\\aryan\\AppData\\Local\\Temp\\velra-hardened-fixtures\\s3-working-set-velra-r4",
+    "leak_terms": [
+      "splits on whitespace even though",
+      "should be a tab",
+      "the bug we are going to fix",
+      "agreed to fix",
+      "TODO(importers)",
+      "the module we agreed",
+      "v2 is the one",
+      "fix v2"
+    ],
+    "canary": {
+      "file": "src/ledger/adapters/adyen_uk.py",
+      "const": "API_KEY_PREFIX",
+      "value": "AQE1",
+      "seed_turn": 4
+    },
+    "compact_turn_index": 12,
+    "measured_turn_index": 13,
+    "turn_count": 14,
+    "target_facts": [
+      {
+        "id": "s3-agreed-file",
+        "what": "src/ledger/importers/legacy_tsv_v2.py is the module turn 3 named as the one to fix.",
+        "probe": "Four turns in, before the audit, we agreed on one specific module to fix and deferred the change. Which module was it? Reply with just the file path.",
+        "recalled_markers": [
+          "legacy_tsv_v2"
+        ],
+        "ledger_table": "file_stats",
+        "ledger_sql": "SELECT f.path, f.reads, f.edits, f.first_touch_ms, f.last_touch_ms FROM file_stats f WHERE f.path LIKE '%legacy_tsv_v2.py' AND f.reads >= 1   AND f.last_touch_ms <= (SELECT COALESCE(MAX(ts_ms), 0) FROM events                           WHERE id <= ?1)",
+        "capsule_markers": [
+          "legacy_tsv_v2"
+        ],
+        "necessary_because": "the measured turn is 'Now make that fix', and 'that' is never written into the repository. Three importers are broken in the same visible way, so the tree cannot disambiguate them; there is no failing test pointing anywhere, because the suite is green throughout. The reference resolves from the conversation, from the capsule, or not at all."
+      }
+    ],
+    "fixture_seed": "8b1dfed4efd60e13",
+    "ground_truth": {
+      "as_generated": {
+        "exit": 0,
+        "counts": {
+          "passed": 6,
+          "failed": 0,
+          "errors": 0
+        },
+        "expected": "green",
+        "observed": "green",
+        "tail": [
+          "6 passed in 0.03s"
+        ]
+      }
+    },
+    "leak_scan": {
+      "clean": true,
+      "terms": [
+        "splits on whitespace even though",
+        "should be a tab",
+        "the bug we are going to fix",
+        "agreed to fix",
+        "TODO(importers)",
+        "the module we agreed",
+        "v2 is the one",
+        "fix v2"
+      ],
+      "hits": []
+    },
+    "leak_scan_wide": {
+      "clean": true,
+      "terms": [
+        "splits on whitespace even though",
+        "should be a tab",
+        "the bug we are going to fix",
+        "agreed to fix",
+        "TODO(importers)",
+        "the module we agreed",
+        "v2 is the one",
+        "fix v2"
+      ],
+      "surfaces_scanned": [
+        "tree",
+        "filenames",
+        "pre_prompts",
+        "post_prompt",
+        "environment"
+      ],
+      "fatal_surfaces": [
+        "tree",
+        "filenames",
+        "post_prompt",
+        "environment"
+      ],
+      "hits_by_surface": {
+        "pre_prompts": 3
+      },
+      "fatal_hits": [],
+      "hits": [
+        {
+          "surface": "pre_prompts",
+          "where": "turn 3",
+          "term": "splits on whitespace even though",
+          "context": "Right. src/ledger/importers/legacy_tsv_v2.py splits on whitespace even though it is a tab-separated importer, and that is the bug we are"
+        },
+        {
+          "surface": "pre_prompts",
+          "where": "turn 3",
+          "term": "should be a tab",
+          "context": "ter, and that is the bug we are going to fix: its DELIMITER should be a tab, like its siblings. Do not change anything yet \u2014 I want the"
+        },
+        {
+          "surface": "pre_prompts",
+          "where": "turn 3",
+          "term": "the bug we are going to fix",
+          "context": "ace even though it is a tab-separated importer, and that is the bug we are going to fix: its DELIMITER should be a tab, like its siblings. Do not c"
+        }
+      ]
+    }
+  },
+  "claude_binary": "C:\\Users\\aryan\\.vscode\\extensions\\anthropic.claude-code-2.1.272-win32-x64\\resources\\native-binary\\claude.exe",
+  "claude_version": "2.1.272",
+  "velra_binary": "C:\\Users\\aryan\\Videos\\Velra\\target\\release\\velra.exe",
+  "provenance": {
+    "binary": "C:\\Users\\aryan\\Videos\\Velra\\target\\release\\velra.exe",
+    "binary_bytes": 5399040,
+    "reported_version": "velra 0.1.1 (4b68b6b7c, x86_64-pc-windows-gnu)",
+    "embedded_commit": "4b68b6b7c",
+    "git_head": "4b68b6b7cc82c94d420377afcd1200622700123b",
+    "git_head_short9": "4b68b6b7c",
+    "git_branch": "main",
+    "git_describe": "v0.1.1-benchmark-baseline-7-g4b68b6b",
+    "working_tree_clean": false,
+    "working_tree_changes": [
+      "?? bench/results/v0.1.2/"
+    ],
+    "commit_matches_binary": true,
+    "host": {
+      "platform": "Windows-11-10.0.26200-SP0",
+      "machine": "AMD64",
+      "python": "3.14.0",
+      "processor": "Intel64 Family 6 Model 183 Stepping 1, GenuineIntel",
+      "cpu_count": 20
+    },
+    "agent": {
+      "binary": "C:\\Users\\aryan\\.vscode\\extensions\\anthropic.claude-code-2.1.272-win32-x64\\resources\\native-binary\\claude.exe",
+      "version": "2.1.272"
+    },
+    "warnings": [
+      "the working tree is dirty: results cannot be attributed to a commit"
+    ]
+  },
+  "preregistration_version": "1.0.0",
+  "preregistration_sha256": "4658a1a538411e0f15bf9c5d57ee50ede85bcd2d7929b8c7045262732c2eb1ad",
+  "minimum_replicates_per_arm": 4
+}

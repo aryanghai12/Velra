@@ -1,0 +1,958 @@
+{
+  "scenario": "s1-dead-end-pair",
+  "arm": "baseline",
+  "replicate": 1,
+  "pair_id": "s1-dead-end-pair#r1",
+  "pair_key": {
+    "scenario": "s1-dead-end-pair",
+    "pair_id": "s1-dead-end-pair#r1",
+    "fixture_seed": "48819ce65e3bca90",
+    "model": "sonnet",
+    "turn_count": 17,
+    "compact_turn_index": 15,
+    "measured_turn_index": 16,
+    "claude_version": "2.1.272",
+    "velra_commit": "4b68b6b7c"
+  },
+  "model": "sonnet",
+  "session_id": "801146f9-f853-4e88-bca5-99d48c4cdd0e",
+  "transcript_source": "C:\\Users\\aryan\\.claude\\projects\\C--Users-aryan-AppData-Local-Temp-velra-hardened-fixtures-s1-dead-end-pair-baseline-r1\\801146f9-f853-4e88-bca5-99d48c4cdd0e.jsonl",
+  "fixture": "C:\\Users\\aryan\\AppData\\Local\\Temp\\velra-hardened-fixtures\\s1-dead-end-pair-baseline-r1",
+  "velra_home": "C:\\Users\\aryan\\Videos\\Velra\\bench\\results\\v0.1.2\\trials\\s1-dead-end-pair-baseline-r1\\velra_home",
+  "wall_seconds": 262.887,
+  "turns_sent": 17,
+  "turns_expected": 17,
+  "compact_turn_index": 15,
+  "measured_turn_index": 16,
+  "compact_status": {
+    "compact_result": "success",
+    "compact_error": null,
+    "at_turn": 15
+  },
+  "turn_marks": [
+    {
+      "turn": 0,
+      "elapsed_s": 9.58,
+      "duration_ms": 8627,
+      "total_cost_usd": 0.04743619999999999,
+      "num_turns": 2,
+      "subtype": "success",
+      "usage": {
+        "input_tokens": 4,
+        "cache_creation_input_tokens": 8895,
+        "cache_read_input_tokens": 34856,
+        "output_tokens": 388,
+        "output_tokens_details": {
+          "thinking_tokens": 0
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 8895,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "not_available",
+        "iterations": [
+          {
+            "input_tokens": 2,
+            "output_tokens": 298,
+            "cache_read_input_tokens": 21666,
+            "cache_creation_input_tokens": 419,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 419
+            },
+            "type": "message"
+          }
+        ],
+        "speed": "standard"
+      }
+    },
+    {
+      "turn": 1,
+      "elapsed_s": 19.669,
+      "duration_ms": 10085,
+      "total_cost_usd": 0.079789,
+      "num_turns": 6,
+      "subtype": "success",
+      "usage": {
+        "input_tokens": 4,
+        "cache_creation_input_tokens": 3389,
+        "cache_read_input_tokens": 44594,
+        "output_tokens": 987,
+        "output_tokens_details": {
+          "thinking_tokens": 0
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 3389,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "not_available",
+        "iterations": [
+          {
+            "input_tokens": 2,
+            "output_tokens": 458,
+            "cache_read_input_tokens": 22509,
+            "cache_creation_input_tokens": 2965,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 2965
+            },
+            "type": "message"
+          }
+        ],
+        "speed": "standard"
+      }
+    },
+    {
+      "turn": 2,
+      "elapsed_s": 32.36,
+      "duration_ms": 12687,
+      "total_cost_usd": 0.1151254,
+      "num_turns": 4,
+      "subtype": "success",
+      "usage": {
+        "input_tokens": 6,
+        "cache_creation_input_tokens": 2212,
+        "cache_read_input_tokens": 78382,
+        "output_tokens": 1080,
+        "output_tokens_details": {
+          "thinking_tokens": 0
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 2212,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "not_available",
+        "iterations": [
+          {
+            "input_tokens": 2,
+            "output_tokens": 473,
+            "cache_read_input_tokens": 26848,
+            "cache_creation_input_tokens": 838,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 838
+            },
+            "type": "message"
+          }
+        ],
+        "speed": "standard"
+      }
+    },
+    {
+      "turn": 3,
+      "elapsed_s": 37.58,
+      "duration_ms": 5217,
+      "total_cost_usd": 0.1355028,
+      "num_turns": 2,
+      "subtype": "success",
+      "usage": {
+        "input_tokens": 4,
+        "cache_creation_input_tokens": 1623,
+        "cache_read_input_tokens": 55937,
+        "output_tokens": 269,
+        "output_tokens_details": {
+          "thinking_tokens": 0
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 1623,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "not_available",
+        "iterations": [
+          {
+            "input_tokens": 2,
+            "output_tokens": 154,
+            "cache_read_input_tokens": 28251,
+            "cache_creation_input_tokens": 1058,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 1058
+            },
+            "type": "message"
+          }
+        ],
+        "speed": "standard"
+      }
+    },
+    {
+      "turn": 4,
+      "elapsed_s": 47.118,
+      "duration_ms": 9535,
+      "total_cost_usd": 0.159406,
+      "num_turns": 3,
+      "subtype": "success",
+      "usage": {
+        "input_tokens": 4,
+        "cache_creation_input_tokens": 1106,
+        "cache_read_input_tokens": 58906,
+        "output_tokens": 769,
+        "output_tokens_details": {
+          "thinking_tokens": 89
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 1106,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "not_available",
+        "iterations": [
+          {
+            "input_tokens": 2,
+            "output_tokens": 419,
+            "cache_read_input_tokens": 29597,
+            "cache_creation_input_tokens": 818,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 818
+            },
+            "type": "message"
+          }
+        ],
+        "speed": "standard"
+      }
+    },
+    {
+      "turn": 5,
+      "elapsed_s": 54.387,
+      "duration_ms": 7266,
+      "total_cost_usd": 0.180885,
+      "num_turns": 2,
+      "subtype": "success",
+      "usage": {
+        "input_tokens": 4,
+        "cache_creation_input_tokens": 1243,
+        "cache_read_input_tokens": 61345,
+        "output_tokens": 423,
+        "output_tokens_details": {
+          "thinking_tokens": 0
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 1243,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "not_available",
+        "iterations": [
+          {
+            "input_tokens": 2,
+            "output_tokens": 302,
+            "cache_read_input_tokens": 30930,
+            "cache_creation_input_tokens": 728,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 728
+            },
+            "type": "message"
+          }
+        ],
+        "speed": "standard"
+      }
+    },
+    {
+      "turn": 6,
+      "elapsed_s": 67.645,
+      "duration_ms": 13256,
+      "total_cost_usd": 0.2109644,
+      "num_turns": 2,
+      "subtype": "success",
+      "usage": {
+        "input_tokens": 4,
+        "cache_creation_input_tokens": 1341,
+        "cache_read_input_tokens": 63687,
+        "output_tokens": 1197,
+        "output_tokens_details": {
+          "thinking_tokens": 280
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 1341,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "not_available",
+        "iterations": [
+          {
+            "input_tokens": 2,
+            "output_tokens": 1090,
+            "cache_read_input_tokens": 32029,
+            "cache_creation_input_tokens": 970,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 970
+            },
+            "type": "message"
+          }
+        ],
+        "speed": "standard"
+      }
+    },
+    {
+      "turn": 7,
+      "elapsed_s": 89.054,
+      "duration_ms": 21406,
+      "total_cost_usd": 0.3000876,
+      "num_turns": 6,
+      "subtype": "success",
+      "usage": {
+        "input_tokens": 8,
+        "cache_creation_input_tokens": 10092,
+        "cache_read_input_tokens": 139196,
+        "output_tokens": 2090,
+        "output_tokens_details": {
+          "thinking_tokens": 267
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 10092,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "not_available",
+        "iterations": [
+          {
+            "input_tokens": 2,
+            "output_tokens": 1126,
+            "cache_read_input_tokens": 37085,
+            "cache_creation_input_tokens": 6006,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 6006
+            },
+            "type": "message"
+          }
+        ],
+        "speed": "standard"
+      }
+    },
+    {
+      "turn": 8,
+      "elapsed_s": 105.939,
+      "duration_ms": 16884,
+      "total_cost_usd": 0.3734958,
+      "num_turns": 5,
+      "subtype": "success",
+      "usage": {
+        "input_tokens": 8,
+        "cache_creation_input_tokens": 5775,
+        "cache_read_input_tokens": 180011,
+        "output_tokens": 1429,
+        "output_tokens_details": {
+          "thinking_tokens": 38
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 5775,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "not_available",
+        "iterations": [
+          {
+            "input_tokens": 2,
+            "output_tokens": 787,
+            "cache_read_input_tokens": 47772,
+            "cache_creation_input_tokens": 1094,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 1094
+            },
+            "type": "message"
+          }
+        ],
+        "speed": "standard"
+      }
+    },
+    {
+      "turn": 9,
+      "elapsed_s": 119.139,
+      "duration_ms": 13197,
+      "total_cost_usd": 0.43803960000000003,
+      "num_turns": 4,
+      "subtype": "success",
+      "usage": {
+        "input_tokens": 6,
+        "cache_creation_input_tokens": 5950,
+        "cache_read_input_tokens": 148809,
+        "output_tokens": 1097,
+        "output_tokens_details": {
+          "thinking_tokens": 0
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 5950,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "not_available",
+        "iterations": [
+          {
+            "input_tokens": 2,
+            "output_tokens": 704,
+            "cache_read_input_tokens": 50192,
+            "cache_creation_input_tokens": 4624,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 4624
+            },
+            "type": "message"
+          }
+        ],
+        "speed": "standard"
+      }
+    },
+    {
+      "turn": 10,
+      "elapsed_s": 139.062,
+      "duration_ms": 19919,
+      "total_cost_usd": 0.5168192,
+      "num_turns": 6,
+      "subtype": "success",
+      "usage": {
+        "input_tokens": 8,
+        "cache_creation_input_tokens": 4510,
+        "cache_read_input_tokens": 224118,
+        "output_tokens": 1590,
+        "output_tokens_details": {
+          "thinking_tokens": 46
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 4510,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "not_available",
+        "iterations": [
+          {
+            "input_tokens": 2,
+            "output_tokens": 726,
+            "cache_read_input_tokens": 57695,
+            "cache_creation_input_tokens": 1631,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 1631
+            },
+            "type": "message"
+          }
+        ],
+        "speed": "standard"
+      }
+    },
+    {
+      "turn": 11,
+      "elapsed_s": 150.021,
+      "duration_ms": 10957,
+      "total_cost_usd": 0.5583332000000001,
+      "num_turns": 2,
+      "subtype": "success",
+      "usage": {
+        "input_tokens": 4,
+        "cache_creation_input_tokens": 2166,
+        "cache_read_input_tokens": 119460,
+        "output_tokens": 895,
+        "output_tokens_details": {
+          "thinking_tokens": 0
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 2166,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "not_available",
+        "iterations": [
+          {
+            "input_tokens": 2,
+            "output_tokens": 704,
+            "cache_read_input_tokens": 60134,
+            "cache_creation_input_tokens": 1358,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 1358
+            },
+            "type": "message"
+          }
+        ],
+        "speed": "standard"
+      }
+    },
+    {
+      "turn": 12,
+      "elapsed_s": 166.717,
+      "duration_ms": 16693,
+      "total_cost_usd": 0.6343624,
+      "num_turns": 2,
+      "subtype": "success",
+      "usage": {
+        "input_tokens": 4,
+        "cache_creation_input_tokens": 8902,
+        "cache_read_input_tokens": 123766,
+        "output_tokens": 1566,
+        "output_tokens_details": {
+          "thinking_tokens": 302
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 8902,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "not_available",
+        "iterations": [
+          {
+            "input_tokens": 2,
+            "output_tokens": 1395,
+            "cache_read_input_tokens": 62274,
+            "cache_creation_input_tokens": 8120,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 8120
+            },
+            "type": "message"
+          }
+        ],
+        "speed": "standard"
+      }
+    },
+    {
+      "turn": 13,
+      "elapsed_s": 182.819,
+      "duration_ms": 16100,
+      "total_cost_usd": 0.7056334000000001,
+      "num_turns": 3,
+      "subtype": "success",
+      "usage": {
+        "input_tokens": 6,
+        "cache_creation_input_tokens": 3551,
+        "cache_read_input_tokens": 215875,
+        "output_tokens": 1388,
+        "output_tokens_details": {
+          "thinking_tokens": 141
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 3551,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "not_available",
+        "iterations": [
+          {
+            "input_tokens": 2,
+            "output_tokens": 837,
+            "cache_read_input_tokens": 73619,
+            "cache_creation_input_tokens": 326,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 326
+            },
+            "type": "message"
+          }
+        ],
+        "speed": "standard"
+      }
+    },
+    {
+      "turn": 14,
+      "elapsed_s": 193.0,
+      "duration_ms": 10178,
+      "total_cost_usd": 0.7346744000000001,
+      "num_turns": 1,
+      "subtype": "success",
+      "usage": {
+        "input_tokens": 2,
+        "cache_creation_input_tokens": 902,
+        "cache_read_input_tokens": 73945,
+        "output_tokens": 1064,
+        "output_tokens_details": {
+          "thinking_tokens": 0
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 902,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "not_available",
+        "iterations": [
+          {
+            "input_tokens": 2,
+            "output_tokens": 1064,
+            "cache_read_input_tokens": 73945,
+            "cache_creation_input_tokens": 902,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 902
+            },
+            "type": "message"
+          }
+        ],
+        "speed": "standard"
+      }
+    },
+    {
+      "turn": 15,
+      "elapsed_s": 247.681,
+      "duration_ms": 54678,
+      "total_cost_usd": 0.8129308000000001,
+      "num_turns": 0,
+      "subtype": "success",
+      "usage": {
+        "output_tokens_details": {
+          "thinking_tokens": 0
+        },
+        "input_tokens": 0,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 0,
+        "output_tokens": 0,
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 0,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "",
+        "iterations": [],
+        "speed": "standard"
+      }
+    },
+    {
+      "turn": 16,
+      "elapsed_s": 262.338,
+      "duration_ms": 14655,
+      "total_cost_usd": 0.888948,
+      "num_turns": 5,
+      "subtype": "success",
+      "usage": {
+        "input_tokens": 8,
+        "cache_creation_input_tokens": 11987,
+        "cache_read_input_tokens": 92816,
+        "output_tokens": 949,
+        "output_tokens_details": {
+          "thinking_tokens": 73
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 11987,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "not_available",
+        "iterations": [
+          {
+            "input_tokens": 2,
+            "output_tokens": 209,
+            "cache_read_input_tokens": 26728,
+            "cache_creation_input_tokens": 135,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 135
+            },
+            "type": "message"
+          }
+        ],
+        "speed": "standard"
+      }
+    }
+  ],
+  "final_pytest_exit": 0,
+  "stderr": "",
+  "manifest": {
+    "failing_test": "tests/test_engine.py::test_exact_payment_settles_invoice",
+    "failing_assertion_line": 59,
+    "failing_assertion_text": "assert result.status == \"SETTLED\"",
+    "true_fix_file": "src/ledger/promos.py",
+    "true_fix_symbol": "discount_total",
+    "dead_end_files": [
+      "src/ledger/surcharges.py",
+      "src/ledger/money.py"
+    ],
+    "dead_end_file": "src/ledger/surcharges.py",
+    "dead_end_symbol": "handling_total",
+    "twin_files": [
+      "src/ledger/promos.py",
+      "src/ledger/surcharges.py"
+    ],
+    "historical_dead_end_commit": "c9017bd",
+    "historical_revert_commit": "459768b",
+    "uncommitted_files": [
+      "src/ledger/rules.py"
+    ],
+    "noise_module_count": 84,
+    "expected_status": "SETTLED",
+    "observed_status": "UNDERPAID",
+    "scenario": "s1-dead-end-pair",
+    "title": "Two indistinguishable candidates, one already eliminated",
+    "mechanism": "[DEAD_ENDS]",
+    "repo": "C:\\Users\\aryan\\AppData\\Local\\Temp\\velra-hardened-fixtures\\s1-dead-end-pair-baseline-r1",
+    "leak_terms": [
+      "not of each line",
+      "per line item",
+      "each line item",
+      "discount the subtotal",
+      "subtotal once",
+      "discount_for(subtotal)",
+      "round once",
+      "rounds three times",
+      "discount_total is",
+      "promos is the",
+      "handling_total is correct",
+      "surcharges is correct",
+      "not surcharges",
+      "not promos"
+    ],
+    "canary": {
+      "file": "src/ledger/adapters/adyen_uk.py",
+      "const": "API_KEY_PREFIX",
+      "value": "AQE1",
+      "seed_turn": 7
+    },
+    "compact_turn_index": 15,
+    "measured_turn_index": 16,
+    "turn_count": 17,
+    "target_facts": [
+      {
+        "id": "s1-burned-twin",
+        "what": "src/ledger/surcharges.py was collapsed and reverted before the boundary, and collapsing it changed nothing.",
+        "probe": "Earlier in this session we changed one of the two per-line aggregator modules so it rounded once on the subtotal, saw the suite fail in exactly the same way, and reverted it with git. Which module was that? Reply with just the file path.",
+        "recalled_markers": [
+          "surcharges"
+        ],
+        "ledger_table": "dead_ends",
+        "ledger_sql": "SELECT d.id, d.path, d.mechanism, d.command_text, d.resolved_ms,        e.id AS event_id FROM dead_ends d JOIN edits x ON x.id = (SELECT MIN(value) FROM json_each(d.edit_ids)) JOIN events e ON e.id = x.event_id WHERE d.path LIKE '%surcharges.py' AND d.reapplied = 0   AND e.id <= ?1",
+        "capsule_markers": [
+          "surcharges.py"
+        ],
+        "necessary_because": "promos.discount_total and surcharges.handling_total are written to be the same module twice: same loop, same per-line rounding call, same docstring skeleton. Which of them loses the cent depends on how 0.074 and 0.0185 happen to land against three specific line amounts, and nothing in the tree says which. An agent that has lost the elimination is choosing between two candidates it cannot tell apart; one that still has it is choosing between one."
+      }
+    ],
+    "fixture_seed": "48819ce65e3bca90",
+    "ground_truth": {
+      "as_generated": {
+        "exit": 1,
+        "counts": {
+          "passed": 6,
+          "failed": 1,
+          "errors": 0
+        },
+        "expected": "red",
+        "observed": "red",
+        "tail": [
+          "1 failed, 6 passed in 0.08s"
+        ]
+      },
+      "dead_end_money_round_half_even": {
+        "exit": 1,
+        "counts": {
+          "passed": 4,
+          "failed": 3,
+          "errors": 0
+        },
+        "expected": "red",
+        "observed": "red",
+        "tail": [
+          "3 failed, 4 passed in 0.06s"
+        ]
+      },
+      "dead_end_surcharges_collapse_the_loop": {
+        "exit": 1,
+        "counts": {
+          "passed": 6,
+          "failed": 1,
+          "errors": 0
+        },
+        "expected": "red",
+        "observed": "red",
+        "tail": [
+          "1 failed, 6 passed in 0.06s"
+        ]
+      },
+      "true_fix_promos_collapse_the_loop": {
+        "exit": 0,
+        "counts": {
+          "passed": 7,
+          "failed": 0,
+          "errors": 0
+        },
+        "expected": "green",
+        "observed": "green",
+        "tail": [
+          "7 passed in 0.03s"
+        ]
+      },
+      "both_collapsed_is_still_green": {
+        "exit": 0,
+        "counts": {
+          "passed": 7,
+          "failed": 0,
+          "errors": 0
+        },
+        "expected": "green",
+        "observed": "green",
+        "tail": [
+          "7 passed in 0.02s"
+        ]
+      }
+    },
+    "leak_scan": {
+      "clean": true,
+      "terms": [
+        "not of each line",
+        "per line item",
+        "each line item",
+        "discount the subtotal",
+        "subtotal once",
+        "discount_for(subtotal)",
+        "round once",
+        "rounds three times",
+        "discount_total is",
+        "promos is the",
+        "handling_total is correct",
+        "surcharges is correct",
+        "not surcharges",
+        "not promos"
+      ],
+      "hits": []
+    },
+    "leak_scan_wide": {
+      "clean": true,
+      "terms": [
+        "not of each line",
+        "per line item",
+        "each line item",
+        "discount the subtotal",
+        "subtotal once",
+        "discount_for(subtotal)",
+        "round once",
+        "rounds three times",
+        "discount_total is",
+        "promos is the",
+        "handling_total is correct",
+        "surcharges is correct",
+        "not surcharges",
+        "not promos"
+      ],
+      "surfaces_scanned": [
+        "tree",
+        "filenames",
+        "pre_prompts",
+        "post_prompt",
+        "environment"
+      ],
+      "fatal_surfaces": [
+        "tree",
+        "filenames",
+        "post_prompt",
+        "environment"
+      ],
+      "hits_by_surface": {
+        "pre_prompts": 1
+      },
+      "fatal_hits": [],
+      "hits": [
+        {
+          "surface": "pre_prompts",
+          "where": "turn 4",
+          "term": "round once",
+          "context": "er-line aggregators is rounding three times where it should round once. Try src/ledger/surcharges.py first \u2014 edit handling_total s"
+        }
+      ]
+    }
+  },
+  "claude_binary": "C:\\Users\\aryan\\.vscode\\extensions\\anthropic.claude-code-2.1.272-win32-x64\\resources\\native-binary\\claude.exe",
+  "claude_version": "2.1.272",
+  "velra_binary": "C:\\Users\\aryan\\Videos\\Velra\\target\\release\\velra.exe",
+  "provenance": {
+    "binary": "C:\\Users\\aryan\\Videos\\Velra\\target\\release\\velra.exe",
+    "binary_bytes": 5399040,
+    "reported_version": "velra 0.1.1 (4b68b6b7c, x86_64-pc-windows-gnu)",
+    "embedded_commit": "4b68b6b7c",
+    "git_head": "4b68b6b7cc82c94d420377afcd1200622700123b",
+    "git_head_short9": "4b68b6b7c",
+    "git_branch": "main",
+    "git_describe": "v0.1.1-benchmark-baseline-7-g4b68b6b",
+    "working_tree_clean": false,
+    "working_tree_changes": [
+      "?? bench/results/v0.1.2/"
+    ],
+    "commit_matches_binary": true,
+    "host": {
+      "platform": "Windows-11-10.0.26200-SP0",
+      "machine": "AMD64",
+      "python": "3.14.0",
+      "processor": "Intel64 Family 6 Model 183 Stepping 1, GenuineIntel",
+      "cpu_count": 20
+    },
+    "agent": {
+      "binary": "C:\\Users\\aryan\\.vscode\\extensions\\anthropic.claude-code-2.1.272-win32-x64\\resources\\native-binary\\claude.exe",
+      "version": "2.1.272"
+    },
+    "warnings": [
+      "the working tree is dirty: results cannot be attributed to a commit"
+    ]
+  },
+  "preregistration_version": "1.0.0",
+  "preregistration_sha256": "4658a1a538411e0f15bf9c5d57ee50ede85bcd2d7929b8c7045262732c2eb1ad",
+  "minimum_replicates_per_arm": 4
+}

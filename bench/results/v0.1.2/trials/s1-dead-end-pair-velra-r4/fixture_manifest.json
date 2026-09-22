@@ -1,0 +1,202 @@
+{
+  "failing_test": "tests/test_engine.py::test_exact_payment_settles_invoice",
+  "failing_assertion_line": 59,
+  "failing_assertion_text": "assert result.status == \"SETTLED\"",
+  "true_fix_file": "src/ledger/promos.py",
+  "true_fix_symbol": "discount_total",
+  "dead_end_files": [
+    "src/ledger/surcharges.py",
+    "src/ledger/money.py"
+  ],
+  "dead_end_file": "src/ledger/surcharges.py",
+  "dead_end_symbol": "handling_total",
+  "twin_files": [
+    "src/ledger/promos.py",
+    "src/ledger/surcharges.py"
+  ],
+  "historical_dead_end_commit": "75ab464",
+  "historical_revert_commit": "ec7e91b",
+  "uncommitted_files": [
+    "src/ledger/rules.py"
+  ],
+  "noise_module_count": 84,
+  "expected_status": "SETTLED",
+  "observed_status": "UNDERPAID",
+  "scenario": "s1-dead-end-pair",
+  "title": "Two indistinguishable candidates, one already eliminated",
+  "mechanism": "[DEAD_ENDS]",
+  "repo": "C:\\Users\\aryan\\AppData\\Local\\Temp\\velra-hardened-fixtures\\s1-dead-end-pair-velra-r4",
+  "leak_terms": [
+    "not of each line",
+    "per line item",
+    "each line item",
+    "discount the subtotal",
+    "subtotal once",
+    "discount_for(subtotal)",
+    "round once",
+    "rounds three times",
+    "discount_total is",
+    "promos is the",
+    "handling_total is correct",
+    "surcharges is correct",
+    "not surcharges",
+    "not promos"
+  ],
+  "canary": {
+    "file": "src/ledger/adapters/adyen_uk.py",
+    "const": "API_KEY_PREFIX",
+    "value": "AQE1",
+    "seed_turn": 7
+  },
+  "compact_turn_index": 15,
+  "measured_turn_index": 16,
+  "turn_count": 17,
+  "target_facts": [
+    {
+      "id": "s1-burned-twin",
+      "what": "src/ledger/surcharges.py was collapsed and reverted before the boundary, and collapsing it changed nothing.",
+      "probe": "Earlier in this session we changed one of the two per-line aggregator modules so it rounded once on the subtotal, saw the suite fail in exactly the same way, and reverted it with git. Which module was that? Reply with just the file path.",
+      "recalled_markers": [
+        "surcharges"
+      ],
+      "ledger_table": "dead_ends",
+      "ledger_sql": "SELECT d.id, d.path, d.mechanism, d.command_text, d.resolved_ms,        e.id AS event_id FROM dead_ends d JOIN edits x ON x.id = (SELECT MIN(value) FROM json_each(d.edit_ids)) JOIN events e ON e.id = x.event_id WHERE d.path LIKE '%surcharges.py' AND d.reapplied = 0   AND e.id <= ?1",
+      "capsule_markers": [
+        "surcharges.py"
+      ],
+      "necessary_because": "promos.discount_total and surcharges.handling_total are written to be the same module twice: same loop, same per-line rounding call, same docstring skeleton. Which of them loses the cent depends on how 0.074 and 0.0185 happen to land against three specific line amounts, and nothing in the tree says which. An agent that has lost the elimination is choosing between two candidates it cannot tell apart; one that still has it is choosing between one."
+    }
+  ],
+  "fixture_seed": "48819ce65e3bca90",
+  "ground_truth": {
+    "as_generated": {
+      "exit": 1,
+      "counts": {
+        "passed": 6,
+        "failed": 1,
+        "errors": 0
+      },
+      "expected": "red",
+      "observed": "red",
+      "tail": [
+        "1 failed, 6 passed in 0.09s"
+      ]
+    },
+    "dead_end_money_round_half_even": {
+      "exit": 1,
+      "counts": {
+        "passed": 4,
+        "failed": 3,
+        "errors": 0
+      },
+      "expected": "red",
+      "observed": "red",
+      "tail": [
+        "3 failed, 4 passed in 0.06s"
+      ]
+    },
+    "dead_end_surcharges_collapse_the_loop": {
+      "exit": 1,
+      "counts": {
+        "passed": 6,
+        "failed": 1,
+        "errors": 0
+      },
+      "expected": "red",
+      "observed": "red",
+      "tail": [
+        "1 failed, 6 passed in 0.07s"
+      ]
+    },
+    "true_fix_promos_collapse_the_loop": {
+      "exit": 0,
+      "counts": {
+        "passed": 7,
+        "failed": 0,
+        "errors": 0
+      },
+      "expected": "green",
+      "observed": "green",
+      "tail": [
+        "7 passed in 0.02s"
+      ]
+    },
+    "both_collapsed_is_still_green": {
+      "exit": 0,
+      "counts": {
+        "passed": 7,
+        "failed": 0,
+        "errors": 0
+      },
+      "expected": "green",
+      "observed": "green",
+      "tail": [
+        "7 passed in 0.02s"
+      ]
+    }
+  },
+  "leak_scan": {
+    "clean": true,
+    "terms": [
+      "not of each line",
+      "per line item",
+      "each line item",
+      "discount the subtotal",
+      "subtotal once",
+      "discount_for(subtotal)",
+      "round once",
+      "rounds three times",
+      "discount_total is",
+      "promos is the",
+      "handling_total is correct",
+      "surcharges is correct",
+      "not surcharges",
+      "not promos"
+    ],
+    "hits": []
+  },
+  "leak_scan_wide": {
+    "clean": true,
+    "terms": [
+      "not of each line",
+      "per line item",
+      "each line item",
+      "discount the subtotal",
+      "subtotal once",
+      "discount_for(subtotal)",
+      "round once",
+      "rounds three times",
+      "discount_total is",
+      "promos is the",
+      "handling_total is correct",
+      "surcharges is correct",
+      "not surcharges",
+      "not promos"
+    ],
+    "surfaces_scanned": [
+      "tree",
+      "filenames",
+      "pre_prompts",
+      "post_prompt",
+      "environment"
+    ],
+    "fatal_surfaces": [
+      "tree",
+      "filenames",
+      "post_prompt",
+      "environment"
+    ],
+    "hits_by_surface": {
+      "pre_prompts": 1
+    },
+    "fatal_hits": [],
+    "hits": [
+      {
+        "surface": "pre_prompts",
+        "where": "turn 4",
+        "term": "round once",
+        "context": "er-line aggregators is rounding three times where it should round once. Try src/ledger/surcharges.py first \u2014 edit handling_total s"
+      }
+    ]
+  }
+}

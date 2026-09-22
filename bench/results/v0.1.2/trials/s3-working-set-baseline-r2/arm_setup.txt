@@ -1,0 +1,6 @@
+$ velra disable
+exit=0
+✓ Velra disabled. Claude Code is otherwise untouched.
+  Settings: C:\Users\aryan\.claude\settings.json  (backup: C:\Users\aryan\Videos\Velra\bench\results\v0.1.2\trials\s3-working-set-baseline-r2\velra_home\backups\settings.json.20260921T115940Z.bak)
+
+

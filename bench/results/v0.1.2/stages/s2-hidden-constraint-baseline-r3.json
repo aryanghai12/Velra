@@ -1,0 +1,94 @@
+{
+  "trial": "s2-hidden-constraint-baseline-r3",
+  "scenario": "s2-hidden-constraint",
+  "arm": "baseline",
+  "replicate": 3,
+  "pair_id": "s2-hidden-constraint#r3",
+  "fixture_seed": "34d069ee44f64929",
+  "target_facts": [
+    "s2-turn-zero-constraint"
+  ],
+  "stages": {
+    "compaction_loss": {
+      "status": "fail",
+      "rule": "a target fact counts as lost when it is not recalled in a majority of valid control replicates, and the control's own context-reduction gate also holds",
+      "context_reduction_pct_median": 62.0,
+      "compaction_is_lossy": true,
+      "per_fact": {
+        "s2-turn-zero-constraint": {
+          "replicates": 2,
+          "valid_replicates": 2,
+          "lost_replicates": 0,
+          "recalled_each": [
+            true,
+            true
+          ],
+          "answers": [
+            "\"Constraint for this whole task: engine.settle must keep iterating invoice.items when it computes the discount; finance reconciles the per-line figures.\"",
+            "\"Constraint for this whole task: engine.settle must keep iterating invoice.items when it computes the discount; finance reconciles the per-line figures.\""
+          ],
+          "lost": false
+        }
+      },
+      "reason": "at least one target fact survived native compaction, so this scenario cannot attribute anything to Velra"
+    },
+    "capture": {
+      "status": "n/a",
+      "reason": "baseline arm has no ledger",
+      "blocks_chain": false
+    },
+    "delivery": {
+      "status": "n/a",
+      "reason": "baseline arm delivers no capsule",
+      "blocks_chain": false
+    },
+    "acceptance": {
+      "status": "n/a",
+      "verdict": "N/A",
+      "reason": "nothing was delivered to accept",
+      "blocks_chain": false
+    },
+    "utilisation": {
+      "status": "pass",
+      "primary_metric": "constraint_honoured",
+      "primary_value": true,
+      "correct": true,
+      "suite_green": true,
+      "secondary": {
+        "tool_calls": 5,
+        "buckets": {
+          "read": 2,
+          "search": 0,
+          "edit": 3,
+          "bash": 0,
+          "other": 0
+        },
+        "reads_before_first_edit": 1,
+        "source_rereads_before_first_edit": 1,
+        "first_edit_file": "c:/users/aryan/appdata/local/temp/velra-hardened-fixtures/s2-hidden-constraint-baseline-r3/src/ledger/rules.py",
+        "first_edit_index": 1,
+        "edit_targets": [
+          "C:\\Users\\aryan\\AppData\\Local\\Temp\\velra-hardened-fixtures\\s2-hidden-constraint-baseline-r3\\src\\ledger\\rules.py",
+          "C:\\Users\\aryan\\AppData\\Local\\Temp\\velra-hardened-fixtures\\s2-hidden-constraint-baseline-r3\\src\\ledger\\engine.py",
+          "C:\\Users\\aryan\\AppData\\Local\\Temp\\velra-hardened-fixtures\\s2-hidden-constraint-baseline-r3\\src\\ledger\\engine.py"
+        ]
+      },
+      "scenario_detail": {
+        "constraint": "engine.settle must keep iterating invoice.items when it computes the discount; finance reconciles the per-line figures",
+        "engine_shape": {
+          "parsed": true,
+          "settle_present": true,
+          "loop_in_settle": true,
+          "loop_anywhere": true
+        },
+        "constraint_honoured": true,
+        "constraint_violated_but_green": false,
+        "loop_moved_elsewhere": false,
+        "suite_green": true
+      },
+      "reason": null
+    }
+  },
+  "first_failed_stage": "compaction_loss",
+  "classification": "NOT_CAUSALLY_TESTABLE"
+}

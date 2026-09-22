@@ -1,0 +1,65 @@
+This session is being continued from a previous conversation that ran out of context. The summary below covers the earlier portion of the conversation.
+
+Summary:
+1. Primary Request and Intent:
+   The user asked for a read-only audit of the ledger codebase, ending with a short table summarising the findings so far. The user's one planned change is that `src/ledger/importers/legacy_tsv_v2.py` splits on whitespace (`DELIMITER = None`) although it's a tab-separated importer, and its DELIMITER should be a tab. The user said: "Do not change anything yet — I want the audit finished first." No edits have been made.
+
+2. Key Technical Concepts:
+   - Python package `ledger`. Money is stored as integer cents, with Decimal and ROUND_HALF_UP rounding.
+   - `split_fields` splits with `line.split()` when DELIMITER is None, and with `[c.strip() for c in line.split(DELIMITER)]` otherwise.
+   - The modules are near-identical generated copies of templates, so a fix in one can be missed in the others.
+
+3. Files and Code Sections:
+   - `src/ledger/money.py`: `Money` class with `from_str` (line 17) and `scaled`. `ZERO = Money(0)`.
+   - `src/ledger/rules.py`: `PROMO_RATE = Decimal("0.074")`; `discount_for(amount)` returns `amount.scaled(PROMO_RATE)`; `FLAT_FEE = Money(250)`.
+   - `src/ledger/importers/legacy_tsv_v2.py`: target of the planned fix. `DELIMITER = None` at line 10 and `RECORD_KIND = "invoice"` at line 11. `split_fields` is at line 45 and `Money.from_str(fields[1])` at line 61, inside a try block that raises `LegacyTsvV2ParseError`. v1 and v3 have the same code.
+   - `src/ledger/validation/iban_gb.py`: read in full. `MAX_LENGTH = 34` is duplicated in the regex `{1,34}` and the message text.
+   - `tests/test_engine.py`: the only test file. There are no importer tests.
+
+4. Errors and fixes:
+   - I reported the `from_str` call sites as being in 65 files; the correct count is 66 (1 test + 32 adapters + 15 importers + 18 reporting). I corrected this in the next answer. The 220 total was right.
+   - The user's premise that v2 differs "like its siblings" was wrong. I flagged it and asked how to scope the fix.
+
+5. Problem Solving:
+   The audit is complete for the areas requested. The TSV delimiter scope question is unresolved.
+
+6. All user messages:
+   - "Orientation first. Run `python -m pytest -q` and tell me whether the suite is green, then give me the top-level layout of src/ledger."
+   - "Read src/ledger/money.py and src/ledger/rules.py and summarise how a promotional discount is computed."
+   - "Read src/ledger/importers/legacy_tsv_v1.py and src/ledger/importers/legacy_tsv_v2.py and tell me, for each one, how it splits a record into fields and what its RECORD_KIND is."
+   - "Right. src/ledger/importers/legacy_tsv_v2.py splits on whitespace even though it is a tab-separated importer, and that is the bug we are going to fix: its DELIMITER should be a tab, like its siblings. Do not change anything yet — I want the audit finished first."
+   - "Read every module under src/ledger/adapters and list, for each one, the exception classes it defines and the currencies it supports."
+   - "Now read every module under src/ledger/reporting and list, for each one, its COLUMNS tuple and its grouping key."
+   - "Now read every module under src/ledger/importers and tell me which ones use an explicit delimiter and which split on whitespace, with the RECORD_KIND of each."
+   - "Now read every module under src/ledger/validation and list each one's MAX_LENGTH and the label it validates."
+   - "Across all the adapter modules, group them by their DECLINE_STATUS value and tell me which ones share each status."
+   - "List every call site of Money.from_str across the whole codebase, with the file and the line number for each."
+   - "Which modules import ledger.money directly? Give me the complete list, grouped by package."
+   - "Summarise the audit findings so far in a short table." (with a text-only instruction and a request for this structured summary)
+
+7. Pending Tasks:
+   - The user's planned fix: set `DELIMITER = "\t"` in `legacy_tsv_v2.py`. It is not to start until the user says so. The v2-only versus all-three-TSV-importers question is open.
+   - The short findings table requested in the latest message.
+
+8. Current Work:
+   Producing the short findings table. Findings so far:
+
+   | Area | Finding |
+   |---|---|
+   | Tests | Suite green: 6 passed. Only `tests/test_engine.py` exists, with no importer, adapter, reporting or validation tests. |
+   | Discount | `discount_for` = amount × 0.074, ROUND_HALF_UP to the cent. Flat fee is 250 cents. |
+   | TSV importers | v1, v2 and v3 all have `DELIMITER = None` (whitespace) and `RECORD_KIND = "invoice"`. No sibling uses a tab, so v2 is not the odd one out. |
+   | Importers overall | Only `bank_csv_v1/2/3` use an explicit delimiter (","). The other 12 (legacy_tsv, ledger_ofx, gateway_json, erp_fixed_width) use None. Kinds: statement, invoice, transaction, payout, journal. |
+   | Adapters | 32 modules (8 providers × us/uk/eu/apac). All support GBP/EUR/USD/CAD/AUD. Each defines `<P><R>Error(RuntimeError)` and `<P><R>Declined`. |
+   | DECLINE_STATUS | Per provider: Worldpay 400, Stripe 402, Checkout 403, Braintree 409, Mollie 410, Adyen 422, GoCardless 429, PayPal 503. Consistent across regions. 429, 503 and 410 look odd for declines. |
+   | Reporting | 18 modules (6 families × daily/monthly/quarterly). COLUMNS and key are the same across cadences. `tax_summary_daily` and `tax_summary_monthly` use a "quarter" column, likely a copy-paste leftover. |
+   | Validation | 15 modules: IBAN 34, VAT number 14, postal address 240, currency code 3, invoice number 24, each in de/fr/gb. Length limit is duplicated in the regex and message. IBAN pattern is generic. |
+   | `Money.from_str` | 220 calls in 66 files (9 tests, 160 adapters, 15 importers, 36 reporting). Importer calls are guarded; reporting calls are not, as far as I saw. |
+   | Imports of `ledger.money` | 69 modules: 3 top-level, 32 adapters, 15 importers, 18 reporting, 1 test. None in validation. |
+   | Method caveat | Most audits searched constants rather than reading every file in full. Labels for validation modules other than iban_gb are inferred from filenames. |
+
+9. Optional Next Step:
+   No code change until the user confirms. The next step is to wait for the user's answer on scope: "Fix v2 only or across all three TSV importers?" Once they answer, apply the `DELIMITER = "\t"` change as they specify and consider adding a tab-splitting test.
+
+If you need specific details from before compaction (like exact code snippets, error messages, or content you generated), read the full transcript at: C:\Users\aryan\.claude\projects\C--Users-aryan-AppData-Local-Temp-velra-hardened-fixtures-s3-working-set-baseline-r1\033611f7-bd7f-427f-ac2e-e90e478bb787.jsonl
+Continue the conversation from where it left off without asking the user any further questions. Resume directly — do not acknowledge the summary, do not recap what was happening, do not preface with "I'll continue" or similar. Pick up the last task as if the break never happened.

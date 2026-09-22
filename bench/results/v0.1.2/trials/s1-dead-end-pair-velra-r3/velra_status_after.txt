@@ -1,0 +1,9 @@
+exit=0
+✓ Enabled (13 hook handlers registered)
+  Claude Code: 2.1.272 (from VS Code extension)
+  Binary:      C:\Users\aryan\Videos\Velra\target\release\velra.exe
+  Database:    C:\Users\aryan\Videos\Velra\bench\results\v0.1.2\trials\s1-dead-end-pair-velra-r3\velra_home\velra.db (268 KiB)
+  Tracking:    1 session(s), 82 event(s)
+  Last event:  0s ago
+  Continuations: none live
+

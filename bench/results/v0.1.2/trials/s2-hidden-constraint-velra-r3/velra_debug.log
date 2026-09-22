@@ -1,0 +1,138 @@
+2026-09-21T11:39:27Z DEBUG hook session-start - 9206 us stdin=29us parse=35us context=179us db-open=5873us db-append=111us handler=2972us
+2026-09-21T11:39:28Z DEBUG hook user-prompt-submit - 4438 us stdin=202us parse=56us context=177us db-open=1437us db-append=1207us handler=1353us
+2026-09-21T11:39:30Z DEBUG hook pre-tool-use - 246 us stdin=23us parse=27us context=179us handler=15us
+2026-09-21T11:39:32Z DEBUG hook post-tool-use - 4266 us stdin=24us parse=26us context=139us db-open=1344us db-append=1456us handler=1272us
+2026-09-21T11:39:32Z DEBUG reduce - processed 3 spool 0
+2026-09-21T11:39:32Z DEBUG reduce - 5236 us stdin=26us
+2026-09-21T11:39:36Z DEBUG hook stop - 20556 us stdin=24us parse=30us context=186us db-open=1271us db-append=18792us handler=248us
+2026-09-21T11:39:36Z DEBUG reduce - processed 1 spool 0
+2026-09-21T11:39:36Z DEBUG reduce - 39597 us stdin=20us
+2026-09-21T11:39:36Z DEBUG hook user-prompt-submit - 5526 us stdin=27us parse=43us context=289us db-open=2101us db-append=1438us handler=1621us
+2026-09-21T11:39:38Z DEBUG hook post-tool-use - 19670 us stdin=24us parse=30us context=180us db-open=1250us db-append=16825us handler=1356us
+2026-09-21T11:39:39Z DEBUG hook post-tool-use - 8705 us stdin=22us parse=28us context=175us db-open=1554us db-append=5668us handler=1253us
+2026-09-21T11:39:39Z DEBUG hook post-tool-use - 3598 us stdin=24us parse=40us context=176us db-open=1256us db-append=1008us handler=1090us
+2026-09-21T11:39:39Z DEBUG reduce - processed 4 spool 0
+2026-09-21T11:39:39Z DEBUG reduce - 4886 us stdin=32us
+2026-09-21T11:39:46Z DEBUG reduce - processed 0 spool 0
+2026-09-21T11:39:46Z DEBUG reduce - 2055 us stdin=22us
+2026-09-21T11:39:46Z DEBUG hook stop - 31304 us stdin=84us parse=59us context=361us db-open=11630us db-append=18118us handler=1046us
+2026-09-21T11:39:46Z DEBUG hook user-prompt-submit - 3802 us stdin=23us parse=23us context=221us db-open=1648us db-append=855us handler=1026us
+2026-09-21T11:39:48Z DEBUG hook post-tool-use - 23285 us stdin=44us parse=34us context=192us db-open=1292us db-append=19300us handler=2420us
+2026-09-21T11:39:48Z DEBUG reduce - processed 3 spool 0
+2026-09-21T11:39:48Z DEBUG reduce - 4403 us stdin=26us
+2026-09-21T11:39:59Z DEBUG reduce - processed 0 spool 0
+2026-09-21T11:39:59Z DEBUG reduce - 1892 us stdin=26us
+2026-09-21T11:39:59Z DEBUG hook stop - 29373 us stdin=89us parse=27us context=157us db-open=9665us db-append=17941us handler=1488us
+2026-09-21T11:39:59Z DEBUG hook user-prompt-submit - 4004 us stdin=36us parse=23us context=186us db-open=1789us db-append=835us handler=1128us
+2026-09-21T11:40:01Z DEBUG hook pre-tool-use - 284 us stdin=26us parse=29us context=194us handler=33us
+2026-09-21T11:40:02Z DEBUG hook post-tool-use - 5789 us stdin=74us parse=43us context=146us db-open=2418us db-append=1302us handler=1794us
+2026-09-21T11:40:02Z DEBUG reduce - processed 3 spool 0
+2026-09-21T11:40:02Z DEBUG reduce - 8088 us stdin=2662us
+2026-09-21T11:40:05Z DEBUG hook pre-tool-use - 271 us stdin=26us parse=27us context=181us handler=35us
+2026-09-21T11:40:06Z DEBUG hook post-tool-use - 21336 us stdin=26us parse=26us context=154us db-open=1591us db-append=18168us handler=1368us
+2026-09-21T11:40:06Z DEBUG reduce - processed 1 spool 0
+2026-09-21T11:40:06Z DEBUG reduce - 8158 us stdin=3177us
+2026-09-21T11:40:12Z DEBUG hook stop - 18820 us stdin=39us parse=25us context=192us db-open=1336us db-append=16979us handler=243us
+2026-09-21T11:40:12Z DEBUG reduce - processed 1 spool 0
+2026-09-21T11:40:12Z DEBUG reduce - 41060 us stdin=21us
+2026-09-21T11:40:12Z DEBUG hook user-prompt-submit - 3606 us stdin=21us parse=20us context=180us db-open=1468us db-append=765us handler=1147us
+2026-09-21T11:40:16Z DEBUG hook post-tool-use - 22655 us stdin=30us parse=42us context=221us db-open=1697us db-append=19004us handler=1657us
+2026-09-21T11:40:16Z DEBUG hook pre-tool-use - 256 us stdin=38us parse=24us context=177us handler=14us
+2026-09-21T11:40:16Z DEBUG hook post-tool-use - 4160 us stdin=50us parse=26us context=171us db-open=1592us db-append=1016us handler=1299us
+2026-09-21T11:40:16Z DEBUG reduce - processed 3 spool 0
+2026-09-21T11:40:16Z DEBUG reduce - 4596 us stdin=33us
+2026-09-21T11:40:20Z DEBUG hook pre-tool-use - 337 us stdin=25us parse=45us context=248us handler=16us
+2026-09-21T11:40:23Z DEBUG hook post-tool-use - 4257 us stdin=30us parse=32us context=153us db-open=1496us db-append=1328us handler=1213us
+2026-09-21T11:40:23Z DEBUG reduce - processed 1 spool 0
+2026-09-21T11:40:23Z DEBUG reduce - 12240 us stdin=7799us
+2026-09-21T11:40:29Z DEBUG hook pre-tool-use - 252 us stdin=25us parse=26us context=180us handler=19us
+2026-09-21T11:40:31Z DEBUG hook post-tool-use - 6063 us stdin=21us parse=27us context=135us db-open=1955us db-append=1730us handler=2191us
+2026-09-21T11:40:31Z DEBUG reduce - processed 1 spool 0
+2026-09-21T11:40:31Z DEBUG reduce - 11638 us stdin=6117us
+2026-09-21T11:40:42Z DEBUG hook stop - 3486 us stdin=23us parse=26us context=179us db-open=1243us db-append=1803us handler=205us
+2026-09-21T11:40:42Z DEBUG reduce - processed 1 spool 0
+2026-09-21T11:40:42Z DEBUG reduce - 27180 us stdin=51us
+2026-09-21T11:40:42Z DEBUG hook user-prompt-submit - 19231 us stdin=21us parse=29us context=146us db-open=17619us db-append=129us handler=1280us
+2026-09-21T11:40:45Z DEBUG hook post-tool-use - 26466 us stdin=26us parse=30us context=191us db-open=1683us db-append=22566us handler=1966us
+2026-09-21T11:40:45Z DEBUG hook pre-tool-use - 289 us stdin=26us parse=29us context=209us handler=18us
+2026-09-21T11:40:45Z DEBUG hook post-tool-use - 4907 us stdin=25us parse=32us context=172us db-open=2257us db-append=930us handler=1488us
+2026-09-21T11:40:45Z DEBUG reduce - processed 3 spool 0
+2026-09-21T11:40:45Z DEBUG reduce - 4637 us stdin=54us
+2026-09-21T11:40:49Z DEBUG hook pre-tool-use - 260 us stdin=23us parse=26us context=189us handler=18us
+2026-09-21T11:40:51Z DEBUG hook post-tool-use - 5144 us stdin=36us parse=29us context=157us db-open=2255us db-append=944us handler=1719us
+2026-09-21T11:40:51Z DEBUG reduce - processed 1 spool 0
+2026-09-21T11:40:51Z DEBUG reduce - 9019 us stdin=4989us
+2026-09-21T11:41:00Z DEBUG hook stop - 2804 us stdin=50us parse=26us context=216us db-open=1260us db-append=1036us handler=210us
+2026-09-21T11:41:00Z DEBUG reduce - processed 1 spool 0
+2026-09-21T11:41:00Z DEBUG reduce - 13630 us stdin=23us
+2026-09-21T11:41:00Z DEBUG hook user-prompt-submit - 3562 us stdin=18us parse=23us context=201us db-open=1304us db-append=733us handler=1277us
+2026-09-21T11:41:03Z DEBUG hook post-tool-use - 21232 us stdin=33us parse=37us context=200us db-open=1942us db-append=17550us handler=1465us
+2026-09-21T11:41:04Z DEBUG hook pre-tool-use - 248 us stdin=23us parse=25us context=182us handler=16us
+2026-09-21T11:41:05Z DEBUG hook post-tool-use - 4518 us stdin=28us parse=27us context=142us db-open=1804us db-append=1307us handler=1205us
+2026-09-21T11:41:05Z DEBUG reduce - processed 3 spool 0
+2026-09-21T11:41:05Z DEBUG reduce - 5066 us stdin=29us
+2026-09-21T11:41:15Z DEBUG hook stop - 18535 us stdin=49us parse=25us context=182us db-open=1391us db-append=16673us handler=210us
+2026-09-21T11:41:15Z DEBUG reduce - processed 1 spool 0
+2026-09-21T11:41:15Z DEBUG reduce - 40239 us stdin=47us
+2026-09-21T11:41:15Z DEBUG hook user-prompt-submit - 3605 us stdin=22us parse=22us context=197us db-open=1571us db-append=738us handler=1049us
+2026-09-21T11:41:18Z DEBUG hook post-tool-use - 21185 us stdin=27us parse=32us context=189us db-open=1218us db-append=18008us handler=1708us
+2026-09-21T11:41:18Z DEBUG hook pre-tool-use - 235 us stdin=23us parse=27us context=167us handler=15us
+2026-09-21T11:41:18Z DEBUG hook post-tool-use - 4037 us stdin=100us parse=27us context=147us db-open=1519us db-append=1069us handler=1170us
+2026-09-21T11:41:18Z DEBUG reduce - processed 3 spool 0
+2026-09-21T11:41:18Z DEBUG reduce - 4071 us stdin=29us
+2026-09-21T11:41:22Z DEBUG hook pre-tool-use - 279 us stdin=21us parse=25us context=215us handler=16us
+2026-09-21T11:41:23Z DEBUG hook post-tool-use - 4624 us stdin=71us parse=27us context=140us db-open=1807us db-append=1062us handler=1514us
+2026-09-21T11:41:23Z DEBUG reduce - processed 1 spool 0
+2026-09-21T11:41:23Z DEBUG reduce - 4465 us stdin=26us
+2026-09-21T11:41:36Z DEBUG reduce - processed 0 spool 0
+2026-09-21T11:41:36Z DEBUG reduce - 2308 us stdin=30us
+2026-09-21T11:41:36Z DEBUG hook user-prompt-submit - 5578 us stdin=32us parse=25us context=259us db-open=1495us db-append=1855us handler=1906us
+2026-09-21T11:41:40Z DEBUG hook pre-tool-use - 270 us stdin=23us parse=26us context=202us handler=17us
+2026-09-21T11:41:42Z DEBUG hook post-tool-use - 21229 us stdin=23us parse=26us context=134us db-open=1458us db-append=18019us handler=1565us
+2026-09-21T11:41:43Z DEBUG reduce - processed 2 spool 0
+2026-09-21T11:41:43Z DEBUG reduce - 22918 us stdin=712us
+2026-09-21T11:41:53Z DEBUG reduce - processed 0 spool 0
+2026-09-21T11:41:53Z DEBUG reduce - 2100 us stdin=37us
+2026-09-21T11:41:53Z DEBUG hook user-prompt-submit - 4726 us stdin=27us parse=24us context=181us db-open=1472us db-append=1470us handler=1545us
+2026-09-21T11:41:56Z DEBUG hook post-tool-use - 5085 us stdin=42us parse=34us context=193us db-open=1489us db-append=1640us handler=1683us
+2026-09-21T11:41:56Z DEBUG reduce - processed 2 spool 0
+2026-09-21T11:41:56Z DEBUG reduce - 10707 us stdin=5153us
+2026-09-21T11:42:03Z DEBUG hook pre-tool-use - 403 us stdin=140us parse=28us context=195us handler=37us
+2026-09-21T11:42:03Z DEBUG hook post-tool-use - 4124 us stdin=21us parse=26us context=139us db-open=1525us db-append=1278us handler=1132us
+2026-09-21T11:42:03Z DEBUG reduce - processed 1 spool 0
+2026-09-21T11:42:03Z DEBUG reduce - 12095 us stdin=7636us
+2026-09-21T11:42:06Z DEBUG hook pre-tool-use - 290 us stdin=25us parse=26us context=203us handler=33us
+2026-09-21T11:42:07Z DEBUG hook post-tool-use - 4095 us stdin=33us parse=31us context=160us db-open=1821us db-append=854us handler=1191us
+2026-09-21T11:42:07Z DEBUG reduce - processed 1 spool 0
+2026-09-21T11:42:07Z DEBUG reduce - 9013 us stdin=4033us
+2026-09-21T11:42:16Z DEBUG reduce - processed 0 spool 0
+2026-09-21T11:42:16Z DEBUG reduce - 20046 us stdin=77us
+2026-09-21T11:42:16Z DEBUG hook stop - 22448 us stdin=24us parse=31us context=186us db-open=1954us db-append=18764us handler=1483us
+2026-09-21T11:42:16Z DEBUG hook user-prompt-submit - 4260 us stdin=26us parse=30us context=184us db-open=1460us db-append=886us handler=1667us
+2026-09-21T11:42:23Z DEBUG hook pre-tool-use - 346 us stdin=80us parse=24us context=199us handler=41us
+2026-09-21T11:42:23Z DEBUG hook post-tool-use - 4318 us stdin=22us parse=36us context=144us db-open=1356us db-append=1443us handler=1312us
+2026-09-21T11:42:24Z DEBUG hook pre-tool-use - 263 us stdin=37us parse=34us context=173us handler=16us
+2026-09-21T11:42:24Z DEBUG hook post-tool-use - 4125 us stdin=34us parse=39us context=144us db-open=1418us db-append=1198us handler=1288us
+2026-09-21T11:42:24Z DEBUG reduce - processed 4 spool 0
+2026-09-21T11:42:24Z DEBUG reduce - 6123 us stdin=1841us
+2026-09-21T11:42:36Z DEBUG hook stop - 19244 us stdin=23us parse=39us context=213us db-open=1563us db-append=17086us handler=313us
+2026-09-21T11:42:36Z DEBUG reduce - processed 1 spool 0
+2026-09-21T11:42:36Z DEBUG reduce - 38645 us stdin=46us
+2026-09-21T11:42:36Z DEBUG hook user-prompt-submit - 4369 us stdin=60us parse=24us context=172us db-open=1434us db-append=1192us handler=1480us
+2026-09-21T11:42:47Z DEBUG hook stop - 20004 us stdin=37us parse=27us context=196us db-open=1543us db-append=17897us handler=298us
+2026-09-21T11:42:47Z DEBUG reduce - processed 2 spool 0
+2026-09-21T11:42:47Z DEBUG reduce - 38173 us stdin=20us
+2026-09-21T11:42:47Z DEBUG hook pre-compact - 5965 us stdin=25us parse=24us context=212us db-open=1100us db-append=1053us handler=3544us
+2026-09-21T11:43:32Z DEBUG hook session-start - 21626 us stdin=29us parse=23us context=197us db-open=1444us db-append=18091us handler=1837us
+2026-09-21T11:43:32Z DEBUG hook post-compact - 5200 us stdin=35us parse=47us context=193us db-open=2122us db-append=1219us handler=1573us
+2026-09-21T11:43:32Z DEBUG hook user-prompt-submit - 4325 us stdin=24us parse=23us context=186us db-open=1587us db-append=1161us handler=1329us
+2026-09-21T11:43:43Z DEBUG hook pre-tool-use - 21669 us stdin=21us parse=25us context=276us db-open=1674us db-append=18226us handler=1441us
+2026-09-21T11:43:43Z DEBUG hook post-tool-use - 5278 us stdin=27us parse=31us context=187us db-open=1576us db-append=1366us handler=2087us
+2026-09-21T11:43:43Z DEBUG hook pre-tool-use - 280 us stdin=50us parse=25us context=186us handler=15us
+2026-09-21T11:43:44Z DEBUG hook post-tool-use - 4420 us stdin=26us parse=28us context=150us db-open=1452us db-append=1676us handler=1083us
+2026-09-21T11:43:44Z DEBUG reduce - processed 6 spool 0
+2026-09-21T11:43:44Z DEBUG reduce - 12373 us stdin=6928us
+2026-09-21T11:43:47Z DEBUG reduce - processed 0 spool 0
+2026-09-21T11:43:47Z DEBUG reduce - 1863 us stdin=39us
+2026-09-21T11:43:47Z DEBUG hook stop - 30924 us stdin=21us parse=25us context=222us db-open=11257us db-append=17805us handler=1586us
+2026-09-21T11:43:47Z DEBUG hook session-end - 3834 us stdin=24us parse=26us context=221us db-open=1207us db-append=1021us handler=1330us

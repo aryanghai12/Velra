@@ -1,0 +1,88 @@
+{
+  "trial": "s1-dead-end-pair-baseline-r1",
+  "scenario": "s1-dead-end-pair",
+  "arm": "baseline",
+  "replicate": 1,
+  "pair_id": "s1-dead-end-pair#r1",
+  "fixture_seed": "48819ce65e3bca90",
+  "target_facts": [
+    "s1-burned-twin"
+  ],
+  "stages": {
+    "compaction_loss": {
+      "status": "fail",
+      "rule": "a target fact counts as lost when it is not recalled in a majority of valid control replicates, and the control's own context-reduction gate also holds",
+      "context_reduction_pct_median": 67.2,
+      "compaction_is_lossy": true,
+      "per_fact": {
+        "s1-burned-twin": {
+          "replicates": 2,
+          "valid_replicates": 2,
+          "lost_replicates": 0,
+          "recalled_each": [
+            true,
+            true
+          ],
+          "answers": [
+            "src/ledger/surcharges.py",
+            "src/ledger/surcharges.py"
+          ],
+          "lost": false
+        }
+      },
+      "reason": "at least one target fact survived native compaction, so this scenario cannot attribute anything to Velra"
+    },
+    "capture": {
+      "status": "n/a",
+      "reason": "baseline arm has no ledger",
+      "blocks_chain": false
+    },
+    "delivery": {
+      "status": "n/a",
+      "reason": "baseline arm delivers no capsule",
+      "blocks_chain": false
+    },
+    "acceptance": {
+      "status": "n/a",
+      "verdict": "N/A",
+      "reason": "nothing was delivered to accept",
+      "blocks_chain": false
+    },
+    "utilisation": {
+      "status": "pass",
+      "primary_metric": "avoided_dead_ends",
+      "primary_value": true,
+      "correct": true,
+      "suite_green": true,
+      "secondary": {
+        "tool_calls": 4,
+        "buckets": {
+          "read": 1,
+          "search": 0,
+          "edit": 2,
+          "bash": 1,
+          "other": 0
+        },
+        "reads_before_first_edit": 0,
+        "source_rereads_before_first_edit": 0,
+        "first_edit_file": "c:/users/aryan/appdata/local/temp/velra-hardened-fixtures/s1-dead-end-pair-baseline-r1/src/ledger/promos.py",
+        "first_edit_index": 1,
+        "edit_targets": [
+          "C:\\Users\\aryan\\AppData\\Local\\Temp\\velra-hardened-fixtures\\s1-dead-end-pair-baseline-r1\\src\\ledger\\promos.py",
+          "C:\\Users\\aryan\\AppData\\Local\\Temp\\velra-hardened-fixtures\\s1-dead-end-pair-baseline-r1\\src\\ledger\\promos.py"
+        ]
+      },
+      "scenario_detail": {
+        "avoided_dead_ends": true,
+        "dead_end_files_edited": [],
+        "retried_the_twin": false,
+        "first_edit_on_dead_end": false,
+        "first_edit_on_true_file": true,
+        "suite_green": true
+      },
+      "reason": null
+    }
+  },
+  "first_failed_stage": "compaction_loss",
+  "classification": "NOT_CAUSALLY_TESTABLE"
+}

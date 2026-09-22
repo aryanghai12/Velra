@@ -1,0 +1,16 @@
+2026-09-21T12:08:32Z DEBUG hook session-start - 17048 us stdin=79us parse=51us context=339us db-open=14406us db-append=82us handler=2083us
+2026-09-21T12:08:32Z DEBUG hook user-prompt-submit - 4292 us stdin=23us parse=23us context=138us db-open=1831us db-append=898us handler=1373us
+2026-09-21T12:08:33Z DEBUG hook user-prompt-submit - 3741 us stdin=84us parse=31us context=201us db-open=1465us db-append=868us handler=1086us
+2026-09-21T12:08:34Z DEBUG hook user-prompt-submit - 4327 us stdin=24us parse=24us context=213us db-open=1500us db-append=1460us handler=1098us
+2026-09-21T12:08:35Z DEBUG hook user-prompt-submit - 4347 us stdin=23us parse=26us context=189us db-open=1509us db-append=1337us handler=1257us
+2026-09-21T12:08:35Z DEBUG hook user-prompt-submit - 4320 us stdin=31us parse=24us context=212us db-open=1450us db-append=1354us handler=1241us
+2026-09-21T12:08:36Z DEBUG hook user-prompt-submit - 22549 us stdin=23us parse=24us context=188us db-open=2051us db-append=18051us handler=2205us
+2026-09-21T12:08:36Z DEBUG hook user-prompt-submit - 19722 us stdin=59us parse=30us context=216us db-open=1500us db-append=16799us handler=1112us
+2026-09-21T12:08:37Z DEBUG hook user-prompt-submit - 21398 us stdin=27us parse=134us context=205us db-open=1529us db-append=18066us handler=1430us
+2026-09-21T12:08:38Z DEBUG hook user-prompt-submit - 22093 us stdin=65us parse=28us context=209us db-open=1716us db-append=18813us handler=1255us
+2026-09-21T12:08:39Z DEBUG hook user-prompt-submit - 20421 us stdin=25us parse=31us context=191us db-open=1603us db-append=17463us handler=1100us
+2026-09-21T12:08:39Z DEBUG hook user-prompt-submit - 21267 us stdin=72us parse=24us context=231us db-open=1875us db-append=17949us handler=1110us
+2026-09-21T12:08:40Z DEBUG hook user-prompt-submit - 22231 us stdin=53us parse=25us context=172us db-open=1547us db-append=18970us handler=1456us
+2026-09-21T12:08:40Z DEBUG hook pre-compact - 21981 us stdin=25us parse=28us context=185us db-open=1193us db-append=17435us handler=3108us
+2026-09-21T12:08:41Z DEBUG hook user-prompt-submit - 22240 us stdin=23us parse=28us context=189us db-open=1697us db-append=18355us handler=1941us
+2026-09-21T12:08:42Z DEBUG hook session-end - 22103 us stdin=24us parse=23us context=202us db-open=1245us db-append=18970us handler=1633us

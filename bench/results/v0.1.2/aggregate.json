@@ -1,0 +1,1123 @@
+{
+  "preregistration_version": "1.0.0",
+  "preregistration_sha256": "4658a1a538411e0f15bf9c5d57ee50ede85bcd2d7929b8c7045262732c2eb1ad",
+  "minimum_replicates_per_arm": 4,
+  "trials": [
+    {
+      "dir": "s1-dead-end-pair-baseline-r1",
+      "scenario": "s1-dead-end-pair",
+      "arm": "baseline",
+      "replicate": 1,
+      "model": "sonnet",
+      "session_id": "801146f9-f853-4e88-bca5-99d48c4cdd0e",
+      "valid": true,
+      "failed_criteria": []
+    },
+    {
+      "dir": "s1-dead-end-pair-velra-r1",
+      "scenario": "s1-dead-end-pair",
+      "arm": "velra",
+      "replicate": 1,
+      "model": "sonnet",
+      "session_id": "08e10d7a-bf57-45d3-97d0-21bfbc1b4fd0",
+      "valid": true,
+      "failed_criteria": []
+    },
+    {
+      "dir": "s1-dead-end-pair-baseline-r2",
+      "scenario": "s1-dead-end-pair",
+      "arm": "baseline",
+      "replicate": 2,
+      "model": "sonnet",
+      "session_id": "9f2505eb-c923-44ed-b426-f6d4a4388257",
+      "valid": true,
+      "failed_criteria": []
+    },
+    {
+      "dir": "s1-dead-end-pair-velra-r2",
+      "scenario": "s1-dead-end-pair",
+      "arm": "velra",
+      "replicate": 2,
+      "model": "sonnet",
+      "session_id": "45b5d03f-e5cb-43d2-859b-154a8f873b93",
+      "valid": true,
+      "failed_criteria": []
+    },
+    {
+      "dir": "s1-dead-end-pair-baseline-r3",
+      "scenario": "s1-dead-end-pair",
+      "arm": "baseline",
+      "replicate": 3,
+      "model": "sonnet",
+      "session_id": "21a05bb4-1826-4829-b4cd-7a372adda103",
+      "valid": true,
+      "failed_criteria": []
+    },
+    {
+      "dir": "s1-dead-end-pair-velra-r3",
+      "scenario": "s1-dead-end-pair",
+      "arm": "velra",
+      "replicate": 3,
+      "model": "sonnet",
+      "session_id": "6fbbceff-20dd-47c4-bd21-c90c9446ee8c",
+      "valid": true,
+      "failed_criteria": []
+    },
+    {
+      "dir": "s1-dead-end-pair-baseline-r4",
+      "scenario": "s1-dead-end-pair",
+      "arm": "baseline",
+      "replicate": 4,
+      "model": "sonnet",
+      "session_id": "290f14a3-bf1d-4b6f-83f3-d39194aa3059",
+      "valid": true,
+      "failed_criteria": []
+    },
+    {
+      "dir": "s1-dead-end-pair-velra-r4",
+      "scenario": "s1-dead-end-pair",
+      "arm": "velra",
+      "replicate": 4,
+      "model": "sonnet",
+      "session_id": "4f776157-549a-40f7-8a70-883cbf0ce1df",
+      "valid": true,
+      "failed_criteria": []
+    },
+    {
+      "dir": "s2-hidden-constraint-baseline-r1",
+      "scenario": "s2-hidden-constraint",
+      "arm": "baseline",
+      "replicate": 1,
+      "model": "sonnet",
+      "session_id": "04e9ac0f-5284-486a-9afb-2d80f714f187",
+      "valid": true,
+      "failed_criteria": []
+    },
+    {
+      "dir": "s2-hidden-constraint-velra-r1",
+      "scenario": "s2-hidden-constraint",
+      "arm": "velra",
+      "replicate": 1,
+      "model": "sonnet",
+      "session_id": "4a42c401-8c81-44ce-9e86-17bfaf392e74",
+      "valid": true,
+      "failed_criteria": []
+    },
+    {
+      "dir": "s2-hidden-constraint-baseline-r2",
+      "scenario": "s2-hidden-constraint",
+      "arm": "baseline",
+      "replicate": 2,
+      "model": "sonnet",
+      "session_id": "71f66965-7db1-4c15-8b86-b2d8ecc5b310",
+      "valid": true,
+      "failed_criteria": []
+    },
+    {
+      "dir": "s2-hidden-constraint-velra-r2",
+      "scenario": "s2-hidden-constraint",
+      "arm": "velra",
+      "replicate": 2,
+      "model": "sonnet",
+      "session_id": "a305025c-f066-4243-b41c-5431f7e63926",
+      "valid": true,
+      "failed_criteria": []
+    },
+    {
+      "dir": "s2-hidden-constraint-baseline-r3",
+      "scenario": "s2-hidden-constraint",
+      "arm": "baseline",
+      "replicate": 3,
+      "model": "sonnet",
+      "session_id": "99e682d2-33d2-4d7c-83ea-932b1b9e1414",
+      "valid": true,
+      "failed_criteria": []
+    },
+    {
+      "dir": "s2-hidden-constraint-velra-r3",
+      "scenario": "s2-hidden-constraint",
+      "arm": "velra",
+      "replicate": 3,
+      "model": "sonnet",
+      "session_id": "fabe93f4-d73e-4044-84a4-4be0fe4ce039",
+      "valid": true,
+      "failed_criteria": []
+    },
+    {
+      "dir": "s2-hidden-constraint-baseline-r4",
+      "scenario": "s2-hidden-constraint",
+      "arm": "baseline",
+      "replicate": 4,
+      "model": "sonnet",
+      "session_id": "44fd9bfe-be63-49d9-b764-a450fb20f081",
+      "valid": true,
+      "failed_criteria": []
+    },
+    {
+      "dir": "s2-hidden-constraint-velra-r4",
+      "scenario": "s2-hidden-constraint",
+      "arm": "velra",
+      "replicate": 4,
+      "model": "sonnet",
+      "session_id": "97606663-8f95-4f9c-ac0d-0a7780f7b2fe",
+      "valid": true,
+      "failed_criteria": []
+    },
+    {
+      "dir": "s3-working-set-baseline-r1",
+      "scenario": "s3-working-set",
+      "arm": "baseline",
+      "replicate": 1,
+      "model": "sonnet",
+      "session_id": "033611f7-bd7f-427f-ac2e-e90e478bb787",
+      "valid": true,
+      "failed_criteria": []
+    },
+    {
+      "dir": "s3-working-set-velra-r1",
+      "scenario": "s3-working-set",
+      "arm": "velra",
+      "replicate": 1,
+      "model": "sonnet",
+      "session_id": "6e69168a-730a-46ef-b2cd-0e03fc636566",
+      "valid": true,
+      "failed_criteria": []
+    },
+    {
+      "dir": "s3-working-set-baseline-r2",
+      "scenario": "s3-working-set",
+      "arm": "baseline",
+      "replicate": 2,
+      "model": "sonnet",
+      "session_id": "7d824704-fc8a-41fc-abdb-ce84d8eda203",
+      "valid": true,
+      "failed_criteria": []
+    },
+    {
+      "dir": "s3-working-set-velra-r2",
+      "scenario": "s3-working-set",
+      "arm": "velra",
+      "replicate": 2,
+      "model": "sonnet",
+      "session_id": "1eaf7069-7557-46c2-9c3c-4f375e7e19b6",
+      "valid": true,
+      "failed_criteria": []
+    },
+    {
+      "dir": "s3-working-set-baseline-r3",
+      "scenario": "s3-working-set",
+      "arm": "baseline",
+      "replicate": 3,
+      "model": "sonnet",
+      "session_id": "b8456dc5-1647-4796-bc19-5a40b0c38ccb",
+      "valid": false,
+      "failed_criteria": [
+        "compaction_occurred",
+        "compaction_summary_present"
+      ]
+    },
+    {
+      "dir": "s3-working-set-velra-r3",
+      "scenario": "s3-working-set",
+      "arm": "velra",
+      "replicate": 3,
+      "model": "sonnet",
+      "session_id": "f6d73157-ef22-4ce5-b45e-bdad3be54b76",
+      "valid": false,
+      "failed_criteria": [
+        "compaction_occurred",
+        "compaction_summary_present"
+      ]
+    },
+    {
+      "dir": "s3-working-set-baseline-r4",
+      "scenario": "s3-working-set",
+      "arm": "baseline",
+      "replicate": 4,
+      "model": "sonnet",
+      "session_id": "7ab2db77-7c42-4ff4-86c9-94b8f93008de",
+      "valid": false,
+      "failed_criteria": [
+        "compaction_occurred",
+        "compaction_summary_present"
+      ]
+    },
+    {
+      "dir": "s3-working-set-velra-r4",
+      "scenario": "s3-working-set",
+      "arm": "velra",
+      "replicate": 4,
+      "model": "sonnet",
+      "session_id": "026dc677-9371-41dc-857f-f3a5b692e93b",
+      "valid": false,
+      "failed_criteria": [
+        "compaction_occurred",
+        "compaction_summary_present"
+      ]
+    }
+  ],
+  "validity": {
+    "total": 24,
+    "valid": 20,
+    "invalid": 4,
+    "invalid_trials": [
+      {
+        "trial": "s3-working-set-baseline-r3",
+        "arm": "baseline",
+        "scenario": "s3-working-set",
+        "failed_criteria": [
+          "compaction_occurred",
+          "compaction_summary_present"
+        ],
+        "excluded_from": [
+          "behavioural",
+          "budget"
+        ]
+      },
+      {
+        "trial": "s3-working-set-velra-r3",
+        "arm": "velra",
+        "scenario": "s3-working-set",
+        "failed_criteria": [
+          "compaction_occurred",
+          "compaction_summary_present"
+        ],
+        "excluded_from": [
+          "behavioural",
+          "budget"
+        ]
+      },
+      {
+        "trial": "s3-working-set-baseline-r4",
+        "arm": "baseline",
+        "scenario": "s3-working-set",
+        "failed_criteria": [
+          "compaction_occurred",
+          "compaction_summary_present"
+        ],
+        "excluded_from": [
+          "behavioural",
+          "budget"
+        ]
+      },
+      {
+        "trial": "s3-working-set-velra-r4",
+        "arm": "velra",
+        "scenario": "s3-working-set",
+        "failed_criteria": [
+          "compaction_occurred",
+          "compaction_summary_present"
+        ],
+        "excluded_from": [
+          "behavioural",
+          "budget"
+        ]
+      }
+    ],
+    "usable": {
+      "behavioural": 20,
+      "budget": 20,
+      "hooks": 24
+    }
+  },
+  "groups": {
+    "s1-dead-end-pair/baseline": {
+      "n_trials": 4,
+      "n_usable_behavioural": 4,
+      "sessions": [
+        "801146f9-f853-4e88-bca5-99d48c4cdd0e",
+        "9f2505eb-c923-44ed-b426-f6d4a4388257",
+        "21a05bb4-1826-4829-b4cd-7a372adda103",
+        "290f14a3-bf1d-4b6f-83f3-d39194aa3059"
+      ],
+      "primary_metric": "avoided_dead_ends",
+      "primary_each": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "primary_successes": 4,
+      "success_each": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "successes": 4,
+      "suite_green": 4,
+      "tool_calls_each": [
+        4,
+        3,
+        5,
+        5
+      ],
+      "tool_calls_median": 4.5,
+      "source_rereads_each": [
+        0,
+        1,
+        1,
+        1
+      ],
+      "source_rereads_median": 1.0,
+      "wall_seconds_median": 262.65999999999997,
+      "cost_usd_each": [
+        6.8924,
+        6.8393,
+        6.7296,
+        6.6285
+      ],
+      "cost_usd_total": 27.0899,
+      "capsules_delivered": 0,
+      "capsule_tokens_each": [],
+      "capsule_tokens_median": null,
+      "capsule_tokens_worst": null,
+      "capsule_sections_each": [],
+      "working_files_section_present": 0,
+      "dead_ends_section_present": 0,
+      "capsule_rejected": 0,
+      "working_file_recall_each": [],
+      "constraint_in_capsule": 0,
+      "dead_ends_all_named": 0,
+      "dead_end_attribution": [],
+      "native_summary_present": 4,
+      "native_summary_tokens_each": [],
+      "native_summary_tokens_median": null,
+      "hook_invocations": 0,
+      "hook_nonzero_exits": 0,
+      "hook_stderr_writes": 0
+    },
+    "s1-dead-end-pair/velra": {
+      "n_trials": 4,
+      "n_usable_behavioural": 4,
+      "sessions": [
+        "08e10d7a-bf57-45d3-97d0-21bfbc1b4fd0",
+        "45b5d03f-e5cb-43d2-859b-154a8f873b93",
+        "6fbbceff-20dd-47c4-bd21-c90c9446ee8c",
+        "4f776157-549a-40f7-8a70-883cbf0ce1df"
+      ],
+      "primary_metric": "avoided_dead_ends",
+      "primary_each": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "primary_successes": 4,
+      "success_each": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "successes": 4,
+      "suite_green": 4,
+      "tool_calls_each": [
+        4,
+        4,
+        4,
+        2
+      ],
+      "tool_calls_median": 4.0,
+      "source_rereads_each": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "source_rereads_median": 0.0,
+      "wall_seconds_median": 292.326,
+      "cost_usd_each": [
+        6.9647,
+        7.2552,
+        7.0154,
+        6.4504
+      ],
+      "cost_usd_total": 27.6858,
+      "capsules_delivered": 4,
+      "capsule_tokens_each": [],
+      "capsule_tokens_median": null,
+      "capsule_tokens_worst": null,
+      "capsule_sections_each": [
+        [
+          "ABOUT_THIS_RECORD",
+          "FIRST_MESSAGE",
+          "LATEST_MESSAGE",
+          "WORKSPACE_STATE",
+          "TEST_RESULT",
+          "REVERTED_EDITS",
+          "RECORD_DETAIL"
+        ],
+        [
+          "ABOUT_THIS_RECORD",
+          "FIRST_MESSAGE",
+          "LATEST_MESSAGE",
+          "WORKSPACE_STATE",
+          "TEST_RESULT",
+          "REVERTED_EDITS",
+          "RECORD_DETAIL"
+        ],
+        [
+          "ABOUT_THIS_RECORD",
+          "FIRST_MESSAGE",
+          "LATEST_MESSAGE",
+          "WORKSPACE_STATE",
+          "TEST_RESULT",
+          "REVERTED_EDITS",
+          "FAILURE_LOCATION",
+          "RECORD_DETAIL"
+        ],
+        [
+          "ABOUT_THIS_RECORD",
+          "FIRST_MESSAGE",
+          "LATEST_MESSAGE",
+          "WORKSPACE_STATE",
+          "TEST_RESULT",
+          "REVERTED_EDITS",
+          "RECORD_DETAIL"
+        ]
+      ],
+      "working_files_section_present": 0,
+      "dead_ends_section_present": 4,
+      "capsule_rejected": 0,
+      "working_file_recall_each": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "constraint_in_capsule": 0,
+      "dead_ends_all_named": 4,
+      "dead_end_attribution": [
+        "git restore src/ledger/surcharges.py",
+        "git restore src/ledger/money.py",
+        "git restore src/ledger/surcharges.py",
+        "outside the agent",
+        "git restore src/ledger/surcharges.py",
+        "outside the agent",
+        "outside the agent",
+        "git restore src/ledger/money.py"
+      ],
+      "native_summary_present": 4,
+      "native_summary_tokens_each": [],
+      "native_summary_tokens_median": null,
+      "hook_invocations": 530,
+      "hook_nonzero_exits": 0,
+      "hook_stderr_writes": 0
+    },
+    "s2-hidden-constraint/baseline": {
+      "n_trials": 4,
+      "n_usable_behavioural": 4,
+      "sessions": [
+        "04e9ac0f-5284-486a-9afb-2d80f714f187",
+        "71f66965-7db1-4c15-8b86-b2d8ecc5b310",
+        "99e682d2-33d2-4d7c-83ea-932b1b9e1414",
+        "44fd9bfe-be63-49d9-b764-a450fb20f081"
+      ],
+      "primary_metric": "constraint_honoured",
+      "primary_each": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "primary_successes": 4,
+      "success_each": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "successes": 4,
+      "suite_green": 4,
+      "tool_calls_each": [
+        2,
+        2,
+        5,
+        2
+      ],
+      "tool_calls_median": 2.0,
+      "source_rereads_each": [
+        0,
+        0,
+        1,
+        0
+      ],
+      "source_rereads_median": 0.0,
+      "wall_seconds_median": 240.711,
+      "cost_usd_each": [
+        5.6027,
+        5.0244,
+        5.0009,
+        5.0735
+      ],
+      "cost_usd_total": 20.7015,
+      "capsules_delivered": 0,
+      "capsule_tokens_each": [],
+      "capsule_tokens_median": null,
+      "capsule_tokens_worst": null,
+      "capsule_sections_each": [],
+      "working_files_section_present": 0,
+      "dead_ends_section_present": 0,
+      "capsule_rejected": 0,
+      "working_file_recall_each": [],
+      "constraint_in_capsule": 0,
+      "dead_ends_all_named": 0,
+      "dead_end_attribution": [],
+      "native_summary_present": 4,
+      "native_summary_tokens_each": [],
+      "native_summary_tokens_median": null,
+      "hook_invocations": 0,
+      "hook_nonzero_exits": 0,
+      "hook_stderr_writes": 0
+    },
+    "s2-hidden-constraint/velra": {
+      "n_trials": 4,
+      "n_usable_behavioural": 4,
+      "sessions": [
+        "4a42c401-8c81-44ce-9e86-17bfaf392e74",
+        "a305025c-f066-4243-b41c-5431f7e63926",
+        "fabe93f4-d73e-4044-84a4-4be0fe4ce039",
+        "97606663-8f95-4f9c-ac0d-0a7780f7b2fe"
+      ],
+      "primary_metric": "constraint_honoured",
+      "primary_each": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "primary_successes": 4,
+      "success_each": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "successes": 4,
+      "suite_green": 4,
+      "tool_calls_each": [
+        3,
+        5,
+        2,
+        2
+      ],
+      "tool_calls_median": 2.5,
+      "source_rereads_each": [
+        0,
+        1,
+        0,
+        0
+      ],
+      "source_rereads_median": 0.0,
+      "wall_seconds_median": 235.9835,
+      "cost_usd_each": [
+        4.8513,
+        5.1348,
+        4.9485,
+        5.3843
+      ],
+      "cost_usd_total": 20.3189,
+      "capsules_delivered": 4,
+      "capsule_tokens_each": [],
+      "capsule_tokens_median": null,
+      "capsule_tokens_worst": null,
+      "capsule_sections_each": [
+        [
+          "ABOUT_THIS_RECORD",
+          "FIRST_MESSAGE",
+          "STATED_CONSTRAINTS",
+          "LATEST_MESSAGE",
+          "WORKSPACE_STATE",
+          "TEST_RESULT",
+          "FAILURE_LOCATION",
+          "RECORD_DETAIL"
+        ],
+        [
+          "ABOUT_THIS_RECORD",
+          "FIRST_MESSAGE",
+          "STATED_CONSTRAINTS",
+          "LATEST_MESSAGE",
+          "WORKSPACE_STATE",
+          "TEST_RESULT",
+          "FAILURE_LOCATION",
+          "RECORD_DETAIL"
+        ],
+        [
+          "ABOUT_THIS_RECORD",
+          "FIRST_MESSAGE",
+          "STATED_CONSTRAINTS",
+          "LATEST_MESSAGE",
+          "WORKSPACE_STATE",
+          "TEST_RESULT",
+          "FAILURE_LOCATION",
+          "RECORD_DETAIL"
+        ],
+        [
+          "ABOUT_THIS_RECORD",
+          "FIRST_MESSAGE",
+          "STATED_CONSTRAINTS",
+          "LATEST_MESSAGE",
+          "WORKSPACE_STATE",
+          "TEST_RESULT",
+          "FAILURE_LOCATION",
+          "RECORD_DETAIL"
+        ]
+      ],
+      "working_files_section_present": 0,
+      "dead_ends_section_present": 0,
+      "capsule_rejected": 0,
+      "working_file_recall_each": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "constraint_in_capsule": 4,
+      "dead_ends_all_named": 0,
+      "dead_end_attribution": [],
+      "native_summary_present": 4,
+      "native_summary_tokens_each": [],
+      "native_summary_tokens_median": null,
+      "hook_invocations": 363,
+      "hook_nonzero_exits": 0,
+      "hook_stderr_writes": 0
+    },
+    "s3-working-set/baseline": {
+      "n_trials": 4,
+      "n_usable_behavioural": 2,
+      "sessions": [
+        "033611f7-bd7f-427f-ac2e-e90e478bb787",
+        "7d824704-fc8a-41fc-abdb-ce84d8eda203",
+        "b8456dc5-1647-4796-bc19-5a40b0c38ccb",
+        "7ab2db77-7c42-4ff4-86c9-94b8f93008de"
+      ],
+      "primary_metric": "resolved_the_reference",
+      "primary_each": [
+        true,
+        true
+      ],
+      "primary_successes": 2,
+      "success_each": [
+        true,
+        true
+      ],
+      "successes": 2,
+      "suite_green": 2,
+      "tool_calls_each": [
+        3,
+        2
+      ],
+      "tool_calls_median": 2.5,
+      "source_rereads_each": [
+        0,
+        0
+      ],
+      "source_rereads_median": 0.0,
+      "wall_seconds_median": 119.103,
+      "cost_usd_each": [
+        4.9549,
+        5.0515,
+        0.5215,
+        0
+      ],
+      "cost_usd_total": 10.5279,
+      "capsules_delivered": 0,
+      "capsule_tokens_each": [],
+      "capsule_tokens_median": null,
+      "capsule_tokens_worst": null,
+      "capsule_sections_each": [],
+      "working_files_section_present": 0,
+      "dead_ends_section_present": 0,
+      "capsule_rejected": 0,
+      "working_file_recall_each": [],
+      "constraint_in_capsule": 0,
+      "dead_ends_all_named": 0,
+      "dead_end_attribution": [],
+      "native_summary_present": 2,
+      "native_summary_tokens_each": [],
+      "native_summary_tokens_median": null,
+      "hook_invocations": 0,
+      "hook_nonzero_exits": 0,
+      "hook_stderr_writes": 0
+    },
+    "s3-working-set/velra": {
+      "n_trials": 4,
+      "n_usable_behavioural": 2,
+      "sessions": [
+        "6e69168a-730a-46ef-b2cd-0e03fc636566",
+        "1eaf7069-7557-46c2-9c3c-4f375e7e19b6",
+        "f6d73157-ef22-4ce5-b45e-bdad3be54b76",
+        "026dc677-9371-41dc-857f-f3a5b692e93b"
+      ],
+      "primary_metric": "resolved_the_reference",
+      "primary_each": [
+        true,
+        true
+      ],
+      "primary_successes": 2,
+      "success_each": [
+        true,
+        true
+      ],
+      "successes": 2,
+      "suite_green": 2,
+      "tool_calls_each": [
+        2,
+        5
+      ],
+      "tool_calls_median": 3.5,
+      "source_rereads_each": [
+        0,
+        0
+      ],
+      "source_rereads_median": 0.0,
+      "wall_seconds_median": 121.6215,
+      "cost_usd_each": [
+        5.2084,
+        4.9782,
+        0,
+        0
+      ],
+      "cost_usd_total": 10.1866,
+      "capsules_delivered": 4,
+      "capsule_tokens_each": [],
+      "capsule_tokens_median": null,
+      "capsule_tokens_worst": null,
+      "capsule_sections_each": [
+        [
+          "ABOUT_THIS_RECORD",
+          "FIRST_MESSAGE",
+          "LATEST_MESSAGE",
+          "WORKSPACE_STATE",
+          "FILE_ACTIVITY",
+          "RECORD_DETAIL"
+        ],
+        [
+          "ABOUT_THIS_RECORD",
+          "FIRST_MESSAGE",
+          "LATEST_MESSAGE",
+          "WORKSPACE_STATE",
+          "FILE_ACTIVITY",
+          "RECORD_DETAIL"
+        ],
+        [
+          "ABOUT_THIS_RECORD",
+          "FIRST_MESSAGE",
+          "LATEST_MESSAGE",
+          "WORKSPACE_STATE",
+          "RECORD_DETAIL"
+        ],
+        [
+          "ABOUT_THIS_RECORD",
+          "FIRST_MESSAGE",
+          "LATEST_MESSAGE",
+          "WORKSPACE_STATE",
+          "RECORD_DETAIL"
+        ]
+      ],
+      "working_files_section_present": 2,
+      "dead_ends_section_present": 0,
+      "capsule_rejected": 0,
+      "working_file_recall_each": [
+        1.0,
+        1.0,
+        0.0,
+        0.0
+      ],
+      "constraint_in_capsule": 0,
+      "dead_ends_all_named": 0,
+      "dead_end_attribution": [],
+      "native_summary_present": 2,
+      "native_summary_tokens_each": [],
+      "native_summary_tokens_median": null,
+      "hook_invocations": 216,
+      "hook_nonzero_exits": 0,
+      "hook_stderr_writes": 0
+    }
+  },
+  "provenance": {
+    "binary": "C:\\Users\\aryan\\Videos\\Velra\\target\\release\\velra.exe",
+    "binary_bytes": 5399040,
+    "reported_version": "velra 0.1.1 (4b68b6b7c, x86_64-pc-windows-gnu)",
+    "embedded_commit": "4b68b6b7c",
+    "git_head": "4b68b6b7cc82c94d420377afcd1200622700123b",
+    "git_head_short9": "4b68b6b7c",
+    "git_branch": "main",
+    "git_describe": "v0.1.1-benchmark-baseline-7-g4b68b6b",
+    "working_tree_clean": false,
+    "working_tree_changes": [
+      "?? bench/results/v0.1.2/"
+    ],
+    "commit_matches_binary": true,
+    "host": {
+      "platform": "Windows-11-10.0.26200-SP0",
+      "machine": "AMD64",
+      "python": "3.14.0",
+      "processor": "Intel64 Family 6 Model 183 Stepping 1, GenuineIntel",
+      "cpu_count": 20
+    },
+    "agent": {
+      "binary": "C:\\Users\\aryan\\.vscode\\extensions\\anthropic.claude-code-2.1.272-win32-x64\\resources\\native-binary\\claude.exe",
+      "version": "2.1.272"
+    },
+    "warnings": [
+      "the working tree is dirty: results cannot be attributed to a commit"
+    ]
+  },
+  "comparisons": {
+    "s1-dead-end-pair": {
+      "primary_metric": "avoided_dead_ends",
+      "pairing": {
+        "design": "matched pairs, matched on recorded pair identity",
+        "invariants": [
+          "scenario",
+          "pair_id",
+          "fixture_seed",
+          "model",
+          "turn_count",
+          "compact_turn_index",
+          "measured_turn_index",
+          "claude_version",
+          "velra_commit"
+        ],
+        "paired_ids": [
+          "s1-dead-end-pair#r1",
+          "s1-dead-end-pair#r2",
+          "s1-dead-end-pair#r3",
+          "s1-dead-end-pair#r4"
+        ],
+        "n_pairs": 4,
+        "dropped_pairs": [],
+        "usable_velra": 4,
+        "usable_baseline": 4,
+        "symmetric": true
+      },
+      "primary": {
+        "treatment_successes": 4,
+        "treatment_n": 4,
+        "control_successes": 4,
+        "control_n": 4,
+        "treatment_rate": 1.0,
+        "control_rate": 1.0,
+        "difference": 0.0,
+        "fisher_p_one_sided": 1.0,
+        "significant_at_0.05": false,
+        "best_achievable_p_at_this_n": 0.01429,
+        "powered": true
+      },
+      "success": {
+        "treatment_successes": 4,
+        "treatment_n": 4,
+        "control_successes": 4,
+        "control_n": 4,
+        "treatment_rate": 1.0,
+        "control_rate": 1.0,
+        "difference": 0.0,
+        "fisher_p_one_sided": 1.0,
+        "significant_at_0.05": false,
+        "best_achievable_p_at_this_n": 0.01429,
+        "powered": true
+      },
+      "tool_calls_median": {
+        "velra": 4.0,
+        "baseline": 4.5
+      },
+      "tool_calls_each": {
+        "velra": [
+          4,
+          4,
+          4,
+          2
+        ],
+        "baseline": [
+          4,
+          3,
+          5,
+          5
+        ]
+      }
+    },
+    "s2-hidden-constraint": {
+      "primary_metric": "constraint_honoured",
+      "pairing": {
+        "design": "matched pairs, matched on recorded pair identity",
+        "invariants": [
+          "scenario",
+          "pair_id",
+          "fixture_seed",
+          "model",
+          "turn_count",
+          "compact_turn_index",
+          "measured_turn_index",
+          "claude_version",
+          "velra_commit"
+        ],
+        "paired_ids": [
+          "s2-hidden-constraint#r1",
+          "s2-hidden-constraint#r2",
+          "s2-hidden-constraint#r3",
+          "s2-hidden-constraint#r4"
+        ],
+        "n_pairs": 4,
+        "dropped_pairs": [],
+        "usable_velra": 4,
+        "usable_baseline": 4,
+        "symmetric": true
+      },
+      "primary": {
+        "treatment_successes": 4,
+        "treatment_n": 4,
+        "control_successes": 4,
+        "control_n": 4,
+        "treatment_rate": 1.0,
+        "control_rate": 1.0,
+        "difference": 0.0,
+        "fisher_p_one_sided": 1.0,
+        "significant_at_0.05": false,
+        "best_achievable_p_at_this_n": 0.01429,
+        "powered": true
+      },
+      "success": {
+        "treatment_successes": 4,
+        "treatment_n": 4,
+        "control_successes": 4,
+        "control_n": 4,
+        "treatment_rate": 1.0,
+        "control_rate": 1.0,
+        "difference": 0.0,
+        "fisher_p_one_sided": 1.0,
+        "significant_at_0.05": false,
+        "best_achievable_p_at_this_n": 0.01429,
+        "powered": true
+      },
+      "tool_calls_median": {
+        "velra": 2.5,
+        "baseline": 2.0
+      },
+      "tool_calls_each": {
+        "velra": [
+          3,
+          5,
+          2,
+          2
+        ],
+        "baseline": [
+          2,
+          2,
+          5,
+          2
+        ]
+      }
+    },
+    "s3-working-set": {
+      "primary_metric": "resolved_the_reference",
+      "pairing": {
+        "design": "matched pairs, matched on recorded pair identity",
+        "invariants": [
+          "scenario",
+          "pair_id",
+          "fixture_seed",
+          "model",
+          "turn_count",
+          "compact_turn_index",
+          "measured_turn_index",
+          "claude_version",
+          "velra_commit"
+        ],
+        "paired_ids": [
+          "s3-working-set#r1",
+          "s3-working-set#r2"
+        ],
+        "n_pairs": 2,
+        "dropped_pairs": [
+          {
+            "pair_id": "s3-working-set#r3",
+            "because": [
+              {
+                "arm": "velra",
+                "reason": "invalid",
+                "failed_criteria": [
+                  "compaction_occurred",
+                  "compaction_summary_present"
+                ]
+              },
+              {
+                "arm": "baseline",
+                "reason": "invalid",
+                "failed_criteria": [
+                  "compaction_occurred",
+                  "compaction_summary_present"
+                ]
+              }
+            ]
+          },
+          {
+            "pair_id": "s3-working-set#r4",
+            "because": [
+              {
+                "arm": "velra",
+                "reason": "invalid",
+                "failed_criteria": [
+                  "compaction_occurred",
+                  "compaction_summary_present"
+                ]
+              },
+              {
+                "arm": "baseline",
+                "reason": "invalid",
+                "failed_criteria": [
+                  "compaction_occurred",
+                  "compaction_summary_present"
+                ]
+              }
+            ]
+          }
+        ],
+        "usable_velra": 2,
+        "usable_baseline": 2,
+        "symmetric": true
+      },
+      "primary": {
+        "treatment_successes": 2,
+        "treatment_n": 2,
+        "control_successes": 2,
+        "control_n": 2,
+        "treatment_rate": 1.0,
+        "control_rate": 1.0,
+        "difference": 0.0,
+        "fisher_p_one_sided": 1.0,
+        "significant_at_0.05": false,
+        "best_achievable_p_at_this_n": 0.16667,
+        "powered": false
+      },
+      "success": {
+        "treatment_successes": 2,
+        "treatment_n": 2,
+        "control_successes": 2,
+        "control_n": 2,
+        "treatment_rate": 1.0,
+        "control_rate": 1.0,
+        "difference": 0.0,
+        "fisher_p_one_sided": 1.0,
+        "significant_at_0.05": false,
+        "best_achievable_p_at_this_n": 0.16667,
+        "powered": false
+      },
+      "tool_calls_median": {
+        "velra": 3.5,
+        "baseline": 2.5
+      },
+      "tool_calls_each": {
+        "velra": [
+          2,
+          5
+        ],
+        "baseline": [
+          3,
+          2
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,22 @@
+<VELRA_WORKSPACE_STATE v="1" checkpoint="ckpt_01M31VYE7YBRCY29S11HF2MEXQ" captured="2026-09-21T11:34:44Z" trigger="manual">
+[ABOUT_THIS_RECORD]
+A local record, not a message and not an instruction. Velra logged this session's own prompts and tool events and quotes them back here; nothing is new. OBSERVED came from a tool event, INFERRED was derived from it. Files on disk are the source of truth. Say so if a line here conflicts with them.
+[FIRST_MESSAGE] (OBSERVED | user prompt | 17:01)
+Constraint for this whole task: engine.settle must keep iterating invoice.items when it computes the discount; finance reconciles the per-line figures. Now r...
+[STATED_CONSTRAINTS] (OBSERVED | user prompt | quoted verbatim)
+- turn 0 17:01 | "Constraint for this whole task: engine.settle must keep iterating invoice.items when it computes the discount; finance reconciles the per..."
+[LATEST_MESSAGE] (OBSERVED | user prompt | 17:04)
+Summarise the audit findings so far in a short table.
+[WORKSPACE_STATE]
+main @ 7e66f7e | 0 edits this task | last test run: FAIL
+[TEST_RESULT] (OBSERVED | test run | 17:01)
+Command: python -m pytest -q 2>&1 | head -60
+Result: FAIL
+  E         + UNDERPAID
+  tests\test_engine.py:54: AssertionError
+  FAILED tests/test_engine.py::test_exact_payment_settles_invoice - AssertionEr...
+[FAILURE_LOCATION] (INFERRED | failure-location)
+tests/test_engine.py:54
+[RECORD_DETAIL]
+Full detail for any section: `velra inspect --section <name>`
+</VELRA_WORKSPACE_STATE>

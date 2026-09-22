@@ -1,0 +1,471 @@
+{
+  "trial": "s3-working-set-baseline-r2",
+  "scenario": "s3-working-set",
+  "mechanism": "[WORKING_FILES]",
+  "arm": "baseline",
+  "replicate": 2,
+  "pair_id": "s3-working-set#r2",
+  "pair_key": {
+    "scenario": "s3-working-set",
+    "pair_id": "s3-working-set#r2",
+    "fixture_seed": "8b1dfed4efd60e13",
+    "model": "sonnet",
+    "turn_count": 14,
+    "compact_turn_index": 12,
+    "measured_turn_index": 13,
+    "claude_version": "2.1.272",
+    "velra_commit": "4b68b6b7c"
+  },
+  "model": "sonnet",
+  "session_id": "7d824704-fc8a-41fc-abdb-ce84d8eda203",
+  "wall_seconds": 229.802,
+  "compact_status": {
+    "compact_result": "success",
+    "compact_error": null,
+    "at_turn": 12
+  },
+  "turns_observed": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13
+  ],
+  "validity": {
+    "criteria": {
+      "all_turns_completed": true,
+      "no_budget_abort": true,
+      "compaction_occurred": true,
+      "compaction_summary_present": true,
+      "measured_turn_present": true,
+      "arm_integrity": true
+    },
+    "failed_criteria": [],
+    "valid": true,
+    "excluded_from": [],
+    "detail": {
+      "turns_sent": 14,
+      "turns_expected": 14,
+      "result_subtypes": [
+        "success",
+        "success",
+        "success",
+        "success",
+        "success",
+        "success",
+        "success",
+        "success",
+        "success",
+        "success",
+        "success",
+        "success",
+        "success",
+        "success"
+      ],
+      "aborted_subtypes": [],
+      "compact_status": {
+        "compact_result": "success",
+        "compact_error": null,
+        "at_turn": 12
+      },
+      "hook_invocations_observed": 0,
+      "arm": "baseline"
+    }
+  },
+  "measured_turn": {
+    "prompt": "Now make that fix.",
+    "tool_call_count": 2,
+    "buckets": {
+      "read": 1,
+      "search": 0,
+      "edit": 1,
+      "bash": 0,
+      "other": 0
+    },
+    "by_tool": {
+      "Edit": 1,
+      "Bash": 1
+    },
+    "tool_sequence": [
+      {
+        "name": "Edit",
+        "bucket": "edit",
+        "target": "C:\\Users\\aryan\\AppData\\Local\\Temp\\velra-hardened-fixtures\\s3-working-set-baseline-r2\\src\\ledger\\importers\\legacy_tsv_v2.py"
+      },
+      {
+        "name": "Bash",
+        "bucket": "read",
+        "target": "cd \"C:\\Users\\aryan\\AppData\\Local\\Temp\\velra-hardened-fixtures\\s3-working-set-baseline-r2\" && python -m pytest -q 2>&1 | tail -5 && python -c \"\nimport sys; sys.path.insert(0,'src')\nfrom ledger.importer"
+      }
+    ],
+    "reads_before_first_edit": 0,
+    "read_targets_before_first_edit": [],
+    "first_edit_index": 0,
+    "first_edit_file": "c:/users/aryan/appdata/local/temp/velra-hardened-fixtures/s3-working-set-baseline-r2/src/ledger/importers/legacy_tsv_v2.py",
+    "edit_count": 1,
+    "edit_targets": [
+      "C:\\Users\\aryan\\AppData\\Local\\Temp\\velra-hardened-fixtures\\s3-working-set-baseline-r2\\src\\ledger\\importers\\legacy_tsv_v2.py"
+    ],
+    "assistant_text": "I changed `DELIMITER` from `None` to `\"\\t\"` in `src/ledger/importers/legacy_tsv_v2.py:10`. The suite still passes (6 tests), and a spot check on a tab-separated line parsed correctly. The description `garden hose, 2m` now stays in one field, where before it was cut off at the first space.\n\n- **Only v2 changed.** `legacy_tsv_v1` and `legacy_tsv_v3` still have `DELIMITER = None`, which is what I found in the audit. That leaves v2 as the only one of the three that splits on tabs. If you want all three to match, I can change the other two.\n- **Behavior change for v2.** Space-separated v2 files will now fail, with \"expected at least two fields\" or \"bad amount\". Empty tab fields are also kept instead of dropped.\n- **No new tests.** The existing suite doesn't exercise the importers, so it says nothing about this change. I can add a small test file for v2 tab splitting.\n- **Not committed.** The change is only in the working tree.",
+    "result_cost_usd": 0.7427606000000002,
+    "result_duration_ms": 13595,
+    "source_rereads_before_first_edit": 0
+  },
+  "behaviour": {
+    "primary": "resolved_the_reference",
+    "resolved_the_reference": true,
+    "target_fixed": true,
+    "hit_the_agreed_file": true,
+    "first_edit_on_target": true,
+    "siblings_edited": [],
+    "repaired_every_candidate": false,
+    "made_no_edit": false,
+    "tool_calls_before_first_edit": 0,
+    "search_calls": 0,
+    "read_calls": 1,
+    "suite_green": true,
+    "success": true
+  },
+  "hooks": {
+    "observed": 0,
+    "paired": 0,
+    "sync_n": 0,
+    "sync_p50_ms": null,
+    "sync_p95_ms": null,
+    "sync_p99_ms": null,
+    "sync_max_ms": null,
+    "all_p50_ms": null,
+    "all_p99_ms": null,
+    "all_max_ms": null,
+    "nonzero_exit": 0,
+    "responses_with_stderr": 0,
+    "responses_with_stdout": 0,
+    "per_event_p99_ms": {},
+    "per_event_p50_ms": {},
+    "per_event_count": {},
+    "per_event_kind": {}
+  },
+  "delivered_capsule": {
+    "delivered": false
+  },
+  "capsule_dead_ends": {
+    "applicable": false
+  },
+  "capsule_constraint": {
+    "applicable": false
+  },
+  "working_file_relevance": {
+    "delivered": false,
+    "relevant": [
+      "src/ledger/importers/legacy_tsv_v2.py"
+    ]
+  },
+  "prompt_rejection": {
+    "applicable": false
+  },
+  "native_compaction_summary": {
+    "present": true,
+    "chars": 10113,
+    "bytes": 10130
+  },
+  "velra_db": {
+    "present": false
+  },
+  "final_state": {
+    "pytest_exit": 0,
+    "pytest_tail": [
+      "......                                                                   [100%]",
+      "6 passed in 0.02s"
+    ],
+    "pytest_output": "......                                                                   [100%]\n6 passed in 0.02s\n",
+    "git_diff": "diff --git a/src/ledger/importers/legacy_tsv_v2.py b/src/ledger/importers/legacy_tsv_v2.py\nindex 94a0d4f..7861725 100644\n--- a/src/ledger/importers/legacy_tsv_v2.py\n+++ b/src/ledger/importers/legacy_tsv_v2.py\n@@ -7,7 +7,7 @@ from typing import Iterable, Iterator, List, Optional\n \n from ..money import Money\n \n-DELIMITER = None\n+DELIMITER = \"\\t\"\n RECORD_KIND = \"invoice\"\n SKIP_PREFIXES = (\"#\", \"//\", \"REM \")\n MAX_FIELD_LENGTH = 512\n",
+    "git_status": " M src/ledger/importers/legacy_tsv_v2.py\n",
+    "git_log": "ac9a2bc Ledger platform: adapters, reporting, importers, validation\n",
+    "present": true
+  },
+  "total_cost_usd": 5.051466400000001,
+  "per_turn": {
+    "0": {
+      "prompt": "Orientation first. Run `python -m pytest -q` and tell me whether the s",
+      "tools": 2,
+      "names": [
+        "Bash"
+      ]
+    },
+    "1": {
+      "prompt": "Read src/ledger/money.py and src/ledger/rules.py and summarise how a p",
+      "tools": 2,
+      "names": [
+        "Read"
+      ]
+    },
+    "2": {
+      "prompt": "Read src/ledger/importers/legacy_tsv_v1.py and src/ledger/importers/le",
+      "tools": 2,
+      "names": [
+        "Read"
+      ]
+    },
+    "3": {
+      "prompt": "Right. src/ledger/importers/legacy_tsv_v2.py splits on whitespace even",
+      "tools": 3,
+      "names": [
+        "Glob",
+        "Grep"
+      ]
+    },
+    "4": {
+      "prompt": "Read every module under src/ledger/adapters and list, for each one, th",
+      "tools": 2,
+      "names": [
+        "Glob",
+        "Grep"
+      ]
+    },
+    "5": {
+      "prompt": "Now read every module under src/ledger/reporting and list, for each on",
+      "tools": 4,
+      "names": [
+        "Glob",
+        "Grep",
+        "Read"
+      ]
+    },
+    "6": {
+      "prompt": "Now read every module under src/ledger/importers and tell me which one",
+      "tools": 2,
+      "names": [
+        "Grep"
+      ]
+    },
+    "7": {
+      "prompt": "Now read every module under src/ledger/validation and list each one's ",
+      "tools": 4,
+      "names": [
+        "Glob",
+        "Grep",
+        "Read"
+      ]
+    },
+    "8": {
+      "prompt": "Across all the adapter modules, group them by their DECLINE_STATUS val",
+      "tools": 1,
+      "names": [
+        "Grep"
+      ]
+    },
+    "9": {
+      "prompt": "List every call site of Money.from_str across the whole codebase, with",
+      "tools": 1,
+      "names": [
+        "Grep"
+      ]
+    },
+    "10": {
+      "prompt": "Which modules import ledger.money directly? Give me the complete list,",
+      "tools": 1,
+      "names": [
+        "Grep"
+      ]
+    },
+    "11": {
+      "prompt": "Summarise the audit findings so far in a short table.",
+      "tools": 0,
+      "names": []
+    },
+    "12": {
+      "prompt": "/compact",
+      "tools": 0,
+      "names": []
+    },
+    "13": {
+      "prompt": "Now make that fix.",
+      "tools": 2,
+      "names": [
+        "Bash",
+        "Edit"
+      ]
+    }
+  },
+  "provenance": {
+    "binary": "C:\\Users\\aryan\\Videos\\Velra\\target\\release\\velra.exe",
+    "binary_bytes": 5399040,
+    "reported_version": "velra 0.1.1 (4b68b6b7c, x86_64-pc-windows-gnu)",
+    "embedded_commit": "4b68b6b7c",
+    "git_head": "4b68b6b7cc82c94d420377afcd1200622700123b",
+    "git_head_short9": "4b68b6b7c",
+    "git_branch": "main",
+    "git_describe": "v0.1.1-benchmark-baseline-7-g4b68b6b",
+    "working_tree_clean": false,
+    "working_tree_changes": [
+      "?? bench/results/v0.1.2/"
+    ],
+    "commit_matches_binary": true,
+    "host": {
+      "platform": "Windows-11-10.0.26200-SP0",
+      "machine": "AMD64",
+      "python": "3.14.0",
+      "processor": "Intel64 Family 6 Model 183 Stepping 1, GenuineIntel",
+      "cpu_count": 20
+    },
+    "agent": {
+      "binary": "C:\\Users\\aryan\\.vscode\\extensions\\anthropic.claude-code-2.1.272-win32-x64\\resources\\native-binary\\claude.exe",
+      "version": "2.1.272"
+    },
+    "warnings": [
+      "the working tree is dirty: results cannot be attributed to a commit"
+    ]
+  },
+  "preregistration_sha256": "4658a1a538411e0f15bf9c5d57ee50ede85bcd2d7929b8c7045262732c2eb1ad",
+  "manifest": {
+    "failing_test": null,
+    "failing_assertion_line": null,
+    "true_fix_file": "src/ledger/importers/legacy_tsv_v2.py",
+    "true_fix_symbol": "DELIMITER",
+    "required_final_state": [
+      {
+        "file": "src/ledger/importers/legacy_tsv_v2.py",
+        "contains": "DELIMITER = \"\\t\""
+      }
+    ],
+    "sibling_files": [
+      "src/ledger/importers/legacy_tsv_v1.py",
+      "src/ledger/importers/legacy_tsv_v3.py"
+    ],
+    "decoy_count": 2,
+    "dead_end_files": [],
+    "dead_end_file": null,
+    "anaphor": "the module we agreed to fix",
+    "uncommitted_files": [],
+    "noise_module_count": 84,
+    "suite_must_stay_green": true,
+    "scenario": "s3-working-set",
+    "title": "The file we agreed on, after eighty-four others",
+    "mechanism": "[WORKING_FILES]",
+    "repo": "C:\\Users\\aryan\\AppData\\Local\\Temp\\velra-hardened-fixtures\\s3-working-set-baseline-r2",
+    "leak_terms": [
+      "splits on whitespace even though",
+      "should be a tab",
+      "the bug we are going to fix",
+      "agreed to fix",
+      "TODO(importers)",
+      "the module we agreed",
+      "v2 is the one",
+      "fix v2"
+    ],
+    "canary": {
+      "file": "src/ledger/adapters/adyen_uk.py",
+      "const": "API_KEY_PREFIX",
+      "value": "AQE1",
+      "seed_turn": 4
+    },
+    "compact_turn_index": 12,
+    "measured_turn_index": 13,
+    "turn_count": 14,
+    "target_facts": [
+      {
+        "id": "s3-agreed-file",
+        "what": "src/ledger/importers/legacy_tsv_v2.py is the module turn 3 named as the one to fix.",
+        "probe": "Four turns in, before the audit, we agreed on one specific module to fix and deferred the change. Which module was it? Reply with just the file path.",
+        "recalled_markers": [
+          "legacy_tsv_v2"
+        ],
+        "ledger_table": "file_stats",
+        "ledger_sql": "SELECT f.path, f.reads, f.edits, f.first_touch_ms, f.last_touch_ms FROM file_stats f WHERE f.path LIKE '%legacy_tsv_v2.py' AND f.reads >= 1   AND f.last_touch_ms <= (SELECT COALESCE(MAX(ts_ms), 0) FROM events                           WHERE id <= ?1)",
+        "capsule_markers": [
+          "legacy_tsv_v2"
+        ],
+        "necessary_because": "the measured turn is 'Now make that fix', and 'that' is never written into the repository. Three importers are broken in the same visible way, so the tree cannot disambiguate them; there is no failing test pointing anywhere, because the suite is green throughout. The reference resolves from the conversation, from the capsule, or not at all."
+      }
+    ],
+    "fixture_seed": "8b1dfed4efd60e13",
+    "ground_truth": {
+      "as_generated": {
+        "exit": 0,
+        "counts": {
+          "passed": 6,
+          "failed": 0,
+          "errors": 0
+        },
+        "expected": "green",
+        "observed": "green",
+        "tail": [
+          "6 passed in 0.03s"
+        ]
+      }
+    },
+    "leak_scan": {
+      "clean": true,
+      "terms": [
+        "splits on whitespace even though",
+        "should be a tab",
+        "the bug we are going to fix",
+        "agreed to fix",
+        "TODO(importers)",
+        "the module we agreed",
+        "v2 is the one",
+        "fix v2"
+      ],
+      "hits": []
+    },
+    "leak_scan_wide": {
+      "clean": true,
+      "terms": [
+        "splits on whitespace even though",
+        "should be a tab",
+        "the bug we are going to fix",
+        "agreed to fix",
+        "TODO(importers)",
+        "the module we agreed",
+        "v2 is the one",
+        "fix v2"
+      ],
+      "surfaces_scanned": [
+        "tree",
+        "filenames",
+        "pre_prompts",
+        "post_prompt",
+        "environment"
+      ],
+      "fatal_surfaces": [
+        "tree",
+        "filenames",
+        "post_prompt",
+        "environment"
+      ],
+      "hits_by_surface": {
+        "pre_prompts": 3
+      },
+      "fatal_hits": [],
+      "hits": [
+        {
+          "surface": "pre_prompts",
+          "where": "turn 3",
+          "term": "splits on whitespace even though",
+          "context": "Right. src/ledger/importers/legacy_tsv_v2.py splits on whitespace even though it is a tab-separated importer, and that is the bug we are"
+        },
+        {
+          "surface": "pre_prompts",
+          "where": "turn 3",
+          "term": "should be a tab",
+          "context": "ter, and that is the bug we are going to fix: its DELIMITER should be a tab, like its siblings. Do not change anything yet \u2014 I want the"
+        },
+        {
+          "surface": "pre_prompts",
+          "where": "turn 3",
+          "term": "the bug we are going to fix",
+          "context": "ace even though it is a tab-separated importer, and that is the bug we are going to fix: its DELIMITER should be a tab, like its siblings. Do not c"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,92 @@
+{
+  "trial": "s3-working-set-baseline-r1",
+  "scenario": "s3-working-set",
+  "arm": "baseline",
+  "replicate": 1,
+  "pair_id": "s3-working-set#r1",
+  "fixture_seed": "8b1dfed4efd60e13",
+  "target_facts": [
+    "s3-agreed-file"
+  ],
+  "stages": {
+    "compaction_loss": {
+      "status": "fail",
+      "rule": "a target fact counts as lost when it is not recalled in a majority of valid control replicates, and the control's own context-reduction gate also holds",
+      "context_reduction_pct_median": 61.3,
+      "compaction_is_lossy": true,
+      "per_fact": {
+        "s3-agreed-file": {
+          "replicates": 2,
+          "valid_replicates": 2,
+          "lost_replicates": 0,
+          "recalled_each": [
+            true,
+            true
+          ],
+          "answers": [
+            "src/ledger/importers/legacy_tsv_v2.py",
+            "src/ledger/importers/legacy_tsv_v2.py"
+          ],
+          "lost": false
+        }
+      },
+      "reason": "at least one target fact survived native compaction, so this scenario cannot attribute anything to Velra"
+    },
+    "capture": {
+      "status": "n/a",
+      "reason": "baseline arm has no ledger",
+      "blocks_chain": false
+    },
+    "delivery": {
+      "status": "n/a",
+      "reason": "baseline arm delivers no capsule",
+      "blocks_chain": false
+    },
+    "acceptance": {
+      "status": "n/a",
+      "verdict": "N/A",
+      "reason": "nothing was delivered to accept",
+      "blocks_chain": false
+    },
+    "utilisation": {
+      "status": "pass",
+      "primary_metric": "resolved_the_reference",
+      "primary_value": true,
+      "correct": true,
+      "suite_green": true,
+      "secondary": {
+        "tool_calls": 3,
+        "buckets": {
+          "read": 1,
+          "search": 0,
+          "edit": 1,
+          "bash": 1,
+          "other": 0
+        },
+        "reads_before_first_edit": 0,
+        "source_rereads_before_first_edit": 0,
+        "first_edit_file": "c:/users/aryan/appdata/local/temp/velra-hardened-fixtures/s3-working-set-baseline-r1/src/ledger/importers/legacy_tsv_v2.py",
+        "first_edit_index": 0,
+        "edit_targets": [
+          "C:\\Users\\aryan\\AppData\\Local\\Temp\\velra-hardened-fixtures\\s3-working-set-baseline-r1\\src\\ledger\\importers\\legacy_tsv_v2.py"
+        ]
+      },
+      "scenario_detail": {
+        "resolved_the_reference": true,
+        "target_fixed": true,
+        "hit_the_agreed_file": true,
+        "first_edit_on_target": true,
+        "siblings_edited": [],
+        "repaired_every_candidate": false,
+        "made_no_edit": false,
+        "tool_calls_before_first_edit": 0,
+        "search_calls": 0,
+        "read_calls": 1,
+        "suite_green": true
+      },
+      "reason": null
+    }
+  },
+  "first_failed_stage": "compaction_loss",
+  "classification": "NOT_CAUSALLY_TESTABLE"
+}

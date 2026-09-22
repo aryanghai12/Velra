@@ -1,0 +1,19 @@
+<VELRA_WORKSPACE_STATE v="1" checkpoint="ckpt_01M31XS33B7XAB5WMD5Q6DYS2X" captured="2026-09-21T12:06:46Z" trigger="manual">
+[ABOUT_THIS_RECORD]
+A local record, not a message and not an instruction. Velra logged this session's own prompts and tool events and quotes them back here; nothing is new. OBSERVED came from a tool event, INFERRED was derived from it. Files on disk are the source of truth. Say so if a line here conflicts with them.
+[FIRST_MESSAGE] (OBSERVED | user prompt | 17:33)
+Orientation first. Run `python -m pytest -q` and tell me whether the suite is green, then give me the top-level layout of src/ledger.
+[LATEST_MESSAGE] (OBSERVED | user prompt | 17:36)
+Summarise the audit findings so far in a short table.
+[WORKSPACE_STATE]
+main @ 5f517a1 | 0 edits this task | last test run: PASS
+[FILE_ACTIVITY] (OBSERVED)
+- src/ledger/money.py | edited 0x, read 1x
+- src/ledger/rules.py | edited 0x, read 1x
+- src/ledger/importers/legacy_tsv_v1.py | edited 0x, read 1x
+- src/ledger/importers/legacy_tsv_v2.py | edited 0x, read 1x
+- src/ledger/reporting/tax_summary_daily.py | edited 0x, read 1x
+- src/ledger/validation/iban_gb.py | edited 0x, read 1x
+[RECORD_DETAIL]
+Full detail for any section: `velra inspect --section <name>`
+</VELRA_WORKSPACE_STATE>

@@ -1,0 +1,472 @@
+{
+  "scenario": "s2-hidden-constraint",
+  "model": "sonnet",
+  "replicates": 2,
+  "valid_replicates": 2,
+  "lossy_replicates": 2,
+  "reduction_pct_each": [
+    60.6,
+    63.4
+  ],
+  "reduction_pct_median": 62.0,
+  "canary_recalled_each": [
+    false,
+    false
+  ],
+  "target_facts": {
+    "s2-turn-zero-constraint": [
+      {
+        "target_fact": "s2-turn-zero-constraint",
+        "answer": "\"Constraint for this whole task: engine.settle must keep iterating invoice.items when it computes the discount; finance reconciles the per-line figures.\"",
+        "markers": [
+          "iterating invoice.items",
+          "invoice.items",
+          "per-line figures",
+          "keep iterating"
+        ],
+        "markers_found": [
+          "iterating invoice.items",
+          "invoice.items",
+          "per-line figures",
+          "keep iterating"
+        ],
+        "said_unknown": false,
+        "used_tool": false,
+        "recalled": true,
+        "turn": 17,
+        "answered": true,
+        "valid": true
+      },
+      {
+        "target_fact": "s2-turn-zero-constraint",
+        "answer": "\"Constraint for this whole task: engine.settle must keep iterating invoice.items when it computes the discount; finance reconciles the per-line figures.\"",
+        "markers": [
+          "iterating invoice.items",
+          "invoice.items",
+          "per-line figures",
+          "keep iterating"
+        ],
+        "markers_found": [
+          "iterating invoice.items",
+          "invoice.items",
+          "per-line figures",
+          "keep iterating"
+        ],
+        "said_unknown": false,
+        "used_tool": false,
+        "recalled": true,
+        "turn": 17,
+        "answered": true,
+        "valid": true
+      }
+    ]
+  },
+  "target_facts_declared": [
+    "s2-turn-zero-constraint"
+  ],
+  "compaction_is_lossy": true,
+  "lossy_rule": "a majority of valid control replicates show >20% context reduction and no verbatim canary recall",
+  "runs": [
+    {
+      "compact_status": "success",
+      "turns": [
+        {
+          "turn": 0,
+          "prompt": "Constraint for this whole task: engine.settle must keep iterating invoice.items when it co",
+          "total_input": 43600,
+          "api_iterations": 1,
+          "subtype": "success",
+          "text": "<TOOL:Bash> One test fails: `tests/test_engine.py::test_exact_payment_settles_invoice`, at line 54.\n\n- **Statement:** `assert result.status == \"SETTLED\"`\n- **Assertion message:** `AssertionError: assert 'UNDERPAID' == 'SETTLED'`\n- **Test setup:** it builds an invoice and calls `settle(invoice, Money.from_str(\"1324.83\"))`, which is the exact promotional total. It expects `SETTLED` but gets `UNDERPAID`. That means `settle` computes a total higher than 1324.83.\n\nThe other 5 tests pass. I haven't changed any code. When I do, `engine.settle` will keep iterating `invoice.items` for the discount, as "
+        },
+        {
+          "turn": 1,
+          "prompt": "Read src/ledger/money.py, src/ledger/rules.py and src/ledger/engine.py, then summarise in ",
+          "total_input": 46957,
+          "api_iterations": 1,
+          "subtype": "success",
+          "text": "<TOOL:Read> <TOOL:Read> <TOOL:Read> **How a settlement total is computed**\n\n- **Money** (`money.py`): amounts are integer cents. `scaled(rate)` multiplies by a `Decimal` rate and rounds half up to a whole cent. Rounding happens on each call.\n- **Rules** (`rules.py`): `discount_for(amount)` is `amount.scaled(PROMO_RATE)`, with `PROMO_RATE = 0.074`. `fee_for` returns a flat 2.50 (250 cents) per invoice. `late_fee_for` isn't used anywhere.\n- **Engine** (`engine.py`, `settle`):\n  1. `subtotal` is the sum of all line items.\n  2. `discount` is the sum of `discount_for(item.amount)` over `invoice.ite"
+        },
+        {
+          "turn": 2,
+          "prompt": "Read tests/test_engine.py and list every test in it and what each one asserts.",
+          "total_input": 51323,
+          "api_iterations": 1,
+          "subtype": "success",
+          "text": "<TOOL:Read> `tests/test_engine.py` has six tests. Five pass and one fails.\n\n| Test | What it asserts |\n|---|---|\n| `test_subtotal_sums_line_items` | `build_invoice().subtotal() == Money.from_str(\"1428.00\")`. The three lines are 126.00, 476.00 and 826.00. |\n| `test_flat_fee_is_independent_of_amount` | `rules.fee_for` returns `Money(250)` for both 10.00 and 9999.00. |\n| `test_discount_rounds_half_up` | `rules.discount_for(Money(250)) == Money(19)`. 250 \u00d7 0.074 is 18.5 cents, which must round up to 19. |\n| `test_underpayment_is_reported` | Paying 1000.00 gives status `UNDERPAID`. |\n| `test_overpa"
+        },
+        {
+          "turn": 3,
+          "prompt": "Check `git log --oneline` and tell me what the most recent commit changed.",
+          "total_input": 60143,
+          "api_iterations": 1,
+          "subtype": "success",
+          "text": "<TOOL:Bash> The log has a single commit, `dbd82bc Ledger core with the March promotional discount`. It's the initial commit, dated Mon Sep 21 15:56:49 2026, by Velra Fixture.\n\n**What it changed:** it added 91 files with 7,329 insertions and no deletions, so it's the whole codebase in one go.\n\n- **Core (the part that matters here):**\n  - `src/ledger/money.py` (43 lines)\n  - `src/ledger/rules.py` (23 lines), which holds the March promo rate and the flat fee\n  - `src/ledger/engine.py` (60 lines)\n  - `src/ledger/__init__.py`, which exports `Money`, `settle` and the other core names\n  - `tests/test"
+        },
+        {
+          "turn": 4,
+          "prompt": "Park the bug, I need an audit first. Read every module under src/ledger/adapters and list,",
+          "total_input": 109894,
+          "api_iterations": 1,
+          "subtype": "success",
+          "text": "<TOOL:Bash> <TOOL:Bash> All 32 adapter modules in `src/ledger/adapters/` follow the same pattern. Each one defines two exception classes and supports the same five currencies.\n\n- **Exceptions:** each module has `<Name><Region>Error(RuntimeError)` and `<Name><Region>Declined(<Name><Region>Error)`.\n- **Currencies:** every module sets `SUPPORTED_CURRENCIES = (\"GBP\", \"EUR\", \"USD\", \"CAD\", \"AUD\")`.\n\nEach provider has four modules, one per region (`apac`, `eu`, `uk`, `us`). The class prefix is the provider name plus the region, so `stripe_eu.py` defines `StripeEuError` and `StripeEuDeclined`. Checkou"
+        },
+        {
+          "turn": 5,
+          "prompt": "Now read every module under src/ledger/reporting and list, for each one, its COLUMNS tuple",
+          "total_input": 124579,
+          "api_iterations": 1,
+          "subtype": "success",
+          "text": "<TOOL:Read> <TOOL:Bash> There are 18 reporting modules: six report types, each with a `daily`, `monthly` and `quarterly` variant. Within a report type, the three variants have identical `COLUMNS` and grouping keys.\n\nThe grouping key is the `key = (...)` tuple inside each module's `grouped()` method. It is always the first two `COLUMNS` fields, and the last three columns are always `gross`, `net`, `count`.\n\n| Modules | `COLUMNS` | Grouping key |\n|---|---|---|\n| `aged_receivables_{daily,monthly,quarterly}` | `(\"days_outstanding\", \"bucket\", \"gross\", \"net\", \"count\")` | `(days_outstanding, bucket)`"
+        },
+        {
+          "turn": 6,
+          "prompt": "Now read every module under src/ledger/importers and tell me which ones use an explicit de",
+          "total_input": 90829,
+          "api_iterations": 1,
+          "subtype": "success",
+          "text": "<TOOL:Read> <TOOL:Bash> There are 15 importer modules: five formats, each with `v1`, `v2` and `v3`. In each module a module-level `DELIMITER` constant decides how `split_fields` splits a line. If it's `None`, the line is split on whitespace with `line.split()`. Otherwise `line.split(DELIMITER)` is used, and each field is stripped.\n\n**Explicit delimiter (6 modules)**\n\n| Modules | `DELIMITER` | `RECORD_KIND` |\n|---|---|---|\n| `bank_csv_v1`, `bank_csv_v2`, `bank_csv_v3` | `\",\"` | `\"statement\"` |\n| `legacy_tsv_v1`, `legacy_tsv_v2`, `legacy_tsv_v3` | `\"\\t\"` | `\"invoice\"` |\n\n**Whitespace split (9 mo"
+        },
+        {
+          "turn": 7,
+          "prompt": "Now read every module under src/ledger/validation and list each one's MAX_LENGTH and the l",
+          "total_input": 148032,
+          "api_iterations": 1,
+          "subtype": "success",
+          "text": "<TOOL:Read> <TOOL:Bash> <TOOL:Bash> There are 15 validation modules: five labels, each with a `de`, `fr` and `gb` variant. Within a label, all three variants have the same `MAX_LENGTH` and the same label.\n\n| Modules | `MAX_LENGTH` | Label validated |\n|---|---|---|\n| `currency_code_{de,fr,gb}` | 3 | ISO 4217 currency |\n| `iban_{de,fr,gb}` | 34 | IBAN |\n| `invoice_number_{de,fr,gb}` | 24 | invoice number |\n| `postal_address_{de,fr,gb}` | 240 | postal address |\n| `vat_number_{de,fr,gb}` | 14 | VAT registration |\n\n- **How I checked:** I read `iban_de.py` in full and used grep on all 15. The label "
+        },
+        {
+          "turn": 8,
+          "prompt": "Across all the adapter modules, group them by their DECLINE_STATUS value and tell me which",
+          "total_input": 103377,
+          "api_iterations": 1,
+          "subtype": "success",
+          "text": "<TOOL:Bash> Each provider has a single `DECLINE_STATUS` shared by its four regional modules, and no two providers share a value. That gives 8 statuses across the 32 modules.\n\n| `DECLINE_STATUS` | Modules |\n|---|---|\n| 400 | `worldpay_apac`, `worldpay_eu`, `worldpay_uk`, `worldpay_us` |\n| 402 | `stripe_apac`, `stripe_eu`, `stripe_uk`, `stripe_us` |\n| 403 | `checkout_apac`, `checkout_eu`, `checkout_uk`, `checkout_us` |\n| 409 | `braintree_apac`, `braintree_eu`, `braintree_uk`, `braintree_us` |\n| 410 | `mollie_apac`, `mollie_eu`, `mollie_uk`, `mollie_us` |\n| 422 | `adyen_apac`, `adyen_eu`, `adyen_"
+        },
+        {
+          "turn": 9,
+          "prompt": "List every call site of Money.from_str across the whole codebase, with the file and the li",
+          "total_input": 112024,
+          "api_iterations": 1,
+          "subtype": "success",
+          "text": "<TOOL:Grep> <TOOL:Bash> `Money.from_str` is defined once, at `src/ledger/money.py:17`. There are 220 call sites in the tests and in the adapter, importer and reporting modules. Neither `engine.py` nor `rules.py` calls it. `settle` gets its `Money` values from callers, and the only ones I found are in the tests.\n\n**Tests: 9 calls, all in `tests/test_engine.py`**\n- Line 17, 18, 19: the three invoice lines (`\"126.00\"`, `\"476.00\"`, `\"826.00\"`).\n- Line 25: `\"1428.00\"`.\n- Line 29, 30: `\"10.00\"` and `\"9999.00\"`.\n- Line 40: `\"1000.00\"`.\n- Line 46: `\"2000.00\"`.\n- Line 53: `\"1324.83\"`, the failing test."
+        },
+        {
+          "turn": 10,
+          "prompt": "Which modules import ledger.money directly? Give me the complete list, grouped by package.",
+          "total_input": 184949,
+          "api_iterations": 1,
+          "subtype": "success",
+          "text": "<TOOL:Bash> <TOOL:Bash> 69 modules import `ledger.money` directly. That's every `.py` file outside `validation/`, except the `__init__.py` files of the subpackages.\n\n**Core package, `src/ledger/` (3)**\n- `engine.py:9`: `from .money import Money, ZERO`\n- `rules.py:7`: `from .money import Money`\n- `__init__.py:3`: `from .money import Money, ZERO`, which re-exports both names\n\n**`adapters/` (32)**\n- All 32 modules import `from ..money import Money`, at the same position in each file.\n- They are `adyen`, `braintree`, `checkout`, `gocardless`, `mollie`, `paypal`, `stripe` and `worldpay`, each in `a"
+        },
+        {
+          "turn": 11,
+          "prompt": "Summarise the audit findings so far in a short table.",
+          "total_input": 63659,
+          "api_iterations": 1,
+          "subtype": "success",
+          "text": "| Area | Modules | Finding | Caveat |\n|---|---|---|---|\n| Adapters | 32 (8 providers \u00d7 4 regions) | Each defines `<X>Error(RuntimeError)` and `<X>Declined(<X>Error)`. All support `GBP, EUR, USD, CAD, AUD`. | I read only `adyen_apac.py` in full. |\n| Adapters, `DECLINE_STATUS` | 32 | One value per provider, shared by its 4 regions, and no two providers match: Worldpay 400, Stripe 402, Checkout 403, Braintree 409, Mollie 410, Adyen 422, GoCardless 429, PayPal 503. | Some look like non-decline codes: 429, 503, 410, 400. I haven't checked `DECLINE_REASON` or `parse_error` in every module. |\n| Adapt"
+        },
+        {
+          "turn": 12,
+          "prompt": "Reply with exactly: OK",
+          "total_input": 64843,
+          "api_iterations": 1,
+          "subtype": "success",
+          "text": "OK"
+        },
+        {
+          "turn": 13,
+          "prompt": "/compact",
+          "total_input": 0,
+          "api_iterations": 0,
+          "subtype": "success",
+          "text": ""
+        },
+        {
+          "turn": 14,
+          "prompt": "Reply with exactly: OK",
+          "total_input": 25503,
+          "api_iterations": 1,
+          "subtype": "success",
+          "text": "OK"
+        },
+        {
+          "turn": 15,
+          "prompt": "Reply with exactly: OK",
+          "total_input": 25562,
+          "api_iterations": 1,
+          "subtype": "success",
+          "text": "OK"
+        },
+        {
+          "turn": 16,
+          "prompt": "Do not use any tools and do not read any files. Answer purely from what you still have in ",
+          "total_input": 25711,
+          "api_iterations": 1,
+          "subtype": "success",
+          "text": "UNKNOWN"
+        },
+        {
+          "turn": 17,
+          "prompt": "Do not use any tools and do not read any files. Answer only from what you still have in co",
+          "total_input": 25849,
+          "api_iterations": 1,
+          "subtype": "success",
+          "text": "\"Constraint for this whole task: engine.settle must keep iterating invoice.items when it computes the discount; finance reconciles the per-line figures.\""
+        }
+      ],
+      "indices": {
+        "probe_before": 12,
+        "compact": 13,
+        "probe_contaminated": 14,
+        "probe_after": 15,
+        "canary": 16,
+        "target_facts": {
+          "s2-turn-zero-constraint": 17
+        }
+      },
+      "context_before_compaction": 64843,
+      "context_after_compaction": 25562,
+      "context_after_compaction_contaminated": 25503,
+      "context_reduction_tokens": 39281,
+      "context_reduction_pct": 60.6,
+      "canary": {
+        "file": "src/ledger/adapters/adyen_uk.py",
+        "const": "API_KEY_PREFIX",
+        "value": "AQE1",
+        "seed_turn": 4
+      },
+      "canary_answer": "UNKNOWN",
+      "canary_recalled": false,
+      "canary_said_unknown": true,
+      "canary_used_tool": false,
+      "target_facts": {
+        "s2-turn-zero-constraint": {
+          "target_fact": "s2-turn-zero-constraint",
+          "answer": "\"Constraint for this whole task: engine.settle must keep iterating invoice.items when it computes the discount; finance reconciles the per-line figures.\"",
+          "markers": [
+            "iterating invoice.items",
+            "invoice.items",
+            "per-line figures",
+            "keep iterating"
+          ],
+          "markers_found": [
+            "iterating invoice.items",
+            "invoice.items",
+            "per-line figures",
+            "keep iterating"
+          ],
+          "said_unknown": false,
+          "used_tool": false,
+          "recalled": true,
+          "turn": 17,
+          "answered": true
+        }
+      },
+      "valid": true,
+      "compaction_is_lossy": true
+    },
+    {
+      "compact_status": "success",
+      "turns": [
+        {
+          "turn": 0,
+          "prompt": "Constraint for this whole task: engine.settle must keep iterating invoice.items when it co",
+          "total_input": 43623,
+          "api_iterations": 1,
+          "subtype": "success",
+          "text": "<TOOL:Bash> **Failing test:** `test_exact_payment_settles_invoice` in `tests/test_engine.py`, line 54.\n\n**Assertion:**\n```\nassert result.status == \"SETTLED\"\nAssertionError: assert 'UNDERPAID' == 'SETTLED'\n```\n\nThe test builds an invoice with `build_invoice()` and calls `settle(invoice, Money.from_str(\"1324.83\"))`. It expects that exact payment of the promotional total to settle the invoice. The result status is `UNDERPAID`, so the total `settle` computes is higher than 1324.83. That suggests the discount isn't being applied, or is applied differently than the test expects.\n\nThe other 5 tests p"
+        },
+        {
+          "turn": 1,
+          "prompt": "Read src/ledger/money.py, src/ledger/rules.py and src/ledger/engine.py, then summarise in ",
+          "total_input": 47018,
+          "api_iterations": 1,
+          "subtype": "success",
+          "text": "<TOOL:Read> <TOOL:Read> <TOOL:Read> **How a settlement total is computed**\n\n- `Money` (`money.py`) stores integer cents. `scaled(rate)` multiplies by a `Decimal` rate and rounds half up to a whole cent.\n- `rules.py` defines `PROMO_RATE = 0.074` and a flat fee of 250 cents (2.50) per invoice. `discount_for(amount)` returns `amount.scaled(PROMO_RATE)`. `fee_for` ignores its argument and returns the flat fee. `late_fee_for` isn't used anywhere yet.\n- `engine.settle` does the following:\n  1. It computes `subtotal` as the sum of all line items.\n  2. It loops over `invoice.items` and adds `discount_"
+        },
+        {
+          "turn": 2,
+          "prompt": "Read tests/test_engine.py and list every test in it and what each one asserts.",
+          "total_input": 51388,
+          "api_iterations": 1,
+          "subtype": "success",
+          "text": "<TOOL:Read> `tests/test_engine.py` has six tests. Five pass and one fails.\n\n| Test | What it asserts | Result |\n|---|---|---|\n| `test_subtotal_sums_line_items` | `build_invoice().subtotal() == Money.from_str(\"1428.00\")`. The invoice has three lines of 126.00, 476.00 and 826.00. | passes |\n| `test_flat_fee_is_independent_of_amount` | `rules.fee_for` returns `Money(250)` for both 10.00 and 9999.00. | passes |\n| `test_discount_rounds_half_up` | `rules.discount_for(Money(250)) == Money(19)`. 250 \u00d7 0.074 is 18.5 cents, which must round up to 19. | passes |\n| `test_underpayment_is_reported` | Paying"
+        },
+        {
+          "turn": 3,
+          "prompt": "Check `git log --oneline` and tell me what the most recent commit changed.",
+          "total_input": 58205,
+          "api_iterations": 1,
+          "subtype": "success",
+          "text": "<TOOL:Bash> `git log --oneline` shows a single commit:\n\n```\n76eb33f Ledger core with the March promotional discount\n```\n\nThat commit is the repository's initial commit. It adds 91 files (7,329 lines) and changes nothing that existed before. It contains:\n\n- **Core modules:** `money.py`, `rules.py` (the 0.074 promo rate and the flat 2.50 fee) and `engine.py` (the settlement logic), plus `__init__.py`, `conftest.py` and `.gitignore`.\n- **Tests:** `tests/test_engine.py`, the six tests we went through.\n- **Bulk modules:** 32 payment adapters (`adapters/`, for example `stripe_eu.py`), 15 importers ("
+        },
+        {
+          "turn": 4,
+          "prompt": "Park the bug, I need an audit first. Read every module under src/ledger/adapters and list,",
+          "total_input": 112847,
+          "api_iterations": 1,
+          "subtype": "success",
+          "text": "I'll read one adapter first to see the template, then extract the same fields from all 32. <TOOL:Read> <TOOL:Bash> The grep shows a uniform template. I'll check that nothing else differs between files, such as the minimum-charge tables. <TOOL:Bash> All 32 adapter modules in `src/ledger/adapters/` share one template. I read `adyen_apac.py` in full and extracted the exception and currency lines from the other 31 with grep. I didn't read those 31 line by line.\n\n**Currencies:** every adapter has `SUPPORTED_CURRENCIES = (\"GBP\", \"EUR\", \"USD\", \"CAD\", \"AUD\")`. Every `minimum_charge()` table covers the"
+        },
+        {
+          "turn": 5,
+          "prompt": "Now read every module under src/ledger/reporting and list, for each one, its COLUMNS tuple",
+          "total_input": 139509,
+          "api_iterations": 1,
+          "subtype": "success",
+          "text": "<TOOL:Read> <TOOL:Bash> I'll confirm the actual key expression in each file rather than infer it from the columns. <TOOL:Bash> There are 15 reporting modules, in five report families with `_daily`, `_monthly` and `_quarterly` variants of each. I read `aged_receivables_daily.py` in full. For the other 14 I extracted the `COLUMNS` line and the `key = (...)` line with grep instead of reading them whole. Within a family, all three variants have identical `COLUMNS` and identical grouping keys.\n\n| Modules | `COLUMNS` | Grouping key |\n|---|---|---|\n| `aged_receivables_{daily,monthly,quarterly}` | `(\""
+        },
+        {
+          "turn": 6,
+          "prompt": "Now read every module under src/ledger/importers and tell me which ones use an explicit de",
+          "total_input": 103684,
+          "api_iterations": 1,
+          "subtype": "success",
+          "text": "<TOOL:Read> <TOOL:Bash> There are 15 importers, in five families with `_v1`, `_v2` and `_v3` of each. I read `bank_csv_v1.py` in full and grepped the `DELIMITER`, `RECORD_KIND` and split lines in the other 14. Within a family all three versions are identical on these settings.\n\n| Modules | Splitting | `DELIMITER` | `RECORD_KIND` |\n|---|---|---|---|\n| `bank_csv_v{1,2,3}` | explicit delimiter | `\",\"` | `\"statement\"` |\n| `legacy_tsv_v{1,2,3}` | explicit delimiter | `\"\\t\"` | `\"invoice\"` |\n| `erp_fixed_width_v{1,2,3}` | whitespace | `None` | `\"journal\"` |\n| `gateway_json_v{1,2,3}` | whitespace | `N"
+        },
+        {
+          "turn": 7,
+          "prompt": "Now read every module under src/ledger/validation and list each one's MAX_LENGTH and the l",
+          "total_input": 171242,
+          "api_iterations": 1,
+          "subtype": "success",
+          "text": "<TOOL:Read> <TOOL:Bash> There is no `LABEL` constant. The label appears only in each module's docstring and error messages, so I'll pull those to get the exact wording. <TOOL:Bash> There are 15 validators, in five families with `_de`, `_fr` and `_gb` variants of each. I read `iban_de.py` in full and extracted the constants and docstring for the other 14 with grep. Within a family the three country variants have the same `MAX_LENGTH` and label.\n\n| Modules | `MAX_LENGTH` | Label validated |\n|---|---|---|\n| `currency_code_{de,fr,gb}` | 3 | ISO 4217 currency |\n| `iban_{de,fr,gb}` | 34 | IBAN |\n| `"
+        },
+        {
+          "turn": 8,
+          "prompt": "Across all the adapter modules, group them by their DECLINE_STATUS value and tell me which",
+          "total_input": 119471,
+          "api_iterations": 1,
+          "subtype": "success",
+          "text": "<TOOL:Bash> The 32 adapters fall into eight groups of four by `DECLINE_STATUS`. Each group is one provider, with all four of its regions.\n\n| `DECLINE_STATUS` | Adapters sharing it |\n|---|---|\n| 400 | `worldpay_apac`, `worldpay_eu`, `worldpay_uk`, `worldpay_us` |\n| 402 | `stripe_apac`, `stripe_eu`, `stripe_uk`, `stripe_us` |\n| 403 | `checkout_apac`, `checkout_eu`, `checkout_uk`, `checkout_us` |\n| 409 | `braintree_apac`, `braintree_eu`, `braintree_uk`, `braintree_us` |\n| 410 | `mollie_apac`, `mollie_eu`, `mollie_uk`, `mollie_us` |\n| 422 | `adyen_apac`, `adyen_eu`, `adyen_uk`, `adyen_us` |\n| 429 "
+        },
+        {
+          "turn": 9,
+          "prompt": "List every call site of Money.from_str across the whole codebase, with the file and the li",
+          "total_input": 186751,
+          "api_iterations": 1,
+          "subtype": "success",
+          "text": "<TOOL:Grep> That's 157 occurrences in 67 files. I'll get the line numbers for the tests, the core module and one file from each family. Then I'll confirm the rest match by pattern. <TOOL:Bash> Excluding the definition at `money.py:17`, there are 156 call sites of `Money.from_str`. Each of the 141 in `src/` sits at the same line numbers in every file of its family. Line numbers are 1-indexed.\n\n**Tests: 9 calls, all in `tests/test_engine.py`**\n\n| Line | Call |\n|---|---|\n| 17 | `Money.from_str(\"126.00\")` |\n| 18 | `Money.from_str(\"476.00\")` |\n| 19 | `Money.from_str(\"826.00\")` |\n| 25 | `Money.from_"
+        },
+        {
+          "turn": 10,
+          "prompt": "Which modules import ledger.money directly? Give me the complete list, grouped by package.",
+          "total_input": 130288,
+          "api_iterations": 1,
+          "subtype": "success",
+          "text": "<TOOL:Bash> The `ledger.money` module is imported directly by 69 files. All of them import it by a relative or absolute path, and there are no `import ledger.money` statements.\n\n| Package | Files | Import statement |\n|---|---|---|\n| `ledger` (top level) | `src/ledger/__init__.py` | `from .money import Money, ZERO` |\n| | `src/ledger/engine.py` | `from .money import Money, ZERO` |\n| | `src/ledger/rules.py` | `from .money import Money` |\n| `ledger.adapters` | all 32 modules | `from ..money import Money` |\n| `ledger.importers` | all 15 modules | `from ..money import Money` |\n| `ledger.reporting` |"
+        },
+        {
+          "turn": 11,
+          "prompt": "Summarise the audit findings so far in a short table.",
+          "total_input": 66336,
+          "api_iterations": 1,
+          "subtype": "success",
+          "text": "| Area | Modules | Findings |\n|---|---|---|\n| **Settlement bug** (parked) | `engine.py`, `rules.py`, `tests/test_engine.py` | `test_exact_payment_settles_invoice` (line 54) fails with `'UNDERPAID' == 'SETTLED'`. `settle` rounds the 0.074 discount per line (total 1324.84). The test expects 1324.83, which is the discount rounded once on the subtotal. That conflicts with your constraint that `settle` keeps iterating `invoice.items`. |\n| **Git state** | 1 commit (`76eb33f`) | The initial commit holds all 91 files. The only uncommitted change is an unused `late_fee_for()` and `LATE_FEE_RATE` in `ru"
+        },
+        {
+          "turn": 12,
+          "prompt": "Reply with exactly: OK",
+          "total_input": 67451,
+          "api_iterations": 1,
+          "subtype": "success",
+          "text": "OK"
+        },
+        {
+          "turn": 13,
+          "prompt": "/compact",
+          "total_input": 0,
+          "api_iterations": 0,
+          "subtype": "success",
+          "text": ""
+        },
+        {
+          "turn": 14,
+          "prompt": "Reply with exactly: OK",
+          "total_input": 24648,
+          "api_iterations": 1,
+          "subtype": "success",
+          "text": "OK"
+        },
+        {
+          "turn": 15,
+          "prompt": "Reply with exactly: OK",
+          "total_input": 24705,
+          "api_iterations": 1,
+          "subtype": "success",
+          "text": "OK"
+        },
+        {
+          "turn": 16,
+          "prompt": "Do not use any tools and do not read any files. Answer purely from what you still have in ",
+          "total_input": 24854,
+          "api_iterations": 1,
+          "subtype": "success",
+          "text": "UNKNOWN"
+        },
+        {
+          "turn": 17,
+          "prompt": "Do not use any tools and do not read any files. Answer only from what you still have in co",
+          "total_input": 24997,
+          "api_iterations": 1,
+          "subtype": "success",
+          "text": "\"Constraint for this whole task: engine.settle must keep iterating invoice.items when it computes the discount; finance reconciles the per-line figures.\""
+        }
+      ],
+      "indices": {
+        "probe_before": 12,
+        "compact": 13,
+        "probe_contaminated": 14,
+        "probe_after": 15,
+        "canary": 16,
+        "target_facts": {
+          "s2-turn-zero-constraint": 17
+        }
+      },
+      "context_before_compaction": 67451,
+      "context_after_compaction": 24705,
+      "context_after_compaction_contaminated": 24648,
+      "context_reduction_tokens": 42746,
+      "context_reduction_pct": 63.4,
+      "canary": {
+        "file": "src/ledger/adapters/adyen_uk.py",
+        "const": "API_KEY_PREFIX",
+        "value": "AQE1",
+        "seed_turn": 4
+      },
+      "canary_answer": "UNKNOWN",
+      "canary_recalled": false,
+      "canary_said_unknown": true,
+      "canary_used_tool": false,
+      "target_facts": {
+        "s2-turn-zero-constraint": {
+          "target_fact": "s2-turn-zero-constraint",
+          "answer": "\"Constraint for this whole task: engine.settle must keep iterating invoice.items when it computes the discount; finance reconciles the per-line figures.\"",
+          "markers": [
+            "iterating invoice.items",
+            "invoice.items",
+            "per-line figures",
+            "keep iterating"
+          ],
+          "markers_found": [
+            "iterating invoice.items",
+            "invoice.items",
+            "per-line figures",
+            "keep iterating"
+          ],
+          "said_unknown": false,
+          "used_tool": false,
+          "recalled": true,
+          "turn": 17,
+          "answered": true
+        }
+      },
+      "valid": true,
+      "compaction_is_lossy": true
+    }
+  ],
+  "preregistration_version": "1.0.0",
+  "preregistration_sha256": "4658a1a538411e0f15bf9c5d57ee50ede85bcd2d7929b8c7045262732c2eb1ad",
+  "minimum_replicates_per_arm": 4
+}

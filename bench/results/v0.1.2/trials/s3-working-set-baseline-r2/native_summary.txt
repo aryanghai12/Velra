@@ -1,0 +1,78 @@
+This session is being continued from a previous conversation that ran out of context. The summary below covers the earlier portion of the conversation.
+
+Summary:
+1. Primary Request and Intent:
+   The user is running a read-only audit of the Python ledger repo. The repo is at `C:\Users\aryan\AppData\Local\Temp\velra-hardened-fixtures\s3-working-set-baseline-r2`, with source in `src/ledger` and tests in `tests/`. They asked a series of per-package questions covering the test suite, the money and rules logic, importers, adapters, reporting, validation, `Money.from_str` call sites and `money` imports. One instruction still applies, verbatim: the user identified `src/ledger/importers/legacy_tsv_v2.py` splitting on whitespace as "the bug we are going to fix: its DELIMITER should be a tab, like its siblings. Do not change anything yet — I want the audit finished first." The latest request is: "Summarise the audit findings so far in a short table", with a text-only response and no tool calls.
+
+2. Key Technical Concepts:
+   - `Money` stores integer cents. `from_str` parses a `Decimal` string with `ROUND_HALF_UP`. `scaled(rate)` multiplies by a `Decimal` rate and rounds half up.
+   - Promotional discount: `PROMO_RATE = Decimal("0.074")`, used in `discount_for` via `amount.scaled(PROMO_RATE)`. The flat fee is `FLAT_FEE = Money(250)` and does not depend on the amount.
+   - Importers share a template. `split_fields` uses `line.split()` when `DELIMITER is None` and `line.split(DELIMITER)` otherwise. Lines starting with `#`, `//` or `REM ` are skipped. Fields are read by position: reference, amount, description. Each is truncated to 512 characters.
+   - The adapter, importer, reporting and validation packages are all near-identical template copies, with only names, a few constants and the family or region varying.
+   - Python 3, pytest, `dataclasses` and `decimal`.
+
+3. Files and Code Sections:
+   - `src/ledger/money.py`: defines `Money` (`from_str`, `scaled`, add and subtract, `__eq__`, `__hash__`, `__repr__`) and `ZERO`. It imports only `decimal`, and is a leaf dependency.
+   - `src/ledger/rules.py`: `PROMO_RATE = Decimal("0.074")`, `FLAT_FEE = Money(250)`, `discount_for(amount)` and `fee_for(amount)`.
+   - `src/ledger/importers/legacy_tsv_v1.py`, `v2` and `v3`: identical except for names. `DELIMITER = None` at line 10 and `RECORD_KIND = "invoice"` at line 11. `split_fields` is at lines 45–49:
+     ```python
+     def split_fields(line: str) -> List[str]:
+         if DELIMITER is None:
+             return [chunk for chunk in line.split() if chunk]
+         return [chunk.strip() for chunk in line.split(DELIMITER)]
+     ```
+     These are the files the pending tab-delimiter fix would touch. No edits have been made.
+   - `src/ledger/importers/*` (15 modules): only `bank_csv_v1`, `v2` and `v3` set an explicit delimiter (`","`). The `Money.from_str` call is at line 61 in every importer.
+   - `src/ledger/adapters/*` (32 modules): `SUPPORTED_CURRENCIES` at line 19, exception classes at lines 22 and 26, `DECLINE_STATUS` at line 17, the decline check at line 84, and a fee table at lines 103–105.
+   - `src/ledger/reporting/*` (18 modules): `COLUMNS` at line 16, the `grouped()` key at line 48, and `build()` calling `Money.from_str` at lines 83–84.
+   - `src/ledger/validation/*` (15 modules): `MAX_LENGTH` at line 9, `PATTERN` at line 10 and `NORMALISE` at line 11. The label is in the docstring at line 1.
+   - `tests/test_engine.py`: imports `from ledger.money import Money` at line 8 and calls `Money.from_str` at lines 17, 18, 19, 25, 29, 30, 40, 46 and 53.
+
+   The audit findings table (the deliverable for the current request):
+
+   | Area | Finding |
+   |---|---|
+   | Tests | Suite is green (6 passed). It doesn't cover importers, adapters, reporting or validation. |
+   | Layout | `src/ledger` has `engine`, `money`, `rules` and `__init__`, plus the subpackages `adapters/`, `importers/`, `reporting/` and `validation/`. |
+   | Discount | Flat 7.4% (`PROMO_RATE`), half-up to the cent. There are no tiers or caps in `rules.py`. The processing fee is a flat 2.50. |
+   | Importers | 15 modules. `legacy_tsv_v1`, `v2` and `v3` are all `DELIMITER=None` (whitespace), so v2 is not the odd one out and no importer uses `"\t"`. Only `bank_csv_*` uses `","`. Record kinds: `bank_csv` = statement, `legacy_tsv` = invoice, `erp_fixed_width` = journal, `gateway_json` = payout, `ledger_ofx` = transaction. |
+   | Adapters | 32 modules (8 providers × 4 regions). Same 5 currencies everywhere (GBP, EUR, USD, CAD, AUD). Each has an `XError(RuntimeError)` and an `XDeclined(XError)`, with no shared base. `DECLINE_STATUS` is constant per provider: worldpay 400, stripe 402, checkout 403, braintree 409, mollie 410, adyen 422, gocardless 429, paypal 503. |
+   | Reporting | 18 modules in 6 families × daily, monthly and quarterly, identical within a family. The key is the first two columns and the last three columns are gross, net and count. `tax_summary_daily` and `tax_summary_monthly` still use a "quarter" column. |
+   | Validation | 15 modules (5 families × gb, de, fr), identical across countries. `MAX_LENGTH`: iban 34, vat_number 14, postal_address 240, currency_code 3, invoice_number 24. These are only length and charset checks, and the length message is a hard-coded literal. |
+   | `Money.from_str` | 220 calls: tests 9, importers 15, reporting 36, adapters 160. Only the importer and reporting calls parse external input. |
+   | `ledger.money` imports | 69 modules: package root 3, adapters 32, importers 15, reporting 18, tests 1. The validation package has none. |
+
+4. Errors and fixes:
+   - No tool or code errors occurred. The one correction was to a premise, not to my work. The user's claim that legacy_tsv_v2's siblings use a tab delimiter was contradicted by the audit, since all three TSV importers use `None`. I reported this and made no change.
+   - In the validation query I first grepped only for `MAX_LENGTH` and found no label constant. I then read `iban_gb.py` and grepped the docstrings to get the labels.
+
+5. Problem Solving:
+   - The main open issue is the tab-delimiter fix. The premise doesn't match the code, and the change has side effects: descriptions containing spaces would no longer be truncated at the first space, empty fields would be kept and could raise "bad amount", and space-separated files would fail. I proposed three options and am waiting for the user to choose.
+   - Suspicious patterns raised but unresolved: JSON, OFX and fixed-width importers using a whitespace splitter, loose validator patterns, and unusual decline status codes.
+
+6. All user messages:
+   - "Orientation first. Run `python -m pytest -q` and tell me whether the suite is green, then give me the top-level layout of src/ledger."
+   - "Read src/ledger/money.py and src/ledger/rules.py and summarise how a promotional discount is computed."
+   - "Read src/ledger/importers/legacy_tsv_v1.py and src/ledger/importers/legacy_tsv_v2.py and tell me, for each one, how it splits a record into fields and what its RECORD_KIND is."
+   - "Right. src/ledger/importers/legacy_tsv_v2.py splits on whitespace even though it is a tab-separated importer, and that is the bug we are going to fix: its DELIMITER should be a tab, like its siblings. Do not change anything yet — I want the audit finished first."
+   - "Read every module under src/ledger/adapters and list, for each one, the exception classes it defines and the currencies it supports."
+   - "Now read every module under src/ledger/reporting and list, for each one, its COLUMNS tuple and its grouping key."
+   - "Now read every module under src/ledger/importers and tell me which ones use an explicit delimiter and which split on whitespace, with the RECORD_KIND of each."
+   - "Now read every module under src/ledger/validation and list each one's MAX_LENGTH and the label it validates."
+   - "Across all the adapter modules, group them by their DECLINE_STATUS value and tell me which ones share each status."
+   - "List every call site of Money.from_str across the whole codebase, with the file and the line number for each."
+   - "Which modules import ledger.money directly? Give me the complete list, grouped by package."
+   - "Summarise the audit findings so far in a short table." (with instructions to respond with text only: an analysis block followed by a summary block, and no tool calls)
+
+7. Pending Tasks:
+   - Deliver the short audit table (the current request; it is included in section 3).
+   - The tab-delimiter fix for `legacy_tsv_v2.py` (and possibly v1 and v3) is pending, and the user has said not to change anything until the audit is finished. Its scope is undecided: only v2, all three TSV importers (recommended), or wait until the real legacy file format is confirmed. Tests for the tab-splitting behavior should be added, since none exist.
+
+8. Current Work:
+   Producing the short summary table of audit findings, using only the context already gathered. The audit questions asked so far have all been answered. No files have been modified, and no commits, branches or memory files have been created.
+
+9. Optional Next Step:
+   After the table is delivered, ask the user whether the audit is now finished and which option to take for the tab-delimiter fix. This follows from their statement "Do not change anything yet — I want the audit finished first." Make no edits until they confirm the scope (v2 only, all three `legacy_tsv_*` importers, or wait for confirmation of the real file format).
+
+If you need specific details from before compaction (like exact code snippets, error messages, or content you generated), read the full transcript at: C:\Users\aryan\.claude\projects\C--Users-aryan-AppData-Local-Temp-velra-hardened-fixtures-s3-working-set-baseline-r2\7d824704-fc8a-41fc-abdb-ce84d8eda203.jsonl
+Continue the conversation from where it left off without asking the user any further questions. Resume directly — do not acknowledge the summary, do not recap what was happening, do not preface with "I'll continue" or similar. Pick up the last task as if the break never happened.

@@ -1,0 +1,7 @@
+exit=1
+✓ settings parse: C:\Users\aryan\.claude\settings.json
+! binary path not recorded; run `velra enable`
+✗ no Velra hooks registered — run `velra enable`
+! no database yet at C:\Users\aryan\Videos\Velra\bench\results\v0.1.2\trials\s3-working-set-baseline-r3\velra_home\velra.db
+✓ no recent errors
+

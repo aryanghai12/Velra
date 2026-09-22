@@ -1,0 +1,92 @@
+This session is being continued from a previous conversation that ran out of context. The summary below covers the earlier portion of the conversation.
+
+Summary:
+1. Primary Request and Intent:
+   The user is debugging one failing test in a small Python billing ledger. They then asked for a series of read-only audits of the codebase. Their latest request is: "Summarise the audit findings so far in a short table." The user drives each step explicitly, and they have consistently asked for hypotheses to be tried one at a time and reverted when they fail.
+
+2. Key Technical Concepts:
+   - `Money` stores integer cents. `Money.scaled(rate)` rounds half up (`ROUND_HALF_UP`) using `Decimal`.
+   - `total_due = subtotal - discount + handling + fee`.
+   - Discount (`PROMO_RATE = 0.074`) and handling (`HANDLING_RATE = 0.0185`) are computed per line item and summed, so the rounding happens once per line.
+   - The flat fee is `Money(250)`, from `rules.fee_for`.
+   - `settle` compares `payment - total_due` against zero. Negative is UNDERPAID, positive is OVERPAID, zero is SETTLED.
+   - The one-cent gap is a per-line versus whole-subtotal rounding difference in the discount.
+
+3. Files and Code Sections:
+   - `src/ledger/money.py`
+     - Defines `Money`, `from_str`, `scaled`. Restored to the committed version after the failed half-even experiment.
+     - `scaled`: `value = Decimal(self.cents) * rate; return Money(int(value.to_integral_value(rounding=ROUND_HALF_UP)))`
+   - `src/ledger/rules.py`
+     - Holds `PROMO_RATE = Decimal("0.074")`, `HANDLING_RATE = Decimal("0.0185")` and `FLAT_FEE = Money(250)`, plus `discount_for`, `handling_for`, `fee_for` and an unused `late_fee_for`.
+     - It has uncommitted modifications from before the session. I never read the diff.
+   - `src/ledger/promos.py`
+     - `discount_total` loops over `invoice.items` and sums `rules.discount_for(item.amount)`. This is the suspected source of the extra cent. It has not been edited.
+   - `src/ledger/surcharges.py`
+     - `handling_total` has the same per-line pattern. Changing it to round once on the subtotal had no effect (handling is 2642 either way), so I restored it.
+   - `src/ledger/engine.py`
+     - `Invoice`, `LineItem`, `SettlementResult` and `settle`. `total_due = subtotal - discount + handling + rules.fee_for(subtotal)`.
+   - `tests/test_engine.py`
+     - 7 tests. The fixture `build_invoice()` (INV-3041) has lines 126.00, 476.00 and 826.00. The failing test at line 59 pays `Money.from_str("1351.25")` and expects `SETTLED`.
+
+4. Errors and fixes:
+   - Half-even rounding in `Money.scaled` made two extra tests fail (`test_discount_rounds_half_up` and `test_handling_rounds_half_up`) and did not fix the target test. Reverted with `git restore src/ledger/money.py`, as the user requested.
+   - Once-on-subtotal handling in `surcharges.py` changed nothing. Reverted with `git restore src/ledger/surcharges.py`, as the user requested.
+   - No other errors.
+
+5. Problem Solving:
+   - The bug is localised by hand arithmetic to `promos.discount_total`. Per-line rounding gives a discount of 10566, and rounding once on the subtotal gives 10567, so `total_due` is 135126 instead of the expected 135125.
+   - The fix has not been applied or tested.
+   - The audits found:
+     - `adapters`: 32 modules with identical structure, the same 5 currencies and a two-class exception hierarchy per module.
+     - `reporting`: 18 modules whose keys and columns do not vary by period.
+     - `importers`: 15 modules in 5 formats. Three importers split on whitespace, including `gateway_json` and `ledger_ofx`.
+     - `validation`: 15 modules with per-field `MAX_LENGTH`.
+     - `DECLINE_STATUS`: one value per gateway.
+     - `Money.from_str`: 220 call sites.
+     - `ledger.money` imports: 71 modules.
+   - None of the audited areas affects the settlement total.
+
+   Audit table to present (from the conversation):
+
+   | Area | Modules | Finding |
+   |---|---|---|
+   | Failing test | `tests/test_engine.py:59` | `test_exact_payment_settles_invoice`: `'UNDERPAID' == 'SETTLED'`. 1 failed, 6 passed. |
+   | Settlement total | `engine`, `rules`, `promos`, `surcharges` | `subtotal − discount + handling + 250`, with per-line half-up rounding. Hand arithmetic puts the extra cent in `promos.discount_total`: per-line 10566 vs subtotal 10567. |
+   | Dead ends | `money.py`, `surcharges.py` | Half-even rounding broke 2 more tests. Once-on-subtotal handling changed nothing. Both reverted. |
+   | adapters | 32 | Identical template. Same 5 currencies. `Error(RuntimeError)` and `Declined(Error)` per module, no shared base. |
+   | `DECLINE_STATUS` | 32 adapters | One value per gateway, shared by its 4 regions: 400 worldpay, 402 stripe, 403 checkout, 409 braintree, 410 mollie, 422 adyen, 429 gocardless, 503 paypal. |
+   | reporting | 18 | 6 reports × daily/monthly/quarterly. Same columns and key across periods. First two columns form the key. |
+   | importers | 15 | csv `,` "statement", tsv `\t` "invoice". `erp_fixed_width`, `gateway_json` and `ledger_ofx` split on whitespace and don't parse their named formats. |
+   | validation | 15 | `MAX_LENGTH` 3, 34, 24, 240 and 14. `iban` has no checksum. |
+   | `Money.from_str` | 220 call sites | 9 tests, 160 adapters, 36 reporting, 15 importers. None in the settlement path. |
+   | `ledger.money` importers | 71 modules | 5 top-level, 32 adapters, 15 importers, 18 reporting, 1 test. Validation has none. |
+
+6. All user messages:
+   - "This repository has a failing test. Run the test suite with `python -m pytest -q` and tell me exactly which test fails, at which line, and what the assertion says. Do not change any code yet."
+   - "Read src/ledger/money.py, src/ledger/rules.py, src/ledger/promos.py, src/ledger/surcharges.py and src/ledger/engine.py, then summarise in a few lines how a settlement total is computed."
+   - "The gap is exactly one cent, so let's start with the rounding hypothesis. Edit src/ledger/money.py so that Money.scaled uses ROUND_HALF_EVEN instead of ROUND_HALF_UP, then run the test suite again."
+   - "That made things worse. Discard that change with `git restore src/ledger/money.py`, then run the suite again to confirm we are back to a single failure."
+   - "Second idea: one of the per-line aggregators is rounding three times where it should round once. Try src/ledger/surcharges.py first — edit handling_total so it calls rules.handling_for on invoice.subtotal() once instead of accumulating per line, then run the suite again."
+   - "Identical failure, so surcharges.py is not where the cent is going. Discard it with `git restore src/ledger/surcharges.py` and run the suite once more."
+   - "Read tests/test_engine.py and list every test in it and what each one asserts."
+   - "Park the bug for a moment, I need an audit first. Read every module under src/ledger/adapters and list, for each one, the exception classes it defines and the currencies it supports."
+   - "Now read every module under src/ledger/reporting and list, for each one, its COLUMNS tuple and its grouping key."
+   - "Now read every module under src/ledger/importers and tell me which ones use an explicit delimiter and which split on whitespace, with the RECORD_KIND of each."
+   - "Now read every module under src/ledger/validation and list each one's MAX_LENGTH and the label it validates."
+   - "Across all the adapter modules, group them by their DECLINE_STATUS value and tell me which ones share each status."
+   - "List every call site of Money.from_str across the whole codebase, with the file and the line number for each."
+   - "Which modules import ledger.money directly? Give me the complete list, grouped by package."
+   - "Summarise the audit findings so far in a short table." (with a system-injected instruction to respond with text only, no tool calls, as an `<analysis>` block plus a `<summary>` block)
+
+7. Pending Tasks:
+   - Present the audit findings table (the latest request). It is drafted in section 5.
+   - The failing-test bug is parked, not abandoned. The user said "Park the bug for a moment". No fix has been requested yet.
+
+8. Current Work:
+   I was asked to summarise the audit findings in a short table. All audit reads were finished in the preceding turns, and the summary content is above. The working tree has only the pre-existing uncommitted change to `src/ledger/rules.py`. Nothing else is modified.
+
+9. Optional Next Step:
+   Deliver the audit table as the answer. After that, only if the user asks, resume the parked bug. My last offer was: "making the same once-on-subtotal change in `promos.py` and running the suite". That is the natural next experiment, but I should confirm with the user first rather than start it. I also suggested reading `git diff src/ledger/rules.py`, which I have not done.
+
+If you need specific details from before compaction (like exact code snippets, error messages, or content you generated), read the full transcript at: C:\Users\aryan\.claude\projects\C--Users-aryan-AppData-Local-Temp-velra-hardened-fixtures-s1-dead-end-pair-velra-r4\4f776157-549a-40f7-8a70-883cbf0ce1df.jsonl
+Continue the conversation from where it left off without asking the user any further questions. Resume directly — do not acknowledge the summary, do not recap what was happening, do not preface with "I'll continue" or similar. Pick up the last task as if the break never happened.

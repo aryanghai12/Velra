@@ -1,0 +1,576 @@
+{
+  "trial": "s1-dead-end-pair-baseline-r4",
+  "scenario": "s1-dead-end-pair",
+  "mechanism": "[DEAD_ENDS]",
+  "arm": "baseline",
+  "replicate": 4,
+  "pair_id": "s1-dead-end-pair#r4",
+  "pair_key": {
+    "scenario": "s1-dead-end-pair",
+    "pair_id": "s1-dead-end-pair#r4",
+    "fixture_seed": "48819ce65e3bca90",
+    "model": "sonnet",
+    "turn_count": 17,
+    "compact_turn_index": 15,
+    "measured_turn_index": 16,
+    "claude_version": "2.1.272",
+    "velra_commit": "4b68b6b7c"
+  },
+  "model": "sonnet",
+  "session_id": "290f14a3-bf1d-4b6f-83f3-d39194aa3059",
+  "wall_seconds": 261.88,
+  "compact_status": {
+    "compact_result": "success",
+    "compact_error": null,
+    "at_turn": 15
+  },
+  "turns_observed": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16
+  ],
+  "validity": {
+    "criteria": {
+      "all_turns_completed": true,
+      "no_budget_abort": true,
+      "compaction_occurred": true,
+      "compaction_summary_present": true,
+      "measured_turn_present": true,
+      "arm_integrity": true
+    },
+    "failed_criteria": [],
+    "valid": true,
+    "excluded_from": [],
+    "detail": {
+      "turns_sent": 17,
+      "turns_expected": 17,
+      "result_subtypes": [
+        "success",
+        "success",
+        "success",
+        "success",
+        "success",
+        "success",
+        "success",
+        "success",
+        "success",
+        "success",
+        "success",
+        "success",
+        "success",
+        "success",
+        "success",
+        "success",
+        "success"
+      ],
+      "aborted_subtypes": [],
+      "compact_status": {
+        "compact_result": "success",
+        "compact_error": null,
+        "at_turn": 15
+      },
+      "hook_invocations_observed": 0,
+      "arm": "baseline"
+    }
+  },
+  "measured_turn": {
+    "prompt": "Fix the remaining test failure.",
+    "tool_call_count": 5,
+    "buckets": {
+      "read": 3,
+      "search": 0,
+      "edit": 2,
+      "bash": 0,
+      "other": 0
+    },
+    "by_tool": {
+      "Bash": 3,
+      "Edit": 2
+    },
+    "tool_sequence": [
+      {
+        "name": "Bash",
+        "bucket": "read",
+        "target": "git diff src/ledger/rules.py; git show 32b0c41 --stat --format=%B | head -30"
+      },
+      {
+        "name": "Edit",
+        "bucket": "edit",
+        "target": "C:\\Users\\aryan\\AppData\\Local\\Temp\\velra-hardened-fixtures\\s1-dead-end-pair-baseline-r4\\src\\ledger\\promos.py"
+      },
+      {
+        "name": "Bash",
+        "bucket": "read",
+        "target": "python -m pytest -q 2>&1 | tail -15"
+      },
+      {
+        "name": "Edit",
+        "bucket": "edit",
+        "target": "C:\\Users\\aryan\\AppData\\Local\\Temp\\velra-hardened-fixtures\\s1-dead-end-pair-baseline-r4\\src\\ledger\\promos.py"
+      },
+      {
+        "name": "Bash",
+        "bucket": "read",
+        "target": "python -m pytest -q 2>&1 | tail -3"
+      }
+    ],
+    "reads_before_first_edit": 1,
+    "read_targets_before_first_edit": [
+      "git diff src/ledger/rules.py; git show 32b0c41 --stat --format=%B | head -30"
+    ],
+    "first_edit_index": 1,
+    "first_edit_file": "c:/users/aryan/appdata/local/temp/velra-hardened-fixtures/s1-dead-end-pair-baseline-r4/src/ledger/promos.py",
+    "edit_count": 2,
+    "edit_targets": [
+      "C:\\Users\\aryan\\AppData\\Local\\Temp\\velra-hardened-fixtures\\s1-dead-end-pair-baseline-r4\\src\\ledger\\promos.py",
+      "C:\\Users\\aryan\\AppData\\Local\\Temp\\velra-hardened-fixtures\\s1-dead-end-pair-baseline-r4\\src\\ledger\\promos.py"
+    ],
+    "assistant_text": "I'll check the uncommitted `rules.py` diff and the promo commit first, since the rates could be the real cause.\nThe `rules.py` diff only adds an unused late-fee helper, so it isn't involved. Next I'll apply the single-rounding change to `discount_total`.\nAll 7 tests now pass, including `test_exact_payment_settles_invoice`.\n\n**Cause:** `discount_total` in `src/ledger/promos.py` rounded the discount on each line and then summed the results. Over the three lines that came to 105.66. Rounding once on the subtotal gives 105.67, so the total due is 1351.25, which is what the test expects. Before the fix the engine computed 1351.26, so a payment of 1351.25 came out `UNDERPAID`.\n\n**Fix:** `discount_total` now returns `rules.discount_for(invoice.subtotal())`. I also removed the `ZERO` import, which nothing uses any more.\n\n**Your call:** the test only says \"exact payment of the promotional total\", so it doesn't settle whether the discount should round per line or once. I chose once on the subtotal because that is the only version that matches the test's 1351.25. If billing actually wants per-line rounding, the test's expected value is what needs to change.\n\n**Not changed:** `handling_total` still rounds per line. It gives 26.42 either way, so it doesn't affect this test. The uncommitted change in `rules.py` is just the unused `late_fee_for` helper, and I left it alone. Nothing is committed.",
+    "result_cost_usd": 0.8462694000000001,
+    "result_duration_ms": 17390,
+    "source_rereads_before_first_edit": 1
+  },
+  "behaviour": {
+    "primary": "avoided_dead_ends",
+    "avoided_dead_ends": true,
+    "dead_end_files_edited": [],
+    "retried_the_twin": false,
+    "first_edit_on_dead_end": false,
+    "first_edit_on_true_file": true,
+    "suite_green": true,
+    "success": true
+  },
+  "hooks": {
+    "observed": 0,
+    "paired": 0,
+    "sync_n": 0,
+    "sync_p50_ms": null,
+    "sync_p95_ms": null,
+    "sync_p99_ms": null,
+    "sync_max_ms": null,
+    "all_p50_ms": null,
+    "all_p99_ms": null,
+    "all_max_ms": null,
+    "nonzero_exit": 0,
+    "responses_with_stderr": 0,
+    "responses_with_stdout": 0,
+    "per_event_p99_ms": {},
+    "per_event_p50_ms": {},
+    "per_event_count": {},
+    "per_event_kind": {}
+  },
+  "delivered_capsule": {
+    "delivered": false
+  },
+  "capsule_dead_ends": {
+    "applicable": false
+  },
+  "capsule_constraint": {
+    "applicable": false
+  },
+  "working_file_relevance": {
+    "delivered": false,
+    "relevant": [
+      "src/ledger/money.py",
+      "src/ledger/promos.py",
+      "src/ledger/surcharges.py",
+      "tests/test_engine.py"
+    ]
+  },
+  "prompt_rejection": {
+    "applicable": false
+  },
+  "native_compaction_summary": {
+    "present": true,
+    "chars": 10249,
+    "bytes": 10263
+  },
+  "velra_db": {
+    "present": false
+  },
+  "final_state": {
+    "pytest_exit": 0,
+    "pytest_tail": [
+      ".......                                                                  [100%]",
+      "7 passed in 0.02s"
+    ],
+    "pytest_output": ".......                                                                  [100%]\n7 passed in 0.02s\n",
+    "git_diff": "diff --git a/src/ledger/promos.py b/src/ledger/promos.py\nindex d30dcf8..19085ed 100644\n--- a/src/ledger/promos.py\n+++ b/src/ledger/promos.py\n@@ -3,15 +3,13 @@\n from __future__ import annotations\n \n from . import rules\n-from .money import Money, ZERO\n+from .money import Money\n \n \n def discount_total(invoice) -> Money:\n     \"\"\"The promotional discount owed on ``invoice``.\n \n-    Each line is taken in turn and the results are added together.\n+    The discount is rounded once, on the invoice subtotal, rather than\n+    per line.\n     \"\"\"\n-    total = ZERO\n-    for item in invoice.items:\n-        total = total + rules.discount_for(item.amount)\n-    return total\n+    return rules.discount_for(invoice.subtotal())\ndiff --git a/src/ledger/rules.py b/src/ledger/rules.py\nindex d461e8e..9c4265e 100644\n--- a/src/ledger/rules.py\n+++ b/src/ledger/rules.py\n@@ -29,3 +29,15 @@ def handling_for(amount: Money) -> Money:\n def fee_for(amount: Money) -> Money:\n     \"\"\"The processing fee for an invoice of ``amount``.\"\"\"\n     return FLAT_FEE\n+\n+\n+# Late-payment surcharge. Not wired into settlement yet.\n+LATE_FEE_RATE = Decimal(\"0.015\")\n+\n+\n+def late_fee_for(amount: Money) -> Money:\n+    \"\"\"Surcharge for an invoice that is past its due date.\n+\n+    TODO(billing): the dunning job should call this; nothing does yet.\n+    \"\"\"\n+    return amount.scaled(LATE_FEE_RATE)\n",
+    "git_status": " M src/ledger/promos.py\n M src/ledger/rules.py\n",
+    "git_log": "a868803 Revert \"Try banker's rounding in Money.scaled to fix the one-cent gap\"\n4b52471 Try banker's rounding in Money.scaled to fix the one-cent gap\n32b0c41 Apply the March promotional discount at settlement\n3cd2d8b Ledger core: money, handling surcharge, flat fee, settlement engine\n",
+    "present": true
+  },
+  "total_cost_usd": 6.628531199999999,
+  "per_turn": {
+    "0": {
+      "prompt": "This repository has a failing test. Run the test suite with `python -m",
+      "tools": 1,
+      "names": [
+        "Bash"
+      ]
+    },
+    "1": {
+      "prompt": "Read src/ledger/money.py, src/ledger/rules.py, src/ledger/promos.py, s",
+      "tools": 5,
+      "names": [
+        "Read"
+      ]
+    },
+    "2": {
+      "prompt": "The gap is exactly one cent, so let's start with the rounding hypothes",
+      "tools": 3,
+      "names": [
+        "Bash",
+        "Edit"
+      ]
+    },
+    "3": {
+      "prompt": "That made things worse. Discard that change with `git restore src/ledg",
+      "tools": 1,
+      "names": [
+        "Bash"
+      ]
+    },
+    "4": {
+      "prompt": "Second idea: one of the per-line aggregators is rounding three times w",
+      "tools": 2,
+      "names": [
+        "Bash",
+        "Edit"
+      ]
+    },
+    "5": {
+      "prompt": "Identical failure, so surcharges.py is not where the cent is going. Di",
+      "tools": 1,
+      "names": [
+        "Bash"
+      ]
+    },
+    "6": {
+      "prompt": "Read tests/test_engine.py and list every test in it and what each one ",
+      "tools": 1,
+      "names": [
+        "Read"
+      ]
+    },
+    "7": {
+      "prompt": "Park the bug for a moment, I need an audit first. Read every module un",
+      "tools": 4,
+      "names": [
+        "Glob",
+        "Grep"
+      ]
+    },
+    "8": {
+      "prompt": "Now read every module under src/ledger/reporting and list, for each on",
+      "tools": 4,
+      "names": [
+        "Glob",
+        "Grep",
+        "Read"
+      ]
+    },
+    "9": {
+      "prompt": "Now read every module under src/ledger/importers and tell me which one",
+      "tools": 2,
+      "names": [
+        "Glob",
+        "Grep"
+      ]
+    },
+    "10": {
+      "prompt": "Now read every module under src/ledger/validation and list each one's ",
+      "tools": 5,
+      "names": [
+        "Glob",
+        "Grep",
+        "Read"
+      ]
+    },
+    "11": {
+      "prompt": "Across all the adapter modules, group them by their DECLINE_STATUS val",
+      "tools": 1,
+      "names": [
+        "Grep"
+      ]
+    },
+    "12": {
+      "prompt": "List every call site of Money.from_str across the whole codebase, with",
+      "tools": 1,
+      "names": [
+        "Grep"
+      ]
+    },
+    "13": {
+      "prompt": "Which modules import ledger.money directly? Give me the complete list,",
+      "tools": 1,
+      "names": [
+        "Grep"
+      ]
+    },
+    "14": {
+      "prompt": "Summarise the audit findings so far in a short table.",
+      "tools": 0,
+      "names": []
+    },
+    "15": {
+      "prompt": "/compact",
+      "tools": 0,
+      "names": []
+    },
+    "16": {
+      "prompt": "Fix the remaining test failure.",
+      "tools": 5,
+      "names": [
+        "Bash",
+        "Edit"
+      ]
+    }
+  },
+  "provenance": {
+    "binary": "C:\\Users\\aryan\\Videos\\Velra\\target\\release\\velra.exe",
+    "binary_bytes": 5399040,
+    "reported_version": "velra 0.1.1 (4b68b6b7c, x86_64-pc-windows-gnu)",
+    "embedded_commit": "4b68b6b7c",
+    "git_head": "4b68b6b7cc82c94d420377afcd1200622700123b",
+    "git_head_short9": "4b68b6b7c",
+    "git_branch": "main",
+    "git_describe": "v0.1.1-benchmark-baseline-7-g4b68b6b",
+    "working_tree_clean": false,
+    "working_tree_changes": [
+      "?? bench/results/v0.1.2/"
+    ],
+    "commit_matches_binary": true,
+    "host": {
+      "platform": "Windows-11-10.0.26200-SP0",
+      "machine": "AMD64",
+      "python": "3.14.0",
+      "processor": "Intel64 Family 6 Model 183 Stepping 1, GenuineIntel",
+      "cpu_count": 20
+    },
+    "agent": {
+      "binary": "C:\\Users\\aryan\\.vscode\\extensions\\anthropic.claude-code-2.1.272-win32-x64\\resources\\native-binary\\claude.exe",
+      "version": "2.1.272"
+    },
+    "warnings": [
+      "the working tree is dirty: results cannot be attributed to a commit"
+    ]
+  },
+  "preregistration_sha256": "4658a1a538411e0f15bf9c5d57ee50ede85bcd2d7929b8c7045262732c2eb1ad",
+  "manifest": {
+    "failing_test": "tests/test_engine.py::test_exact_payment_settles_invoice",
+    "failing_assertion_line": 59,
+    "failing_assertion_text": "assert result.status == \"SETTLED\"",
+    "true_fix_file": "src/ledger/promos.py",
+    "true_fix_symbol": "discount_total",
+    "dead_end_files": [
+      "src/ledger/surcharges.py",
+      "src/ledger/money.py"
+    ],
+    "dead_end_file": "src/ledger/surcharges.py",
+    "dead_end_symbol": "handling_total",
+    "twin_files": [
+      "src/ledger/promos.py",
+      "src/ledger/surcharges.py"
+    ],
+    "historical_dead_end_commit": "4b52471",
+    "historical_revert_commit": "a868803",
+    "uncommitted_files": [
+      "src/ledger/rules.py"
+    ],
+    "noise_module_count": 84,
+    "expected_status": "SETTLED",
+    "observed_status": "UNDERPAID",
+    "scenario": "s1-dead-end-pair",
+    "title": "Two indistinguishable candidates, one already eliminated",
+    "mechanism": "[DEAD_ENDS]",
+    "repo": "C:\\Users\\aryan\\AppData\\Local\\Temp\\velra-hardened-fixtures\\s1-dead-end-pair-baseline-r4",
+    "leak_terms": [
+      "not of each line",
+      "per line item",
+      "each line item",
+      "discount the subtotal",
+      "subtotal once",
+      "discount_for(subtotal)",
+      "round once",
+      "rounds three times",
+      "discount_total is",
+      "promos is the",
+      "handling_total is correct",
+      "surcharges is correct",
+      "not surcharges",
+      "not promos"
+    ],
+    "canary": {
+      "file": "src/ledger/adapters/adyen_uk.py",
+      "const": "API_KEY_PREFIX",
+      "value": "AQE1",
+      "seed_turn": 7
+    },
+    "compact_turn_index": 15,
+    "measured_turn_index": 16,
+    "turn_count": 17,
+    "target_facts": [
+      {
+        "id": "s1-burned-twin",
+        "what": "src/ledger/surcharges.py was collapsed and reverted before the boundary, and collapsing it changed nothing.",
+        "probe": "Earlier in this session we changed one of the two per-line aggregator modules so it rounded once on the subtotal, saw the suite fail in exactly the same way, and reverted it with git. Which module was that? Reply with just the file path.",
+        "recalled_markers": [
+          "surcharges"
+        ],
+        "ledger_table": "dead_ends",
+        "ledger_sql": "SELECT d.id, d.path, d.mechanism, d.command_text, d.resolved_ms,        e.id AS event_id FROM dead_ends d JOIN edits x ON x.id = (SELECT MIN(value) FROM json_each(d.edit_ids)) JOIN events e ON e.id = x.event_id WHERE d.path LIKE '%surcharges.py' AND d.reapplied = 0   AND e.id <= ?1",
+        "capsule_markers": [
+          "surcharges.py"
+        ],
+        "necessary_because": "promos.discount_total and surcharges.handling_total are written to be the same module twice: same loop, same per-line rounding call, same docstring skeleton. Which of them loses the cent depends on how 0.074 and 0.0185 happen to land against three specific line amounts, and nothing in the tree says which. An agent that has lost the elimination is choosing between two candidates it cannot tell apart; one that still has it is choosing between one."
+      }
+    ],
+    "fixture_seed": "48819ce65e3bca90",
+    "ground_truth": {
+      "as_generated": {
+        "exit": 1,
+        "counts": {
+          "passed": 6,
+          "failed": 1,
+          "errors": 0
+        },
+        "expected": "red",
+        "observed": "red",
+        "tail": [
+          "1 failed, 6 passed in 0.07s"
+        ]
+      },
+      "dead_end_money_round_half_even": {
+        "exit": 1,
+        "counts": {
+          "passed": 4,
+          "failed": 3,
+          "errors": 0
+        },
+        "expected": "red",
+        "observed": "red",
+        "tail": [
+          "3 failed, 4 passed in 0.06s"
+        ]
+      },
+      "dead_end_surcharges_collapse_the_loop": {
+        "exit": 1,
+        "counts": {
+          "passed": 6,
+          "failed": 1,
+          "errors": 0
+        },
+        "expected": "red",
+        "observed": "red",
+        "tail": [
+          "1 failed, 6 passed in 0.06s"
+        ]
+      },
+      "true_fix_promos_collapse_the_loop": {
+        "exit": 0,
+        "counts": {
+          "passed": 7,
+          "failed": 0,
+          "errors": 0
+        },
+        "expected": "green",
+        "observed": "green",
+        "tail": [
+          "7 passed in 0.02s"
+        ]
+      },
+      "both_collapsed_is_still_green": {
+        "exit": 0,
+        "counts": {
+          "passed": 7,
+          "failed": 0,
+          "errors": 0
+        },
+        "expected": "green",
+        "observed": "green",
+        "tail": [
+          "7 passed in 0.02s"
+        ]
+      }
+    },
+    "leak_scan": {
+      "clean": true,
+      "terms": [
+        "not of each line",
+        "per line item",
+        "each line item",
+        "discount the subtotal",
+        "subtotal once",
+        "discount_for(subtotal)",
+        "round once",
+        "rounds three times",
+        "discount_total is",
+        "promos is the",
+        "handling_total is correct",
+        "surcharges is correct",
+        "not surcharges",
+        "not promos"
+      ],
+      "hits": []
+    },
+    "leak_scan_wide": {
+      "clean": true,
+      "terms": [
+        "not of each line",
+        "per line item",
+        "each line item",
+        "discount the subtotal",
+        "subtotal once",
+        "discount_for(subtotal)",
+        "round once",
+        "rounds three times",
+        "discount_total is",
+        "promos is the",
+        "handling_total is correct",
+        "surcharges is correct",
+        "not surcharges",
+        "not promos"
+      ],
+      "surfaces_scanned": [
+        "tree",
+        "filenames",
+        "pre_prompts",
+        "post_prompt",
+        "environment"
+      ],
+      "fatal_surfaces": [
+        "tree",
+        "filenames",
+        "post_prompt",
+        "environment"
+      ],
+      "hits_by_surface": {
+        "pre_prompts": 1
+      },
+      "fatal_hits": [],
+      "hits": [
+        {
+          "surface": "pre_prompts",
+          "where": "turn 4",
+          "term": "round once",
+          "context": "er-line aggregators is rounding three times where it should round once. Try src/ledger/surcharges.py first \u2014 edit handling_total s"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,146 @@
+{
+  "trial": "s3-working-set-velra-r4",
+  "scenario": "s3-working-set",
+  "arm": "velra",
+  "replicate": 4,
+  "pair_id": "s3-working-set#r4",
+  "fixture_seed": "8b1dfed4efd60e13",
+  "target_facts": [
+    "s3-agreed-file"
+  ],
+  "stages": {
+    "compaction_loss": {
+      "status": "fail",
+      "rule": "a target fact counts as lost when it is not recalled in a majority of valid control replicates, and the control's own context-reduction gate also holds",
+      "context_reduction_pct_median": 61.3,
+      "compaction_is_lossy": true,
+      "per_fact": {
+        "s3-agreed-file": {
+          "replicates": 2,
+          "valid_replicates": 2,
+          "lost_replicates": 0,
+          "recalled_each": [
+            true,
+            true
+          ],
+          "answers": [
+            "src/ledger/importers/legacy_tsv_v2.py",
+            "src/ledger/importers/legacy_tsv_v2.py"
+          ],
+          "lost": false
+        }
+      },
+      "reason": "at least one target fact survived native compaction, so this scenario cannot attribute anything to Velra"
+    },
+    "capture": {
+      "status": "fail",
+      "checkpoint": {
+        "checkpoint_id": "ckpt_01M31XWK6AWN25W64BDDRTGXZJ",
+        "created_ms": 1789992520887,
+        "trigger": "manual",
+        "event_watermark": 14,
+        "partial": 0,
+        "capsule_tokens_est": 428
+      },
+      "per_fact": {
+        "s3-agreed-file": {
+          "captured": false,
+          "table": "file_stats",
+          "rows": [],
+          "row_count": 0,
+          "sql_error": null,
+          "checkpoint_id": "ckpt_01M31XWK6AWN25W64BDDRTGXZJ",
+          "event_watermark": 14
+        }
+      },
+      "reason": "the target state was not in the ledger at the checkpoint watermark: this is a CAPTURE failure, not a delivery one"
+    },
+    "delivery": {
+      "status": "fail",
+      "checks": {
+        "delivered_after_compaction": false,
+        "delivered_exactly_once": false,
+        "all_exits_zero": true,
+        "target_facts_present": false,
+        "within_token_ceiling": false,
+        "token_measurement_valid": false
+      },
+      "failed_checks": [
+        "delivered_after_compaction",
+        "delivered_exactly_once",
+        "target_facts_present",
+        "token_measurement_valid",
+        "within_token_ceiling"
+      ],
+      "deliveries": [
+        {
+          "stream_index": 83,
+          "hook_name": "UserPromptSubmit",
+          "hook_event": "UserPromptSubmit",
+          "exit_code": 0,
+          "chars": 906,
+          "after_compaction": false
+        }
+      ],
+      "deliveries_after_compaction": 0,
+      "boundary_stream_index": null,
+      "token_ceiling": 800,
+      "measured_tokens": null,
+      "sections": [],
+      "per_fact": {
+        "s3-agreed-file": {
+          "target_fact": "s3-agreed-file",
+          "delivered": false,
+          "present": false,
+          "markers_found": []
+        }
+      },
+      "capsule_chars": 0,
+      "reason": "delivery checks failed: ['delivered_after_compaction', 'delivered_exactly_once', 'target_facts_present', 'token_measurement_valid', 'within_token_ceiling']"
+    },
+    "acceptance": {
+      "status": "n/a",
+      "verdict": "N/A",
+      "reason": "no capsule reached the session after compaction",
+      "blocks_chain": false
+    },
+    "utilisation": {
+      "status": "fail",
+      "primary_metric": "resolved_the_reference",
+      "primary_value": false,
+      "correct": false,
+      "suite_green": true,
+      "secondary": {
+        "tool_calls": 0,
+        "buckets": {
+          "read": 0,
+          "search": 0,
+          "edit": 0,
+          "bash": 0,
+          "other": 0
+        },
+        "reads_before_first_edit": 0,
+        "source_rereads_before_first_edit": 0,
+        "first_edit_file": null,
+        "first_edit_index": null,
+        "edit_targets": []
+      },
+      "scenario_detail": {
+        "resolved_the_reference": false,
+        "target_fixed": false,
+        "hit_the_agreed_file": false,
+        "first_edit_on_target": false,
+        "siblings_edited": [],
+        "repaired_every_candidate": false,
+        "made_no_edit": true,
+        "tool_calls_before_first_edit": null,
+        "search_calls": 0,
+        "read_calls": 0,
+        "suite_green": true
+      },
+      "reason": "the task outcome was wrong on the registered metric 'resolved_the_reference'"
+    }
+  },
+  "first_failed_stage": "compaction_loss",
+  "classification": "NOT_CAUSALLY_TESTABLE"
+}

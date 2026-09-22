@@ -1,0 +1,528 @@
+{
+  "trial": "s3-working-set-velra-r3",
+  "scenario": "s3-working-set",
+  "mechanism": "[WORKING_FILES]",
+  "arm": "velra",
+  "replicate": 3,
+  "pair_id": "s3-working-set#r3",
+  "pair_key": {
+    "scenario": "s3-working-set",
+    "pair_id": "s3-working-set#r3",
+    "fixture_seed": "8b1dfed4efd60e13",
+    "model": "sonnet",
+    "turn_count": 14,
+    "compact_turn_index": 12,
+    "measured_turn_index": 13,
+    "claude_version": "2.1.272",
+    "velra_commit": "4b68b6b7c"
+  },
+  "model": "sonnet",
+  "session_id": "f6d73157-ef22-4ce5-b45e-bdad3be54b76",
+  "wall_seconds": 11.235,
+  "compact_status": {
+    "compact_result": "failed",
+    "compact_error": "Error during compaction: You've hit your session limit \u00b7 resets 9:40pm (Asia/Kolkata)",
+    "at_turn": 12
+  },
+  "turns_observed": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13
+  ],
+  "validity": {
+    "criteria": {
+      "all_turns_completed": true,
+      "no_budget_abort": true,
+      "compaction_occurred": false,
+      "compaction_summary_present": false,
+      "measured_turn_present": true,
+      "arm_integrity": true
+    },
+    "failed_criteria": [
+      "compaction_occurred",
+      "compaction_summary_present"
+    ],
+    "valid": false,
+    "excluded_from": [
+      "behavioural",
+      "budget"
+    ],
+    "detail": {
+      "turns_sent": 14,
+      "turns_expected": 14,
+      "result_subtypes": [
+        "success",
+        "success",
+        "success",
+        "success",
+        "success",
+        "success",
+        "success",
+        "success",
+        "success",
+        "success",
+        "success",
+        "success",
+        "success",
+        "success"
+      ],
+      "aborted_subtypes": [],
+      "compact_status": {
+        "compact_result": "failed",
+        "compact_error": "Error during compaction: You've hit your session limit \u00b7 resets 9:40pm (Asia/Kolkata)",
+        "at_turn": 12
+      },
+      "hook_invocations_observed": 14,
+      "arm": "velra"
+    }
+  },
+  "measured_turn": {
+    "prompt": "Now make that fix.",
+    "tool_call_count": 0,
+    "buckets": {
+      "read": 0,
+      "search": 0,
+      "edit": 0,
+      "bash": 0,
+      "other": 0
+    },
+    "by_tool": {},
+    "tool_sequence": [],
+    "reads_before_first_edit": 0,
+    "read_targets_before_first_edit": [],
+    "first_edit_index": null,
+    "first_edit_file": null,
+    "edit_count": 0,
+    "edit_targets": [],
+    "assistant_text": "You've hit your session limit \u00b7 resets 9:40pm (Asia/Kolkata)",
+    "result_cost_usd": 0,
+    "result_duration_ms": 678,
+    "source_rereads_before_first_edit": 0
+  },
+  "behaviour": {
+    "primary": "resolved_the_reference",
+    "resolved_the_reference": false,
+    "target_fixed": false,
+    "hit_the_agreed_file": false,
+    "first_edit_on_target": false,
+    "siblings_edited": [],
+    "repaired_every_candidate": false,
+    "made_no_edit": true,
+    "tool_calls_before_first_edit": null,
+    "search_calls": 0,
+    "read_calls": 0,
+    "suite_green": true,
+    "success": false
+  },
+  "hooks": {
+    "observed": 14,
+    "paired": 14,
+    "sync_n": 14,
+    "sync_p50_ms": 38.961,
+    "sync_p95_ms": 41.26,
+    "sync_p99_ms": 45.467,
+    "sync_max_ms": 45.467,
+    "all_p50_ms": 38.961,
+    "all_p99_ms": 45.467,
+    "all_max_ms": 45.467,
+    "nonzero_exit": 0,
+    "responses_with_stderr": 0,
+    "responses_with_stdout": 1,
+    "per_event_p99_ms": {
+      "SessionStart": 0.22,
+      "UserPromptSubmit": 45.467
+    },
+    "per_event_p50_ms": {
+      "SessionStart": 0.22,
+      "UserPromptSubmit": 39.238
+    },
+    "per_event_count": {
+      "SessionStart": 1,
+      "UserPromptSubmit": 13
+    },
+    "per_event_kind": {
+      "SessionStart": "sync",
+      "UserPromptSubmit": "sync"
+    }
+  },
+  "delivered_capsule": {
+    "delivered": true,
+    "hook_name": "UserPromptSubmit",
+    "exit_code": 0,
+    "chars": 906,
+    "sections": [
+      "ABOUT_THIS_RECORD",
+      "FIRST_MESSAGE",
+      "LATEST_MESSAGE",
+      "WORKSPACE_STATE",
+      "RECORD_DETAIL"
+    ],
+    "has_dead_ends_section": false,
+    "has_working_files_section": false,
+    "has_recent_attempts_section": false,
+    "has_active_failure_section": false,
+    "has_root_objective_section": true
+  },
+  "capsule_dead_ends": {
+    "applicable": true,
+    "section_present": false,
+    "dead_end_files_expected": [],
+    "dead_end_files_named": [],
+    "all_named": false,
+    "any_named": false,
+    "attribution": [],
+    "attributed_to_git_command": false,
+    "attributed_as_external": false,
+    "approach_named_verbatim": false
+  },
+  "capsule_constraint": {
+    "applicable": false
+  },
+  "working_file_relevance": {
+    "delivered": true,
+    "section_present": false,
+    "relevant": [
+      "src/ledger/importers/legacy_tsv_v2.py"
+    ],
+    "listed": [],
+    "precision": null,
+    "recall": 0.0
+  },
+  "prompt_rejection": {
+    "applicable": true,
+    "rejected": false,
+    "hits": [],
+    "scanned_turns": [
+      13
+    ]
+  },
+  "native_compaction_summary": {
+    "present": false,
+    "reason": "no isCompactSummary entry in the transcript"
+  },
+  "velra_db": {
+    "present": true,
+    "checkpoints": [
+      {
+        "checkpoint_id": "ckpt_01M31XVSCD871V4YFY41NYXREC",
+        "session_id": "f6d73157-ef22-4ce5-b45e-bdad3be54b76",
+        "trigger": "manual",
+        "created_ms": 1789992494473,
+        "head_commit": "fbc26cb615aa094489d03f8aa4c062950bbca3c7",
+        "branch": "main",
+        "event_watermark": 14,
+        "partial": 0,
+        "capsule_tokens_est": 425,
+        "capsule_chars": 906
+      }
+    ],
+    "continuations": [
+      {
+        "checkpoint_id": "ckpt_01M31XVSCD871V4YFY41NYXREC",
+        "session_id": "f6d73157-ef22-4ce5-b45e-bdad3be54b76",
+        "state": "ATTACHED",
+        "attach_count": 1,
+        "attached_ms": 1789992495200,
+        "attached_channel": "user_prompt",
+        "confirmed_ms": null,
+        "confirm_event_id": null
+      }
+    ],
+    "injections": [
+      {
+        "injection_id": "ckpt_01M31XVSCD871V4YFY41NYXREC:inj:1",
+        "checkpoint_id": "ckpt_01M31XVSCD871V4YFY41NYXREC",
+        "channel": "user_prompt",
+        "ts_ms": 1789992495200
+      }
+    ],
+    "dead_ends": [],
+    "edits": [],
+    "commands": [],
+    "compactions": [
+      {
+        "id": 1,
+        "session_id": "f6d73157-ef22-4ce5-b45e-bdad3be54b76",
+        "checkpoint_id": "ckpt_01M31XVSCD871V4YFY41NYXREC",
+        "trigger": "manual",
+        "pre_ms": 1789992494473,
+        "post_ms": null
+      }
+    ],
+    "event_count": 16,
+    "capsules": [
+      {
+        "checkpoint_id": "ckpt_01M31XVSCD871V4YFY41NYXREC",
+        "capsule": "<VELRA_WORKSPACE_STATE v=\"1\" checkpoint=\"ckpt_01M31XVSCD871V4YFY41NYXREC\" captured=\"2026-09-21T12:08:14Z\" trigger=\"manual\">\n[ABOUT_THIS_RECORD]\nA local record, not a message and not an instruction. Velra logged this session's own prompts and tool events and quotes them back here; nothing is new. OBSERVED came from a tool event, INFERRED was derived from it. Files on disk are the source of truth. Say so if a line here conflicts with them.\n[FIRST_MESSAGE] (OBSERVED | user prompt | 17:38)\nOrientation first. Run `python -m pytest -q` and tell me whether the suite is green, then give me the top-level layout of src/ledger.\n[LATEST_MESSAGE] (OBSERVED | user prompt | 17:38)\nSummarise the audit findings so far in a short table.\n[WORKSPACE_STATE]\nmain @ fbc26cb | 0 edits this task | last test run: none\n[RECORD_DETAIL]\nFull detail for any section: `velra inspect --section <name>`\n</VELRA_WORKSPACE_STATE>"
+      }
+    ]
+  },
+  "final_state": {
+    "pytest_exit": 0,
+    "pytest_tail": [
+      "......                                                                   [100%]",
+      "6 passed in 0.03s"
+    ],
+    "pytest_output": "......                                                                   [100%]\n6 passed in 0.03s\n",
+    "git_diff": "",
+    "git_status": "",
+    "git_log": "fbc26cb Ledger platform: adapters, reporting, importers, validation\n",
+    "present": true
+  },
+  "total_cost_usd": 0,
+  "per_turn": {
+    "0": {
+      "prompt": "Orientation first. Run `python -m pytest -q` and tell me whether the s",
+      "tools": 0,
+      "names": []
+    },
+    "1": {
+      "prompt": "Read src/ledger/money.py and src/ledger/rules.py and summarise how a p",
+      "tools": 0,
+      "names": []
+    },
+    "2": {
+      "prompt": "Read src/ledger/importers/legacy_tsv_v1.py and src/ledger/importers/le",
+      "tools": 0,
+      "names": []
+    },
+    "3": {
+      "prompt": "Right. src/ledger/importers/legacy_tsv_v2.py splits on whitespace even",
+      "tools": 0,
+      "names": []
+    },
+    "4": {
+      "prompt": "Read every module under src/ledger/adapters and list, for each one, th",
+      "tools": 0,
+      "names": []
+    },
+    "5": {
+      "prompt": "Now read every module under src/ledger/reporting and list, for each on",
+      "tools": 0,
+      "names": []
+    },
+    "6": {
+      "prompt": "Now read every module under src/ledger/importers and tell me which one",
+      "tools": 0,
+      "names": []
+    },
+    "7": {
+      "prompt": "Now read every module under src/ledger/validation and list each one's ",
+      "tools": 0,
+      "names": []
+    },
+    "8": {
+      "prompt": "Across all the adapter modules, group them by their DECLINE_STATUS val",
+      "tools": 0,
+      "names": []
+    },
+    "9": {
+      "prompt": "List every call site of Money.from_str across the whole codebase, with",
+      "tools": 0,
+      "names": []
+    },
+    "10": {
+      "prompt": "Which modules import ledger.money directly? Give me the complete list,",
+      "tools": 0,
+      "names": []
+    },
+    "11": {
+      "prompt": "Summarise the audit findings so far in a short table.",
+      "tools": 0,
+      "names": []
+    },
+    "12": {
+      "prompt": "/compact",
+      "tools": 0,
+      "names": []
+    },
+    "13": {
+      "prompt": "Now make that fix.",
+      "tools": 0,
+      "names": []
+    }
+  },
+  "provenance": {
+    "binary": "C:\\Users\\aryan\\Videos\\Velra\\target\\release\\velra.exe",
+    "binary_bytes": 5399040,
+    "reported_version": "velra 0.1.1 (4b68b6b7c, x86_64-pc-windows-gnu)",
+    "embedded_commit": "4b68b6b7c",
+    "git_head": "4b68b6b7cc82c94d420377afcd1200622700123b",
+    "git_head_short9": "4b68b6b7c",
+    "git_branch": "main",
+    "git_describe": "v0.1.1-benchmark-baseline-7-g4b68b6b",
+    "working_tree_clean": false,
+    "working_tree_changes": [
+      "?? bench/results/v0.1.2/"
+    ],
+    "commit_matches_binary": true,
+    "host": {
+      "platform": "Windows-11-10.0.26200-SP0",
+      "machine": "AMD64",
+      "python": "3.14.0",
+      "processor": "Intel64 Family 6 Model 183 Stepping 1, GenuineIntel",
+      "cpu_count": 20
+    },
+    "agent": {
+      "binary": "C:\\Users\\aryan\\.vscode\\extensions\\anthropic.claude-code-2.1.272-win32-x64\\resources\\native-binary\\claude.exe",
+      "version": "2.1.272"
+    },
+    "warnings": [
+      "the working tree is dirty: results cannot be attributed to a commit"
+    ]
+  },
+  "preregistration_sha256": "4658a1a538411e0f15bf9c5d57ee50ede85bcd2d7929b8c7045262732c2eb1ad",
+  "manifest": {
+    "failing_test": null,
+    "failing_assertion_line": null,
+    "true_fix_file": "src/ledger/importers/legacy_tsv_v2.py",
+    "true_fix_symbol": "DELIMITER",
+    "required_final_state": [
+      {
+        "file": "src/ledger/importers/legacy_tsv_v2.py",
+        "contains": "DELIMITER = \"\\t\""
+      }
+    ],
+    "sibling_files": [
+      "src/ledger/importers/legacy_tsv_v1.py",
+      "src/ledger/importers/legacy_tsv_v3.py"
+    ],
+    "decoy_count": 2,
+    "dead_end_files": [],
+    "dead_end_file": null,
+    "anaphor": "the module we agreed to fix",
+    "uncommitted_files": [],
+    "noise_module_count": 84,
+    "suite_must_stay_green": true,
+    "scenario": "s3-working-set",
+    "title": "The file we agreed on, after eighty-four others",
+    "mechanism": "[WORKING_FILES]",
+    "repo": "C:\\Users\\aryan\\AppData\\Local\\Temp\\velra-hardened-fixtures\\s3-working-set-velra-r3",
+    "leak_terms": [
+      "splits on whitespace even though",
+      "should be a tab",
+      "the bug we are going to fix",
+      "agreed to fix",
+      "TODO(importers)",
+      "the module we agreed",
+      "v2 is the one",
+      "fix v2"
+    ],
+    "canary": {
+      "file": "src/ledger/adapters/adyen_uk.py",
+      "const": "API_KEY_PREFIX",
+      "value": "AQE1",
+      "seed_turn": 4
+    },
+    "compact_turn_index": 12,
+    "measured_turn_index": 13,
+    "turn_count": 14,
+    "target_facts": [
+      {
+        "id": "s3-agreed-file",
+        "what": "src/ledger/importers/legacy_tsv_v2.py is the module turn 3 named as the one to fix.",
+        "probe": "Four turns in, before the audit, we agreed on one specific module to fix and deferred the change. Which module was it? Reply with just the file path.",
+        "recalled_markers": [
+          "legacy_tsv_v2"
+        ],
+        "ledger_table": "file_stats",
+        "ledger_sql": "SELECT f.path, f.reads, f.edits, f.first_touch_ms, f.last_touch_ms FROM file_stats f WHERE f.path LIKE '%legacy_tsv_v2.py' AND f.reads >= 1   AND f.last_touch_ms <= (SELECT COALESCE(MAX(ts_ms), 0) FROM events                           WHERE id <= ?1)",
+        "capsule_markers": [
+          "legacy_tsv_v2"
+        ],
+        "necessary_because": "the measured turn is 'Now make that fix', and 'that' is never written into the repository. Three importers are broken in the same visible way, so the tree cannot disambiguate them; there is no failing test pointing anywhere, because the suite is green throughout. The reference resolves from the conversation, from the capsule, or not at all."
+      }
+    ],
+    "fixture_seed": "8b1dfed4efd60e13",
+    "ground_truth": {
+      "as_generated": {
+        "exit": 0,
+        "counts": {
+          "passed": 6,
+          "failed": 0,
+          "errors": 0
+        },
+        "expected": "green",
+        "observed": "green",
+        "tail": [
+          "6 passed in 0.04s"
+        ]
+      }
+    },
+    "leak_scan": {
+      "clean": true,
+      "terms": [
+        "splits on whitespace even though",
+        "should be a tab",
+        "the bug we are going to fix",
+        "agreed to fix",
+        "TODO(importers)",
+        "the module we agreed",
+        "v2 is the one",
+        "fix v2"
+      ],
+      "hits": []
+    },
+    "leak_scan_wide": {
+      "clean": true,
+      "terms": [
+        "splits on whitespace even though",
+        "should be a tab",
+        "the bug we are going to fix",
+        "agreed to fix",
+        "TODO(importers)",
+        "the module we agreed",
+        "v2 is the one",
+        "fix v2"
+      ],
+      "surfaces_scanned": [
+        "tree",
+        "filenames",
+        "pre_prompts",
+        "post_prompt",
+        "environment"
+      ],
+      "fatal_surfaces": [
+        "tree",
+        "filenames",
+        "post_prompt",
+        "environment"
+      ],
+      "hits_by_surface": {
+        "pre_prompts": 3
+      },
+      "fatal_hits": [],
+      "hits": [
+        {
+          "surface": "pre_prompts",
+          "where": "turn 3",
+          "term": "splits on whitespace even though",
+          "context": "Right. src/ledger/importers/legacy_tsv_v2.py splits on whitespace even though it is a tab-separated importer, and that is the bug we are"
+        },
+        {
+          "surface": "pre_prompts",
+          "where": "turn 3",
+          "term": "should be a tab",
+          "context": "ter, and that is the bug we are going to fix: its DELIMITER should be a tab, like its siblings. Do not change anything yet \u2014 I want the"
+        },
+        {
+          "surface": "pre_prompts",
+          "where": "turn 3",
+          "term": "the bug we are going to fix",
+          "context": "ace even though it is a tab-separated importer, and that is the bug we are going to fix: its DELIMITER should be a tab, like its siblings. Do not c"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,164 @@
+{
+  "trial": "s1-dead-end-pair-velra-r4",
+  "scenario": "s1-dead-end-pair",
+  "arm": "velra",
+  "replicate": 4,
+  "pair_id": "s1-dead-end-pair#r4",
+  "fixture_seed": "48819ce65e3bca90",
+  "target_facts": [
+    "s1-burned-twin"
+  ],
+  "stages": {
+    "compaction_loss": {
+      "status": "fail",
+      "rule": "a target fact counts as lost when it is not recalled in a majority of valid control replicates, and the control's own context-reduction gate also holds",
+      "context_reduction_pct_median": 67.2,
+      "compaction_is_lossy": true,
+      "per_fact": {
+        "s1-burned-twin": {
+          "replicates": 2,
+          "valid_replicates": 2,
+          "lost_replicates": 0,
+          "recalled_each": [
+            true,
+            true
+          ],
+          "answers": [
+            "src/ledger/surcharges.py",
+            "src/ledger/surcharges.py"
+          ],
+          "lost": false
+        }
+      },
+      "reason": "at least one target fact survived native compaction, so this scenario cannot attribute anything to Velra"
+    },
+    "capture": {
+      "status": "pass",
+      "checkpoint": {
+        "checkpoint_id": "ckpt_01M31V0MK0TAMZ7MXDWG7DV33B",
+        "created_ms": 1789989507677,
+        "trigger": "manual",
+        "event_watermark": 67,
+        "partial": 0,
+        "capsule_tokens_est": 707
+      },
+      "per_fact": {
+        "s1-burned-twin": {
+          "captured": true,
+          "table": "dead_ends",
+          "rows": [
+            {
+              "id": 2,
+              "path": "src/ledger/surcharges.py",
+              "mechanism": "external",
+              "command_text": null,
+              "resolved_ms": 1789989342603,
+              "event_id": 25
+            }
+          ],
+          "row_count": 1,
+          "sql_error": null,
+          "checkpoint_id": "ckpt_01M31V0MK0TAMZ7MXDWG7DV33B",
+          "event_watermark": 67
+        }
+      },
+      "reason": null
+    },
+    "delivery": {
+      "status": "fail",
+      "checks": {
+        "delivered_after_compaction": true,
+        "delivered_exactly_once": true,
+        "all_exits_zero": true,
+        "target_facts_present": true,
+        "within_token_ceiling": false,
+        "token_measurement_valid": false
+      },
+      "failed_checks": [
+        "token_measurement_valid",
+        "within_token_ceiling"
+      ],
+      "deliveries": [
+        {
+          "stream_index": 401,
+          "hook_name": "SessionStart:compact",
+          "hook_event": "SessionStart",
+          "exit_code": 0,
+          "chars": 1442,
+          "after_compaction": true
+        }
+      ],
+      "deliveries_after_compaction": 1,
+      "boundary_stream_index": 402,
+      "token_ceiling": 800,
+      "measured_tokens": null,
+      "sections": [
+        "ABOUT_THIS_RECORD",
+        "FIRST_MESSAGE",
+        "LATEST_MESSAGE",
+        "WORKSPACE_STATE",
+        "TEST_RESULT",
+        "REVERTED_EDITS",
+        "RECORD_DETAIL"
+      ],
+      "per_fact": {
+        "s1-burned-twin": {
+          "target_fact": "s1-burned-twin",
+          "delivered": true,
+          "markers": [
+            "surcharges.py"
+          ],
+          "markers_found": [
+            "surcharges.py"
+          ],
+          "present": true
+        }
+      },
+      "capsule_chars": 1442,
+      "reason": "delivery checks failed: ['token_measurement_valid', 'within_token_ceiling']"
+    },
+    "acceptance": {
+      "status": "pass",
+      "verdict": "SILENT",
+      "rejection_hits": [],
+      "acknowledgement_hits": [],
+      "note": "SILENT is not a failure: an agent may use the state without saying that it did. Only an explicit rejection fails.",
+      "reason": null
+    },
+    "utilisation": {
+      "status": "pass",
+      "primary_metric": "avoided_dead_ends",
+      "primary_value": true,
+      "correct": true,
+      "suite_green": true,
+      "secondary": {
+        "tool_calls": 2,
+        "buckets": {
+          "read": 1,
+          "search": 0,
+          "edit": 1,
+          "bash": 0,
+          "other": 0
+        },
+        "reads_before_first_edit": 0,
+        "source_rereads_before_first_edit": 0,
+        "first_edit_file": "c:/users/aryan/appdata/local/temp/velra-hardened-fixtures/s1-dead-end-pair-velra-r4/src/ledger/promos.py",
+        "first_edit_index": 0,
+        "edit_targets": [
+          "C:\\Users\\aryan\\AppData\\Local\\Temp\\velra-hardened-fixtures\\s1-dead-end-pair-velra-r4\\src\\ledger\\promos.py"
+        ]
+      },
+      "scenario_detail": {
+        "avoided_dead_ends": true,
+        "dead_end_files_edited": [],
+        "retried_the_twin": false,
+        "first_edit_on_dead_end": false,
+        "first_edit_on_true_file": true,
+        "suite_green": true
+      },
+      "reason": null
+    }
+  },
+  "first_failed_stage": "compaction_loss",
+  "classification": "NOT_CAUSALLY_TESTABLE"
+}

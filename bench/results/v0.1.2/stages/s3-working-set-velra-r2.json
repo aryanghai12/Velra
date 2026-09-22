@@ -1,0 +1,160 @@
+{
+  "trial": "s3-working-set-velra-r2",
+  "scenario": "s3-working-set",
+  "arm": "velra",
+  "replicate": 2,
+  "pair_id": "s3-working-set#r2",
+  "fixture_seed": "8b1dfed4efd60e13",
+  "target_facts": [
+    "s3-agreed-file"
+  ],
+  "stages": {
+    "compaction_loss": {
+      "status": "fail",
+      "rule": "a target fact counts as lost when it is not recalled in a majority of valid control replicates, and the control's own context-reduction gate also holds",
+      "context_reduction_pct_median": 61.3,
+      "compaction_is_lossy": true,
+      "per_fact": {
+        "s3-agreed-file": {
+          "replicates": 2,
+          "valid_replicates": 2,
+          "lost_replicates": 0,
+          "recalled_each": [
+            true,
+            true
+          ],
+          "answers": [
+            "src/ledger/importers/legacy_tsv_v2.py",
+            "src/ledger/importers/legacy_tsv_v2.py"
+          ],
+          "lost": false
+        }
+      },
+      "reason": "at least one target fact survived native compaction, so this scenario cannot attribute anything to Velra"
+    },
+    "capture": {
+      "status": "fail",
+      "checkpoint": {
+        "checkpoint_id": "ckpt_01M31XS33B7XAB5WMD5Q6DYS2X",
+        "created_ms": 1789992406120,
+        "trigger": "manual",
+        "event_watermark": 46,
+        "partial": 0,
+        "capsule_tokens_est": 637
+      },
+      "per_fact": {
+        "s3-agreed-file": {
+          "captured": false,
+          "table": "file_stats",
+          "rows": [],
+          "row_count": 0,
+          "sql_error": null,
+          "checkpoint_id": "ckpt_01M31XS33B7XAB5WMD5Q6DYS2X",
+          "event_watermark": 46
+        }
+      },
+      "reason": "the target state was not in the ledger at the checkpoint watermark: this is a CAPTURE failure, not a delivery one"
+    },
+    "delivery": {
+      "status": "fail",
+      "checks": {
+        "delivered_after_compaction": true,
+        "delivered_exactly_once": true,
+        "all_exits_zero": true,
+        "target_facts_present": true,
+        "within_token_ceiling": false,
+        "token_measurement_valid": false
+      },
+      "failed_checks": [
+        "token_measurement_valid",
+        "within_token_ceiling"
+      ],
+      "deliveries": [
+        {
+          "stream_index": 304,
+          "hook_name": "SessionStart:compact",
+          "hook_event": "SessionStart",
+          "exit_code": 0,
+          "chars": 1262,
+          "after_compaction": true
+        }
+      ],
+      "deliveries_after_compaction": 1,
+      "boundary_stream_index": 305,
+      "token_ceiling": 800,
+      "measured_tokens": null,
+      "sections": [
+        "ABOUT_THIS_RECORD",
+        "FIRST_MESSAGE",
+        "LATEST_MESSAGE",
+        "WORKSPACE_STATE",
+        "FILE_ACTIVITY",
+        "RECORD_DETAIL"
+      ],
+      "per_fact": {
+        "s3-agreed-file": {
+          "target_fact": "s3-agreed-file",
+          "delivered": true,
+          "markers": [
+            "legacy_tsv_v2"
+          ],
+          "markers_found": [
+            "legacy_tsv_v2"
+          ],
+          "present": true
+        }
+      },
+      "capsule_chars": 1262,
+      "reason": "delivery checks failed: ['token_measurement_valid', 'within_token_ceiling']"
+    },
+    "acceptance": {
+      "status": "pass",
+      "verdict": "SILENT",
+      "rejection_hits": [],
+      "acknowledgement_hits": [],
+      "note": "SILENT is not a failure: an agent may use the state without saying that it did. Only an explicit rejection fails.",
+      "reason": null
+    },
+    "utilisation": {
+      "status": "pass",
+      "primary_metric": "resolved_the_reference",
+      "primary_value": true,
+      "correct": true,
+      "suite_green": true,
+      "secondary": {
+        "tool_calls": 5,
+        "buckets": {
+          "read": 2,
+          "search": 1,
+          "edit": 2,
+          "bash": 0,
+          "other": 0
+        },
+        "reads_before_first_edit": 0,
+        "source_rereads_before_first_edit": 0,
+        "first_edit_file": "c:/users/aryan/appdata/local/temp/velra-hardened-fixtures/s3-working-set-velra-r2/src/ledger/importers/legacy_tsv_v2.py",
+        "first_edit_index": 0,
+        "edit_targets": [
+          "C:\\Users\\aryan\\AppData\\Local\\Temp\\velra-hardened-fixtures\\s3-working-set-velra-r2\\src\\ledger\\importers\\legacy_tsv_v2.py",
+          "C:\\Users\\aryan\\AppData\\Local\\Temp\\velra-hardened-fixtures\\s3-working-set-velra-r2\\tests\\test_legacy_tsv_v2.py"
+        ]
+      },
+      "scenario_detail": {
+        "resolved_the_reference": true,
+        "target_fixed": true,
+        "hit_the_agreed_file": true,
+        "first_edit_on_target": true,
+        "siblings_edited": [],
+        "repaired_every_candidate": false,
+        "made_no_edit": false,
+        "tool_calls_before_first_edit": 0,
+        "search_calls": 1,
+        "read_calls": 2,
+        "suite_green": true
+      },
+      "reason": null
+    }
+  },
+  "first_failed_stage": "compaction_loss",
+  "classification": "NOT_CAUSALLY_TESTABLE"
+}

@@ -1,0 +1,350 @@
+{
+  "preregistration_version": "2.0.0",
+  "preregistration_sha256": "e04451827574b0daacc3a039c10490affecba786020943cb5c5b0ca884a1176e",
+  "minimum_replicates_per_arm": 4,
+  "results_dir": "C:\\Users\\aryan\\Videos\\Velra\\bench\\results\\v0.1.2",
+  "provenance": {
+    "binary": "C:\\Users\\aryan\\Videos\\Velra\\target\\release\\velra.exe",
+    "binary_bytes": 5399040,
+    "reported_version": "velra 0.1.1 (4b68b6b7c, x86_64-pc-windows-gnu)",
+    "embedded_commit": "4b68b6b7c",
+    "git_head": "4b68b6b7cc82c94d420377afcd1200622700123b",
+    "git_head_short9": "4b68b6b7c",
+    "git_branch": "main",
+    "git_describe": "v0.1.1-benchmark-baseline-7-g4b68b6b",
+    "working_tree_clean": false,
+    "working_tree_changes": [
+      "?? bench/results/v0.1.2/"
+    ],
+    "commit_matches_binary": true,
+    "host": {
+      "platform": "Windows-11-10.0.26200-SP0",
+      "machine": "AMD64",
+      "python": "3.14.0",
+      "processor": "Intel64 Family 6 Model 183 Stepping 1, GenuineIntel",
+      "cpu_count": 20
+    },
+    "agent": {
+      "binary": "C:\\Users\\aryan\\.vscode\\extensions\\anthropic.claude-code-2.1.272-win32-x64\\resources\\native-binary\\claude.exe",
+      "version": "2.1.272"
+    },
+    "warnings": [
+      "the working tree is dirty: results cannot be attributed to a commit"
+    ]
+  },
+  "validity": {
+    "total": 24,
+    "valid": 20,
+    "invalid": 4,
+    "invalid_trials": [
+      {
+        "trial": "s3-working-set-baseline-r3",
+        "arm": "baseline",
+        "scenario": "s3-working-set",
+        "failed_criteria": [
+          "compaction_occurred",
+          "compaction_summary_present"
+        ],
+        "excluded_from": [
+          "behavioural",
+          "budget"
+        ]
+      },
+      {
+        "trial": "s3-working-set-velra-r3",
+        "arm": "velra",
+        "scenario": "s3-working-set",
+        "failed_criteria": [
+          "compaction_occurred",
+          "compaction_summary_present"
+        ],
+        "excluded_from": [
+          "behavioural",
+          "budget"
+        ]
+      },
+      {
+        "trial": "s3-working-set-baseline-r4",
+        "arm": "baseline",
+        "scenario": "s3-working-set",
+        "failed_criteria": [
+          "compaction_occurred",
+          "compaction_summary_present"
+        ],
+        "excluded_from": [
+          "behavioural",
+          "budget"
+        ]
+      },
+      {
+        "trial": "s3-working-set-velra-r4",
+        "arm": "velra",
+        "scenario": "s3-working-set",
+        "failed_criteria": [
+          "compaction_occurred",
+          "compaction_summary_present"
+        ],
+        "excluded_from": [
+          "behavioural",
+          "budget"
+        ]
+      }
+    ],
+    "usable": {
+      "behavioural": 20,
+      "budget": 20,
+      "hooks": 24
+    }
+  },
+  "stage_rows": 24,
+  "verdicts": {
+    "H1": {
+      "hypothesis": "H1",
+      "scenario": "s1-dead-end-pair",
+      "mechanism": "[REVERTED_EDITS]",
+      "target_fact": "s1-burned-twin",
+      "statement": "After compaction, the Velra arm avoids re-editing the file already tried and reverted, and lands the fix, more often than the baseline arm.",
+      "primary_metric": "avoided_dead_ends",
+      "chain": {
+        "velra_trials": 4,
+        "classifications": {
+          "NOT_CAUSALLY_TESTABLE": 4
+        },
+        "per_stage": {
+          "compaction_loss": {
+            "pass": 0,
+            "fail": 4,
+            "n/a": 0
+          },
+          "capture": {
+            "pass": 4,
+            "fail": 0,
+            "n/a": 0
+          },
+          "delivery": {
+            "pass": 0,
+            "fail": 4,
+            "n/a": 0
+          },
+          "acceptance": {
+            "pass": 4,
+            "fail": 0,
+            "n/a": 0
+          },
+          "utilisation": {
+            "pass": 4,
+            "fail": 0,
+            "n/a": 0
+          }
+        },
+        "complete_chains": 0,
+        "first_break": "compaction_loss"
+      },
+      "stage1_compaction_loss": {
+        "status": "fail",
+        "rule": "a target fact counts as lost when it is not recalled in a majority of valid control replicates, and the control's own context-reduction gate also holds",
+        "context_reduction_pct_median": 67.2,
+        "compaction_is_lossy": true,
+        "per_fact": {
+          "s1-burned-twin": {
+            "replicates": 2,
+            "valid_replicates": 2,
+            "lost_replicates": 0,
+            "recalled_each": [
+              true,
+              true
+            ],
+            "answers": [
+              "src/ledger/surcharges.py",
+              "src/ledger/surcharges.py"
+            ],
+            "lost": false
+          }
+        },
+        "reason": "at least one target fact survived native compaction, so this scenario cannot attribute anything to Velra"
+      },
+      "verdict": "NOT CAUSALLY TESTABLE",
+      "outcome": "NOT CAUSALLY TESTABLE",
+      "why": "the target fact survived native compaction in a majority of control replicates, so no behavioural difference here can be attributed to the capsule"
+    },
+    "H2": {
+      "hypothesis": "H2",
+      "scenario": "s2-hidden-constraint",
+      "mechanism": "[STATED_CONSTRAINTS]",
+      "target_fact": "s2-turn-zero-constraint",
+      "statement": "After compaction, the Velra arm honours a constraint stated once in turn 0 more often than the baseline arm. Both arms can make the suite green; only a remembered constraint picks the right way.",
+      "primary_metric": "constraint_honoured",
+      "chain": {
+        "velra_trials": 4,
+        "classifications": {
+          "NOT_CAUSALLY_TESTABLE": 4
+        },
+        "per_stage": {
+          "compaction_loss": {
+            "pass": 0,
+            "fail": 4,
+            "n/a": 0
+          },
+          "capture": {
+            "pass": 4,
+            "fail": 0,
+            "n/a": 0
+          },
+          "delivery": {
+            "pass": 0,
+            "fail": 4,
+            "n/a": 0
+          },
+          "acceptance": {
+            "pass": 4,
+            "fail": 0,
+            "n/a": 0
+          },
+          "utilisation": {
+            "pass": 4,
+            "fail": 0,
+            "n/a": 0
+          }
+        },
+        "complete_chains": 0,
+        "first_break": "compaction_loss"
+      },
+      "stage1_compaction_loss": {
+        "status": "fail",
+        "rule": "a target fact counts as lost when it is not recalled in a majority of valid control replicates, and the control's own context-reduction gate also holds",
+        "context_reduction_pct_median": 62.0,
+        "compaction_is_lossy": true,
+        "per_fact": {
+          "s2-turn-zero-constraint": {
+            "replicates": 2,
+            "valid_replicates": 2,
+            "lost_replicates": 0,
+            "recalled_each": [
+              true,
+              true
+            ],
+            "answers": [
+              "\"Constraint for this whole task: engine.settle must keep iterating invoice.items when it computes the discount; finance reconciles the per-line figures.\"",
+              "\"Constraint for this whole task: engine.settle must keep iterating invoice.items when it computes the discount; finance reconciles the per-line figures.\""
+            ],
+            "lost": false
+          }
+        },
+        "reason": "at least one target fact survived native compaction, so this scenario cannot attribute anything to Velra"
+      },
+      "verdict": "NOT CAUSALLY TESTABLE",
+      "outcome": "NOT CAUSALLY TESTABLE",
+      "why": "the target fact survived native compaction in a majority of control replicates, so no behavioural difference here can be attributed to the capsule"
+    },
+    "H3": {
+      "hypothesis": "H3",
+      "scenario": "s3-working-set",
+      "mechanism": "[FILE_ACTIVITY]",
+      "target_fact": "s3-agreed-file",
+      "statement": "After a sweep across 84 unrelated modules and a compaction, the Velra arm resolves an anaphoric reference to a file it read earlier - fixing that module and not its two identically broken siblings - more often than the baseline arm.",
+      "primary_metric": "resolved_the_reference",
+      "chain": {
+        "velra_trials": 4,
+        "classifications": {
+          "NOT_CAUSALLY_TESTABLE": 4
+        },
+        "per_stage": {
+          "compaction_loss": {
+            "pass": 0,
+            "fail": 4,
+            "n/a": 0
+          },
+          "capture": {
+            "pass": 0,
+            "fail": 4,
+            "n/a": 0
+          },
+          "delivery": {
+            "pass": 0,
+            "fail": 4,
+            "n/a": 0
+          },
+          "acceptance": {
+            "pass": 2,
+            "fail": 0,
+            "n/a": 2
+          },
+          "utilisation": {
+            "pass": 2,
+            "fail": 2,
+            "n/a": 0
+          }
+        },
+        "complete_chains": 0,
+        "first_break": "compaction_loss"
+      },
+      "stage1_compaction_loss": {
+        "status": "fail",
+        "rule": "a target fact counts as lost when it is not recalled in a majority of valid control replicates, and the control's own context-reduction gate also holds",
+        "context_reduction_pct_median": 61.3,
+        "compaction_is_lossy": true,
+        "per_fact": {
+          "s3-agreed-file": {
+            "replicates": 2,
+            "valid_replicates": 2,
+            "lost_replicates": 0,
+            "recalled_each": [
+              true,
+              true
+            ],
+            "answers": [
+              "src/ledger/importers/legacy_tsv_v2.py",
+              "src/ledger/importers/legacy_tsv_v2.py"
+            ],
+            "lost": false
+          }
+        },
+        "reason": "at least one target fact survived native compaction, so this scenario cannot attribute anything to Velra"
+      },
+      "verdict": "NOT CAUSALLY TESTABLE",
+      "outcome": "NOT CAUSALLY TESTABLE",
+      "why": "the target fact survived native compaction in a majority of control replicates, so no behavioural difference here can be attributed to the capsule"
+    },
+    "H4": {
+      "hypothesis": "H4",
+      "mechanism": "truncation ladder and token budget",
+      "scenario": "all",
+      "statement": "Every delivered capsule measures at most 800 real tokens on Anthropic's tokenizer, and its median is below the median native compaction summary measured with the same tokenizer.",
+      "capsule_tokens_each": [],
+      "capsule_tokens_worst": null,
+      "capsule_tokens_median": null,
+      "measurement_controls_valid": true,
+      "ceiling": 800,
+      "verdict": "FAILED",
+      "outcome": "FAILED",
+      "why": "no capsule was measured with the real tokenizer"
+    },
+    "H5": {
+      "hypothesis": "H5",
+      "mechanism": "hook contract",
+      "scenario": "all",
+      "statement": "Every hook invocation observed on Claude Code's own event stream exits 0 and writes nothing to stderr.",
+      "invocations_observed": 1109,
+      "nonzero_exits": 0,
+      "stderr_writes": 0,
+      "verdict": "PASSED",
+      "outcome": "PASSED",
+      "why": "1109 invocations, 0 non-zero exits, 0 stderr writes"
+    },
+    "H6": {
+      "hypothesis": "H6",
+      "mechanism": "capsule acceptance",
+      "scenario": "all",
+      "statement": "The delivered capsule is not rejected by the agent as injected, fabricated or untrusted content.",
+      "capsules_delivered": 10,
+      "verdict_counts": {
+        "SILENT": 10,
+        "N/A": 2
+      },
+      "rejections": 0,
+      "verdict": "PASSED",
+      "outcome": "PASSED",
+      "why": "0 rejection(s) across 10 deliveries"
+    }
+  }
+}

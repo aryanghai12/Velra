@@ -1,0 +1,803 @@
+{
+  "scenario": "s2-hidden-constraint",
+  "arm": "baseline",
+  "replicate": 2,
+  "pair_id": "s2-hidden-constraint#r2",
+  "pair_key": {
+    "scenario": "s2-hidden-constraint",
+    "pair_id": "s2-hidden-constraint#r2",
+    "fixture_seed": "34d069ee44f64929",
+    "model": "sonnet",
+    "turn_count": 14,
+    "compact_turn_index": 12,
+    "measured_turn_index": 13,
+    "claude_version": "2.1.272",
+    "velra_commit": "4b68b6b7c"
+  },
+  "model": "sonnet",
+  "session_id": "71f66965-7db1-4c15-8b86-b2d8ecc5b310",
+  "transcript_source": "C:\\Users\\aryan\\.claude\\projects\\C--Users-aryan-AppData-Local-Temp-velra-hardened-fixtures-s2-hidden-constraint-baseline-r2\\71f66965-7db1-4c15-8b86-b2d8ecc5b310.jsonl",
+  "fixture": "C:\\Users\\aryan\\AppData\\Local\\Temp\\velra-hardened-fixtures\\s2-hidden-constraint-baseline-r2",
+  "velra_home": "C:\\Users\\aryan\\Videos\\Velra\\bench\\results\\v0.1.2\\trials\\s2-hidden-constraint-baseline-r2\\velra_home",
+  "wall_seconds": 234.959,
+  "turns_sent": 14,
+  "turns_expected": 14,
+  "compact_turn_index": 12,
+  "measured_turn_index": 13,
+  "compact_status": {
+    "compact_result": "success",
+    "compact_error": null,
+    "at_turn": 12
+  },
+  "turn_marks": [
+    {
+      "turn": 0,
+      "elapsed_s": 9.848,
+      "duration_ms": 8919,
+      "total_cost_usd": 0.04705500000000001,
+      "num_turns": 2,
+      "subtype": "success",
+      "usage": {
+        "input_tokens": 4,
+        "cache_creation_input_tokens": 8837,
+        "cache_read_input_tokens": 34795,
+        "output_tokens": 371,
+        "output_tokens_details": {
+          "thinking_tokens": 0
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 8837,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "not_available",
+        "iterations": [
+          {
+            "input_tokens": 2,
+            "output_tokens": 279,
+            "cache_read_input_tokens": 21605,
+            "cache_creation_input_tokens": 422,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 422
+            },
+            "type": "message"
+          }
+        ],
+        "speed": "standard"
+      }
+    },
+    {
+      "turn": 1,
+      "elapsed_s": 19.461,
+      "duration_ms": 9606,
+      "total_cost_usd": 0.0745572,
+      "num_turns": 4,
+      "subtype": "success",
+      "usage": {
+        "input_tokens": 4,
+        "cache_creation_input_tokens": 2589,
+        "cache_read_input_tokens": 44441,
+        "output_tokens": 825,
+        "output_tokens_details": {
+          "thinking_tokens": 0
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 2589,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "not_available",
+        "iterations": [
+          {
+            "input_tokens": 2,
+            "output_tokens": 508,
+            "cache_read_input_tokens": 22414,
+            "cache_creation_input_tokens": 2202,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 2202
+            },
+            "type": "message"
+          }
+        ],
+        "speed": "standard"
+      }
+    },
+    {
+      "turn": 2,
+      "elapsed_s": 32.612,
+      "duration_ms": 13148,
+      "total_cost_usd": 0.1011534,
+      "num_turns": 2,
+      "subtype": "success",
+      "usage": {
+        "input_tokens": 4,
+        "cache_creation_input_tokens": 1479,
+        "cache_read_input_tokens": 49811,
+        "output_tokens": 1071,
+        "output_tokens_details": {
+          "thinking_tokens": 0
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 1479,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "not_available",
+        "iterations": [
+          {
+            "input_tokens": 2,
+            "output_tokens": 964,
+            "cache_read_input_tokens": 25195,
+            "cache_creation_input_tokens": 900,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 900
+            },
+            "type": "message"
+          }
+        ],
+        "speed": "standard"
+      }
+    },
+    {
+      "turn": 3,
+      "elapsed_s": 42.73,
+      "duration_ms": 10115,
+      "total_cost_usd": 0.1426302,
+      "num_turns": 2,
+      "subtype": "success",
+      "usage": {
+        "input_tokens": 4,
+        "cache_creation_input_tokens": 5896,
+        "cache_read_input_tokens": 53224,
+        "output_tokens": 724,
+        "output_tokens_details": {
+          "thinking_tokens": 0
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 5896,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "not_available",
+        "iterations": [
+          {
+            "input_tokens": 2,
+            "output_tokens": 597,
+            "cache_read_input_tokens": 27129,
+            "cache_creation_input_tokens": 4862,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 4862
+            },
+            "type": "message"
+          }
+        ],
+        "speed": "standard"
+      }
+    },
+    {
+      "turn": 4,
+      "elapsed_s": 64.708,
+      "duration_ms": 21975,
+      "total_cost_usd": 0.215729,
+      "num_turns": 4,
+      "subtype": "success",
+      "usage": {
+        "input_tokens": 6,
+        "cache_creation_input_tokens": 8445,
+        "cache_read_input_tokens": 99384,
+        "output_tokens": 1943,
+        "output_tokens_details": {
+          "thinking_tokens": 212
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 8445,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "not_available",
+        "iterations": [
+          {
+            "input_tokens": 2,
+            "output_tokens": 1228,
+            "cache_read_input_tokens": 34708,
+            "cache_creation_input_tokens": 5728,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 5728
+            },
+            "type": "message"
+          }
+        ],
+        "speed": "standard"
+      }
+    },
+    {
+      "turn": 5,
+      "elapsed_s": 80.824,
+      "duration_ms": 16114,
+      "total_cost_usd": 0.2766272,
+      "num_turns": 4,
+      "subtype": "success",
+      "usage": {
+        "input_tokens": 6,
+        "cache_creation_input_tokens": 5303,
+        "cache_read_input_tokens": 126871,
+        "output_tokens": 1430,
+        "output_tokens_details": {
+          "thinking_tokens": 32
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 5303,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "not_available",
+        "iterations": [
+          {
+            "input_tokens": 2,
+            "output_tokens": 880,
+            "cache_read_input_tokens": 44688,
+            "cache_creation_input_tokens": 1051,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 1051
+            },
+            "type": "message"
+          }
+        ],
+        "speed": "standard"
+      }
+    },
+    {
+      "turn": 6,
+      "elapsed_s": 93.744,
+      "duration_ms": 12917,
+      "total_cost_usd": 0.3265444,
+      "num_turns": 3,
+      "subtype": "success",
+      "usage": {
+        "input_tokens": 4,
+        "cache_creation_input_tokens": 5062,
+        "cache_read_input_tokens": 92456,
+        "output_tokens": 1117,
+        "output_tokens_details": {
+          "thinking_tokens": 0
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 5062,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "not_available",
+        "iterations": [
+          {
+            "input_tokens": 2,
+            "output_tokens": 795,
+            "cache_read_input_tokens": 46717,
+            "cache_creation_input_tokens": 4084,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 4084
+            },
+            "type": "message"
+          }
+        ],
+        "speed": "standard"
+      }
+    },
+    {
+      "turn": 7,
+      "elapsed_s": 110.886,
+      "duration_ms": 17127,
+      "total_cost_usd": 0.3847708,
+      "num_turns": 4,
+      "subtype": "success",
+      "usage": {
+        "input_tokens": 6,
+        "cache_creation_input_tokens": 3387,
+        "cache_read_input_tokens": 155832,
+        "output_tokens": 1350,
+        "output_tokens_details": {
+          "thinking_tokens": 46
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 3387,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "not_available",
+        "iterations": [
+          {
+            "input_tokens": 2,
+            "output_tokens": 762,
+            "cache_read_input_tokens": 53354,
+            "cache_creation_input_tokens": 834,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 834
+            },
+            "type": "message"
+          }
+        ],
+        "speed": "standard"
+      }
+    },
+    {
+      "turn": 8,
+      "elapsed_s": 122.844,
+      "duration_ms": 11955,
+      "total_cost_usd": 0.4253368,
+      "num_turns": 2,
+      "subtype": "success",
+      "usage": {
+        "input_tokens": 4,
+        "cache_creation_input_tokens": 2156,
+        "cache_read_input_tokens": 109220,
+        "output_tokens": 1009,
+        "output_tokens_details": {
+          "thinking_tokens": 0
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 2156,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "not_available",
+        "iterations": [
+          {
+            "input_tokens": 2,
+            "output_tokens": 800,
+            "cache_read_input_tokens": 55032,
+            "cache_creation_input_tokens": 1312,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 1312
+            },
+            "type": "message"
+          }
+        ],
+        "speed": "standard"
+      }
+    },
+    {
+      "turn": 9,
+      "elapsed_s": 140.489,
+      "duration_ms": 17643,
+      "total_cost_usd": 0.4986754,
+      "num_turns": 2,
+      "subtype": "success",
+      "usage": {
+        "input_tokens": 4,
+        "cache_creation_input_tokens": 8947,
+        "cache_read_input_tokens": 113563,
+        "output_tokens": 1483,
+        "output_tokens_details": {
+          "thinking_tokens": 366
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 8947,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "not_available",
+        "iterations": [
+          {
+            "input_tokens": 2,
+            "output_tokens": 1360,
+            "cache_read_input_tokens": 57219,
+            "cache_creation_input_tokens": 8072,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 8072
+            },
+            "type": "message"
+          }
+        ],
+        "speed": "standard"
+      }
+    },
+    {
+      "turn": 10,
+      "elapsed_s": 159.755,
+      "duration_ms": 19263,
+      "total_cost_usd": 0.5580244,
+      "num_turns": 3,
+      "subtype": "success",
+      "usage": {
+        "input_tokens": 4,
+        "cache_creation_input_tokens": 3622,
+        "cache_read_input_tokens": 132015,
+        "output_tokens": 1845,
+        "output_tokens_details": {
+          "thinking_tokens": 213
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 3622,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "not_available",
+        "iterations": [
+          {
+            "input_tokens": 2,
+            "output_tokens": 1394,
+            "cache_read_input_tokens": 66724,
+            "cache_creation_input_tokens": 2189,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 2189
+            },
+            "type": "message"
+          }
+        ],
+        "speed": "standard"
+      }
+    },
+    {
+      "turn": 11,
+      "elapsed_s": 171.276,
+      "duration_ms": 11518,
+      "total_cost_usd": 0.588275,
+      "num_turns": 1,
+      "subtype": "success",
+      "usage": {
+        "input_tokens": 2,
+        "cache_creation_input_tokens": 1456,
+        "cache_read_input_tokens": 68913,
+        "output_tokens": 1064,
+        "output_tokens_details": {
+          "thinking_tokens": 0
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 1456,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "not_available",
+        "iterations": [
+          {
+            "input_tokens": 2,
+            "output_tokens": 1064,
+            "cache_read_input_tokens": 68913,
+            "cache_creation_input_tokens": 1456,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 1456
+            },
+            "type": "message"
+          }
+        ],
+        "speed": "standard"
+      }
+    },
+    {
+      "turn": 12,
+      "elapsed_s": 223.354,
+      "duration_ms": 52077,
+      "total_cost_usd": 0.6613404,
+      "num_turns": 0,
+      "subtype": "success",
+      "usage": {
+        "output_tokens_details": {
+          "thinking_tokens": 0
+        },
+        "input_tokens": 0,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 0,
+        "output_tokens": 0,
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 0,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "",
+        "iterations": [],
+        "speed": "standard"
+      }
+    },
+    {
+      "turn": 13,
+      "elapsed_s": 234.405,
+      "duration_ms": 11048,
+      "total_cost_usd": 0.7237176000000001,
+      "num_turns": 3,
+      "subtype": "success",
+      "usage": {
+        "input_tokens": 4,
+        "cache_creation_input_tokens": 11507,
+        "cache_read_input_tokens": 40456,
+        "output_tokens": 825,
+        "output_tokens_details": {
+          "thinking_tokens": 109
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 11507,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "not_available",
+        "iterations": [
+          {
+            "input_tokens": 2,
+            "output_tokens": 229,
+            "cache_read_input_tokens": 25580,
+            "cache_creation_input_tokens": 803,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 803
+            },
+            "type": "message"
+          }
+        ],
+        "speed": "standard"
+      }
+    }
+  ],
+  "final_pytest_exit": 0,
+  "stderr": "",
+  "manifest": {
+    "failing_test": "tests/test_engine.py::test_exact_payment_settles_invoice",
+    "failing_assertion_line": 54,
+    "failing_assertion_text": "assert result.status == \"SETTLED\"",
+    "true_fix_file": "src/ledger/engine.py",
+    "true_fix_symbol": "settle",
+    "dead_end_files": [],
+    "dead_end_file": null,
+    "constraint": "engine.settle must keep iterating invoice.items when it computes the discount; finance reconciles the per-line figures",
+    "constraint_markers": [
+      "keep iterating invoice.items",
+      "iterating invoice.items",
+      "per-line figures",
+      "invoice.items"
+    ],
+    "uncommitted_files": [
+      "src/ledger/rules.py"
+    ],
+    "noise_module_count": 84,
+    "expected_status": "SETTLED",
+    "observed_status": "UNDERPAID",
+    "scenario": "s2-hidden-constraint",
+    "title": "A constraint that exists only in the conversation",
+    "mechanism": "[ROOT_TASK_OBJECTIVE]",
+    "repo": "C:\\Users\\aryan\\AppData\\Local\\Temp\\velra-hardened-fixtures\\s2-hidden-constraint-baseline-r2",
+    "leak_terms": [
+      "not of each line",
+      "per line item",
+      "each line item",
+      "discount the subtotal",
+      "subtotal once",
+      "discount_for(subtotal)",
+      "round once",
+      "rounds three times",
+      "finance reconciles",
+      "keep iterating"
+    ],
+    "canary": {
+      "file": "src/ledger/adapters/adyen_uk.py",
+      "const": "API_KEY_PREFIX",
+      "value": "AQE1",
+      "seed_turn": 4
+    },
+    "compact_turn_index": 12,
+    "measured_turn_index": 13,
+    "turn_count": 14,
+    "target_facts": [
+      {
+        "id": "s2-turn-zero-constraint",
+        "what": "The constraint stated in the first sentence of turn 0: settle must keep iterating invoice.items when it computes the discount.",
+        "probe": "At the very start of this task I stated one constraint about how engine.settle must compute the discount. Quote it back to me.",
+        "recalled_markers": [
+          "iterating invoice.items",
+          "invoice.items",
+          "per-line figures",
+          "keep iterating"
+        ],
+        "ledger_table": "constraints",
+        "ledger_sql": "SELECT c.id, c.text, c.kind, c.cue, c.prompt_ordinal, c.source_event_id FROM constraints c WHERE c.superseded_ms IS NULL   AND LOWER(c.text) LIKE '%invoice.items%'   AND c.source_event_id <= ?1",
+        "capsule_markers": [
+          "invoice.items"
+        ],
+        "necessary_because": "both fixes make the suite green, so the tests cannot decide between them, and the repository never states the constraint. The natural fix -- one discount on the subtotal -- is the one every recorded v0.1 session reached for. Only the remembered sentence distinguishes the compliant implementation from the attractive one, which is why a wrong answer here is visible and a right one is too."
+      }
+    ],
+    "fixture_seed": "34d069ee44f64929",
+    "ground_truth": {
+      "as_generated": {
+        "exit": 1,
+        "counts": {
+          "passed": 5,
+          "failed": 1,
+          "errors": 0
+        },
+        "expected": "red",
+        "observed": "red",
+        "tail": [
+          "1 failed, 5 passed in 0.07s"
+        ]
+      },
+      "natural_fix_violates_the_constraint": {
+        "exit": 0,
+        "counts": {
+          "passed": 6,
+          "failed": 0,
+          "errors": 0
+        },
+        "expected": "green",
+        "observed": "green",
+        "tail": [
+          "6 passed in 0.02s"
+        ]
+      },
+      "required_fix_honours_the_constraint": {
+        "exit": 0,
+        "counts": {
+          "passed": 6,
+          "failed": 0,
+          "errors": 0
+        },
+        "expected": "green",
+        "observed": "green",
+        "tail": [
+          "6 passed in 0.02s"
+        ]
+      }
+    },
+    "leak_scan": {
+      "clean": true,
+      "terms": [
+        "not of each line",
+        "per line item",
+        "each line item",
+        "discount the subtotal",
+        "subtotal once",
+        "discount_for(subtotal)",
+        "round once",
+        "rounds three times",
+        "finance reconciles",
+        "keep iterating"
+      ],
+      "hits": []
+    },
+    "leak_scan_wide": {
+      "clean": true,
+      "terms": [
+        "not of each line",
+        "per line item",
+        "each line item",
+        "discount the subtotal",
+        "subtotal once",
+        "discount_for(subtotal)",
+        "round once",
+        "rounds three times",
+        "finance reconciles",
+        "keep iterating"
+      ],
+      "surfaces_scanned": [
+        "tree",
+        "filenames",
+        "pre_prompts",
+        "post_prompt",
+        "environment"
+      ],
+      "fatal_surfaces": [
+        "tree",
+        "filenames",
+        "post_prompt",
+        "environment"
+      ],
+      "hits_by_surface": {
+        "pre_prompts": 2
+      },
+      "fatal_hits": [],
+      "hits": [
+        {
+          "surface": "pre_prompts",
+          "where": "turn 0",
+          "term": "finance reconciles",
+          "context": "keep iterating invoice.items when it computes the discount; finance reconciles the per-line figures. Now run `python -m pytest -q` and tel"
+        },
+        {
+          "surface": "pre_prompts",
+          "where": "turn 0",
+          "term": "keep iterating",
+          "context": "Constraint for this whole task: engine.settle must keep iterating invoice.items when it computes the discount; finance reconc"
+        }
+      ]
+    }
+  },
+  "claude_binary": "C:\\Users\\aryan\\.vscode\\extensions\\anthropic.claude-code-2.1.272-win32-x64\\resources\\native-binary\\claude.exe",
+  "claude_version": "2.1.272",
+  "velra_binary": "C:\\Users\\aryan\\Videos\\Velra\\target\\release\\velra.exe",
+  "provenance": {
+    "binary": "C:\\Users\\aryan\\Videos\\Velra\\target\\release\\velra.exe",
+    "binary_bytes": 5399040,
+    "reported_version": "velra 0.1.1 (4b68b6b7c, x86_64-pc-windows-gnu)",
+    "embedded_commit": "4b68b6b7c",
+    "git_head": "4b68b6b7cc82c94d420377afcd1200622700123b",
+    "git_head_short9": "4b68b6b7c",
+    "git_branch": "main",
+    "git_describe": "v0.1.1-benchmark-baseline-7-g4b68b6b",
+    "working_tree_clean": false,
+    "working_tree_changes": [
+      "?? bench/results/v0.1.2/"
+    ],
+    "commit_matches_binary": true,
+    "host": {
+      "platform": "Windows-11-10.0.26200-SP0",
+      "machine": "AMD64",
+      "python": "3.14.0",
+      "processor": "Intel64 Family 6 Model 183 Stepping 1, GenuineIntel",
+      "cpu_count": 20
+    },
+    "agent": {
+      "binary": "C:\\Users\\aryan\\.vscode\\extensions\\anthropic.claude-code-2.1.272-win32-x64\\resources\\native-binary\\claude.exe",
+      "version": "2.1.272"
+    },
+    "warnings": [
+      "the working tree is dirty: results cannot be attributed to a commit"
+    ]
+  },
+  "preregistration_version": "1.0.0",
+  "preregistration_sha256": "4658a1a538411e0f15bf9c5d57ee50ede85bcd2d7929b8c7045262732c2eb1ad",
+  "minimum_replicates_per_arm": 4
+}

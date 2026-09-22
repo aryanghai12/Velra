@@ -1,0 +1,170 @@
+{
+  "trial": "s2-hidden-constraint-velra-r4",
+  "scenario": "s2-hidden-constraint",
+  "arm": "velra",
+  "replicate": 4,
+  "pair_id": "s2-hidden-constraint#r4",
+  "fixture_seed": "34d069ee44f64929",
+  "target_facts": [
+    "s2-turn-zero-constraint"
+  ],
+  "stages": {
+    "compaction_loss": {
+      "status": "fail",
+      "rule": "a target fact counts as lost when it is not recalled in a majority of valid control replicates, and the control's own context-reduction gate also holds",
+      "context_reduction_pct_median": 62.0,
+      "compaction_is_lossy": true,
+      "per_fact": {
+        "s2-turn-zero-constraint": {
+          "replicates": 2,
+          "valid_replicates": 2,
+          "lost_replicates": 0,
+          "recalled_each": [
+            true,
+            true
+          ],
+          "answers": [
+            "\"Constraint for this whole task: engine.settle must keep iterating invoice.items when it computes the discount; finance reconciles the per-line figures.\"",
+            "\"Constraint for this whole task: engine.settle must keep iterating invoice.items when it computes the discount; finance reconciles the per-line figures.\""
+          ],
+          "lost": false
+        }
+      },
+      "reason": "at least one target fact survived native compaction, so this scenario cannot attribute anything to Velra"
+    },
+    "capture": {
+      "status": "pass",
+      "checkpoint": {
+        "checkpoint_id": "ckpt_01M31WWEY62WNF4WMY9EDG003C",
+        "created_ms": 1789991467971,
+        "trigger": "manual",
+        "event_watermark": 48,
+        "partial": 0,
+        "capsule_tokens_est": 715
+      },
+      "per_fact": {
+        "s2-turn-zero-constraint": {
+          "captured": true,
+          "table": "constraints",
+          "rows": [
+            {
+              "id": 1,
+              "text": "Constraint for this whole task: engine.settle must keep iterating invoice.items when it computes the discount; finance reconciles the per-line figures.",
+              "kind": "labelled",
+              "cue": "constraint",
+              "prompt_ordinal": 0,
+              "source_event_id": 2
+            }
+          ],
+          "row_count": 1,
+          "sql_error": null,
+          "checkpoint_id": "ckpt_01M31WWEY62WNF4WMY9EDG003C",
+          "event_watermark": 48
+        }
+      },
+      "reason": null
+    },
+    "delivery": {
+      "status": "fail",
+      "checks": {
+        "delivered_after_compaction": true,
+        "delivered_exactly_once": true,
+        "all_exits_zero": true,
+        "target_facts_present": true,
+        "within_token_ceiling": false,
+        "token_measurement_valid": false
+      },
+      "failed_checks": [
+        "token_measurement_valid",
+        "within_token_ceiling"
+      ],
+      "deliveries": [
+        {
+          "stream_index": 293,
+          "hook_name": "SessionStart:compact",
+          "hook_event": "SessionStart",
+          "exit_code": 0,
+          "chars": 1481,
+          "after_compaction": true
+        }
+      ],
+      "deliveries_after_compaction": 1,
+      "boundary_stream_index": 294,
+      "token_ceiling": 800,
+      "measured_tokens": null,
+      "sections": [
+        "ABOUT_THIS_RECORD",
+        "FIRST_MESSAGE",
+        "STATED_CONSTRAINTS",
+        "LATEST_MESSAGE",
+        "WORKSPACE_STATE",
+        "TEST_RESULT",
+        "FAILURE_LOCATION",
+        "RECORD_DETAIL"
+      ],
+      "per_fact": {
+        "s2-turn-zero-constraint": {
+          "target_fact": "s2-turn-zero-constraint",
+          "delivered": true,
+          "markers": [
+            "invoice.items"
+          ],
+          "markers_found": [
+            "invoice.items"
+          ],
+          "present": true
+        }
+      },
+      "capsule_chars": 1481,
+      "reason": "delivery checks failed: ['token_measurement_valid', 'within_token_ceiling']"
+    },
+    "acceptance": {
+      "status": "pass",
+      "verdict": "SILENT",
+      "rejection_hits": [],
+      "acknowledgement_hits": [],
+      "note": "SILENT is not a failure: an agent may use the state without saying that it did. Only an explicit rejection fails.",
+      "reason": null
+    },
+    "utilisation": {
+      "status": "pass",
+      "primary_metric": "constraint_honoured",
+      "primary_value": true,
+      "correct": true,
+      "suite_green": true,
+      "secondary": {
+        "tool_calls": 2,
+        "buckets": {
+          "read": 1,
+          "search": 0,
+          "edit": 1,
+          "bash": 0,
+          "other": 0
+        },
+        "reads_before_first_edit": 0,
+        "source_rereads_before_first_edit": 0,
+        "first_edit_file": "c:/users/aryan/appdata/local/temp/velra-hardened-fixtures/s2-hidden-constraint-velra-r4/tests/test_engine.py",
+        "first_edit_index": 0,
+        "edit_targets": [
+          "C:\\Users\\aryan\\AppData\\Local\\Temp\\velra-hardened-fixtures\\s2-hidden-constraint-velra-r4\\tests\\test_engine.py"
+        ]
+      },
+      "scenario_detail": {
+        "constraint": "engine.settle must keep iterating invoice.items when it computes the discount; finance reconciles the per-line figures",
+        "engine_shape": {
+          "parsed": true,
+          "settle_present": true,
+          "loop_in_settle": true,
+          "loop_anywhere": true
+        },
+        "constraint_honoured": true,
+        "constraint_violated_but_green": false,
+        "loop_moved_elsewhere": false,
+        "suite_green": true
+      },
+      "reason": null
+    }
+  },
+  "first_failed_stage": "compaction_loss",
+  "classification": "NOT_CAUSALLY_TESTABLE"
+}

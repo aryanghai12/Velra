@@ -1,0 +1,448 @@
+{
+  "scenario": "s3-working-set",
+  "model": "sonnet",
+  "replicates": 2,
+  "valid_replicates": 2,
+  "lossy_replicates": 2,
+  "reduction_pct_each": [
+    63.3,
+    59.4
+  ],
+  "reduction_pct_median": 61.3,
+  "canary_recalled_each": [
+    false,
+    false
+  ],
+  "target_facts": {
+    "s3-agreed-file": [
+      {
+        "target_fact": "s3-agreed-file",
+        "answer": "src/ledger/importers/legacy_tsv_v2.py",
+        "markers": [
+          "legacy_tsv_v2"
+        ],
+        "markers_found": [
+          "legacy_tsv_v2"
+        ],
+        "said_unknown": false,
+        "used_tool": false,
+        "recalled": true,
+        "turn": 17,
+        "answered": true,
+        "valid": true
+      },
+      {
+        "target_fact": "s3-agreed-file",
+        "answer": "src/ledger/importers/legacy_tsv_v2.py",
+        "markers": [
+          "legacy_tsv_v2"
+        ],
+        "markers_found": [
+          "legacy_tsv_v2"
+        ],
+        "said_unknown": false,
+        "used_tool": false,
+        "recalled": true,
+        "turn": 17,
+        "answered": true,
+        "valid": true
+      }
+    ]
+  },
+  "target_facts_declared": [
+    "s3-agreed-file"
+  ],
+  "compaction_is_lossy": true,
+  "lossy_rule": "a majority of valid control replicates show >20% context reduction and no verbatim canary recall",
+  "runs": [
+    {
+      "compact_status": "success",
+      "turns": [
+        {
+          "turn": 0,
+          "prompt": "Orientation first. Run `python -m pytest -q` and tell me whether the suite is green, then ",
+          "total_input": 43775,
+          "api_iterations": 1,
+          "subtype": "success",
+          "text": "<TOOL:Bash> <TOOL:Bash> The suite is green: 6 tests passed in 0.05s.\n\nTop level of `src/ledger`:\n\n- **Modules**\n  - `__init__.py`\n  - `engine.py`\n  - `money.py`\n  - `rules.py`\n- **Subpackages**\n  - `adapters/`\n  - `importers/`\n  - `reporting/`\n  - `validation/`\n\n`__pycache__/` is also there, but it's only bytecode cache."
+        },
+        {
+          "turn": 1,
+          "prompt": "Read src/ledger/money.py and src/ledger/rules.py and summarise how a promotional discount ",
+          "total_input": 46136,
+          "api_iterations": 1,
+          "subtype": "success",
+          "text": "<TOOL:Read> <TOOL:Read> A promotional discount is the invoice amount times a flat 7.4% rate, rounded half up to the nearest cent.\n\n**`rules.py`**\n- `PROMO_RATE = Decimal(\"0.074\")` is the promotional rate for the current billing period.\n- `discount_for(amount)` returns `amount.scaled(PROMO_RATE)`. It applies no tiers, caps or eligibility checks.\n\n**`money.py`**\n- `Money` stores an integer number of cents, so amounts stay exact and never go through floats.\n- `Money.scaled(rate)` computes `Decimal(cents) * rate`, then rounds to a whole cent with `ROUND_HALF_UP`.\n\n**Example:** a `Money(14250)` amo"
+        },
+        {
+          "turn": 2,
+          "prompt": "Read src/ledger/importers/legacy_tsv_v1.py and src/ledger/importers/legacy_tsv_v2.py and t",
+          "total_input": 51246,
+          "api_iterations": 1,
+          "subtype": "success",
+          "text": "<TOOL:Read> <TOOL:Read> The two importers are the same in both respects you asked about.\n\n| | `legacy_tsv_v1.py` | `legacy_tsv_v2.py` |\n|---|---|---|\n| **Field splitting** | `DELIMITER = None`, so `split_fields` uses `line.split()`, which splits on any run of whitespace and drops empty chunks | Same |\n| **`RECORD_KIND`** | `\"invoice\"` | `\"invoice\"` |\n\n**How splitting works in both**\n- The `DELIMITER is None` branch is the one that runs. Despite the \"tsv\" name, the code doesn't split on tabs specifically. Any mix of spaces and tabs separates fields.\n- The other branch (`line.split(DELIMITER)` p"
+        },
+        {
+          "turn": 3,
+          "prompt": "Right. src/ledger/importers/legacy_tsv_v2.py splits on whitespace even though it is a tab-",
+          "total_input": 56929,
+          "api_iterations": 1,
+          "subtype": "success",
+          "text": "I'll check what the sibling importers use, without changing anything. <TOOL:Grep> <TOOL:Glob> The audit contradicts \"like its siblings\": none of the sibling importers uses a tab. I haven't changed anything.\n\n**`DELIMITER` across `src/ledger/importers/`**\n\n| Importer family | `DELIMITER` | `RECORD_KIND` |\n|---|---|---|\n| `legacy_tsv_v1`, `v2`, `v3` | `None` | `invoice` |\n| `bank_csv_v1`, `v2`, `v3` | `\",\"` | `statement` |\n| `erp_fixed_width_v1`, `v2`, `v3` | `None` | `journal` |\n| `ledger_ofx_v1`, `v2`, `v3` | `None` | `transaction` |\n| `gateway_json_v1`, `v2`, `v3` | `None` | `payout` |\n\n- **T"
+        },
+        {
+          "turn": 4,
+          "prompt": "Read every module under src/ledger/adapters and list, for each one, the exception classes ",
+          "total_input": 102287,
+          "api_iterations": 1,
+          "subtype": "success",
+          "text": "<TOOL:Glob> That's 33 modules. I'll read one to see the structure, then extract the same fields from all of them with grep. <TOOL:Read> <TOOL:Grep> All 32 provider adapter modules have the same shape. Only `__init__.py` differs: it defines no classes and no currency constant.\n\n**Exception classes:** each module defines exactly two, named `<Provider><Region>` plus a suffix.\n- `<Prefix>Error(RuntimeError)` is raised when the provider rejects a request outright.\n- `<Prefix>Declined(<Prefix>Error)` is raised when the request is accepted but the payment is declined.\n\n**Currencies:** every module se"
+        },
+        {
+          "turn": 5,
+          "prompt": "Now read every module under src/ledger/reporting and list, for each one, its COLUMNS tuple",
+          "total_input": 136253,
+          "api_iterations": 1,
+          "subtype": "success",
+          "text": "<TOOL:Glob> <TOOL:Grep> The grep gave me the `COLUMNS` tuples but not the grouping logic. I'll read one module's `grouped` method to see what the key is. <TOOL:Read> <TOOL:Grep> There are 18 report modules: six report types, each with `_daily`, `_monthly` and `_quarterly` variants. `__init__.py` defines neither `COLUMNS` nor a grouping key. Within a type, the three variants have identical `COLUMNS` and grouping key.\n\n| Report | `COLUMNS` | Grouping key (`grouped()`) |\n|---|---|---|\n| `aged_receivables_{daily,monthly,quarterly}` | `(\"days_outstanding\", \"bucket\", \"gross\", \"net\", \"count\")` | `(da"
+        },
+        {
+          "turn": 6,
+          "prompt": "Now read every module under src/ledger/importers and tell me which ones use an explicit de",
+          "total_input": 101737,
+          "api_iterations": 1,
+          "subtype": "success",
+          "text": "I already have `DELIMITER` and `RECORD_KIND` for these from the earlier grep. I'll list the directory to make sure no module was missed, and check how each one actually splits. <TOOL:Glob> <TOOL:Grep> There are 15 importer modules, plus an `__init__.py` with no `DELIMITER` or `RECORD_KIND`. Every one shares the same `split_fields` code, so `DELIMITER` alone decides how it splits.\n\n**Explicit delimiter (`\",\"`):** 3 modules\n\n| Module | `RECORD_KIND` |\n|---|---|\n| `bank_csv_v1` | `statement` |\n| `bank_csv_v2` | `statement` |\n| `bank_csv_v3` | `statement` |\n\n**Whitespace split (`DELIMITER = None`)"
+        },
+        {
+          "turn": 7,
+          "prompt": "Now read every module under src/ledger/validation and list each one's MAX_LENGTH and the l",
+          "total_input": 167292,
+          "api_iterations": 1,
+          "subtype": "success",
+          "text": "<TOOL:Glob> <TOOL:Grep> No `LABEL` constant turned up in the grep, so the label must be somewhere else in the modules. I'll read one to find it. <TOOL:Read> The 15 modules in `src/ledger/validation/` are five field types, each with a `_de`, `_gb` and `_fr` variant. There's no `LABEL` constant. The label comes from the module docstring and the error messages, for example \"IBAN is empty\" and \"IBAN is longer than 34 characters\". `__init__.py` has no `MAX_LENGTH`.\n\n| Modules | Label it validates | `MAX_LENGTH` |\n|---|---|---|\n| `iban_de`, `iban_gb`, `iban_fr` | IBAN | 34 |\n| `vat_number_de`, `vat_"
+        },
+        {
+          "turn": 8,
+          "prompt": "Across all the adapter modules, group them by their DECLINE_STATUS value and tell me which",
+          "total_input": 117859,
+          "api_iterations": 1,
+          "subtype": "success",
+          "text": "<TOOL:Grep> All 32 adapter modules define `DECLINE_STATUS`. The value is the same for every region of a provider, so the groups line up with the providers.\n\n| `DECLINE_STATUS` | Modules sharing it |\n|---|---|\n| **400** | `worldpay_eu`, `worldpay_uk`, `worldpay_us`, `worldpay_apac` |\n| **402** | `stripe_eu`, `stripe_uk`, `stripe_us`, `stripe_apac` |\n| **403** | `checkout_eu`, `checkout_uk`, `checkout_us`, `checkout_apac` |\n| **409** | `braintree_eu`, `braintree_uk`, `braintree_us`, `braintree_apac` |\n| **410** | `mollie_eu`, `mollie_uk`, `mollie_us`, `mollie_apac` |\n| **422** | `adyen_eu`, `ady"
+        },
+        {
+          "turn": 9,
+          "prompt": "List every call site of Money.from_str across the whole codebase, with the file and the li",
+          "total_input": 128931,
+          "api_iterations": 1,
+          "subtype": "success",
+          "text": "<TOOL:Grep> `Money.from_str` has 220 call sites across the codebase. The definition is at `src/ledger/money.py:17`, and I've left it out of the count. Most call sites are repeated boilerplate, so I've grouped them by where they occur.\n\n**Tests: 9 calls, all in `tests/test_engine.py`**\n- Lines 17, 18 and 19 build the `LineItem` amounts.\n- Line 25 is the subtotal assertion.\n- Lines 29 and 30 are the `fee_for` checks.\n- Lines 40, 46 and 53 are the `settle` amounts.\n\n**Importers: 15 calls, one per module, all at line 61** (`amount = Money.from_str(fields[1])`)\n- `src/ledger/importers/bank_csv_v1.p"
+        },
+        {
+          "turn": 10,
+          "prompt": "Which modules import ledger.money directly? Give me the complete list, grouped by package.",
+          "total_input": 143018,
+          "api_iterations": 1,
+          "subtype": "success",
+          "text": "The modules import it with relative paths like `from ..money import`, so I'll search for both the relative and absolute forms. <TOOL:Grep> 69 modules import `ledger.money` directly. All but one use a relative import, `from .money import ...` or `from ..money import ...`. The exception is a single test file that uses `from ledger.money import Money`.\n\n**Top-level package `ledger`: 3 modules**\n- `src/ledger/__init__.py` (line 3, `Money, ZERO`)\n- `src/ledger/engine.py` (line 9, `Money, ZERO`)\n- `src/ledger/rules.py` (line 7, `Money`)\n\n**`ledger.adapters`: 32 modules** (line 14, `Money`)\n- `stripe"
+        },
+        {
+          "turn": 11,
+          "prompt": "Summarise the audit findings so far in a short table.",
+          "total_input": 74129,
+          "api_iterations": 1,
+          "subtype": "success",
+          "text": "| Area | Finding | Confidence |\n|---|---|---|\n| **Test suite** | Green: 6 tests passed | Ran it |\n| **Promo discount** (`rules.py`, `money.py`) | Flat 7.4% (`PROMO_RATE`), rounded half up to the cent. No tiers or caps. `fee_for` is a separate flat 2.50. | Read both files |\n| **`legacy_tsv_v2` delimiter** | `DELIMITER = None`, so it splits on whitespace. This is the bug you named. | Read the file |\n| **Premise check on \"like its siblings\"** | `legacy_tsv_v1` and `v3` are also `None`. No importer uses a tab, and only the 3 `bank_csv` importers use an explicit delimiter (`\",\"`). Nothing has been "
+        },
+        {
+          "turn": 12,
+          "prompt": "Reply with exactly: OK",
+          "total_input": 75228,
+          "api_iterations": 1,
+          "subtype": "success",
+          "text": "OK"
+        },
+        {
+          "turn": 13,
+          "prompt": "/compact",
+          "total_input": 0,
+          "api_iterations": 0,
+          "subtype": "success",
+          "text": ""
+        },
+        {
+          "turn": 14,
+          "prompt": "Reply with exactly: OK",
+          "total_input": 27513,
+          "api_iterations": 1,
+          "subtype": "success",
+          "text": "OK"
+        },
+        {
+          "turn": 15,
+          "prompt": "Reply with exactly: OK",
+          "total_input": 27575,
+          "api_iterations": 1,
+          "subtype": "success",
+          "text": "OK"
+        },
+        {
+          "turn": 16,
+          "prompt": "Do not use any tools and do not read any files. Answer purely from what you still have in ",
+          "total_input": 27727,
+          "api_iterations": 1,
+          "subtype": "success",
+          "text": "UNKNOWN"
+        },
+        {
+          "turn": 17,
+          "prompt": "Do not use any tools and do not read any files. Answer only from what you still have in co",
+          "total_input": 27942,
+          "api_iterations": 1,
+          "subtype": "success",
+          "text": "src/ledger/importers/legacy_tsv_v2.py"
+        }
+      ],
+      "indices": {
+        "probe_before": 12,
+        "compact": 13,
+        "probe_contaminated": 14,
+        "probe_after": 15,
+        "canary": 16,
+        "target_facts": {
+          "s3-agreed-file": 17
+        }
+      },
+      "context_before_compaction": 75228,
+      "context_after_compaction": 27575,
+      "context_after_compaction_contaminated": 27513,
+      "context_reduction_tokens": 47653,
+      "context_reduction_pct": 63.3,
+      "canary": {
+        "file": "src/ledger/adapters/adyen_uk.py",
+        "const": "API_KEY_PREFIX",
+        "value": "AQE1",
+        "seed_turn": 4
+      },
+      "canary_answer": "UNKNOWN",
+      "canary_recalled": false,
+      "canary_said_unknown": true,
+      "canary_used_tool": false,
+      "target_facts": {
+        "s3-agreed-file": {
+          "target_fact": "s3-agreed-file",
+          "answer": "src/ledger/importers/legacy_tsv_v2.py",
+          "markers": [
+            "legacy_tsv_v2"
+          ],
+          "markers_found": [
+            "legacy_tsv_v2"
+          ],
+          "said_unknown": false,
+          "used_tool": false,
+          "recalled": true,
+          "turn": 17,
+          "answered": true
+        }
+      },
+      "valid": true,
+      "compaction_is_lossy": true
+    },
+    {
+      "compact_status": "success",
+      "turns": [
+        {
+          "turn": 0,
+          "prompt": "Orientation first. Run `python -m pytest -q` and tell me whether the suite is green, then ",
+          "total_input": 43781,
+          "api_iterations": 1,
+          "subtype": "success",
+          "text": "<TOOL:Bash> <TOOL:Bash> The suite is green: 6 tests passed in 0.03s.\n\nTop level of `src/ledger`:\n\n- `__init__.py`\n- `engine.py`\n- `money.py`\n- `rules.py`\n- `adapters/`\n- `importers/`\n- `reporting/`\n- `validation/`\n\n`__pycache__/` is also there but is just bytecode cache. I didn't open any of the subpackages."
+        },
+        {
+          "turn": 1,
+          "prompt": "Read src/ledger/money.py and src/ledger/rules.py and summarise how a promotional discount ",
+          "total_input": 46119,
+          "api_iterations": 1,
+          "subtype": "success",
+          "text": "<TOOL:Read> <TOOL:Read> A promotional discount is the invoice amount times a fixed 7.4% rate, rounded half up to the nearest cent.\n\n**`money.py`**\n- `Money` holds an integer number of cents, so there is no float drift.\n- `Money.scaled(rate)` converts the cents to a `Decimal`, multiplies by the rate, and rounds half up to a whole cent with `ROUND_HALF_UP`. It returns a new `Money`.\n\n**`rules.py`**\n- `PROMO_RATE = Decimal(\"0.074\")` is the promotional rate for the current billing period.\n- `discount_for(amount)` returns `amount.scaled(PROMO_RATE)`. It is a single flat percentage, with no tiers, c"
+        },
+        {
+          "turn": 2,
+          "prompt": "Read src/ledger/importers/legacy_tsv_v1.py and src/ledger/importers/legacy_tsv_v2.py and t",
+          "total_input": 51190,
+          "api_iterations": 1,
+          "subtype": "success",
+          "text": "<TOOL:Read> <TOOL:Read> The two importers behave the same. They differ only in the class names (`LegacyTsvV1*` and `LegacyTsvV2*`).\n\n**Field splitting (both files)**\n- `DELIMITER = None`, so `split_fields` takes the `line.split()` branch. That splits on any run of whitespace, tabs included, and drops empty chunks.\n- If `DELIMITER` were set, the code would instead split on that string and strip each piece. That branch is not used here.\n- Despite the \"tsv\" name, these files do not split strictly on tabs. A description containing spaces would be cut at the first space, and only `fields[2]` is kep"
+        },
+        {
+          "turn": 3,
+          "prompt": "Right. src/ledger/importers/legacy_tsv_v2.py splits on whitespace even though it is a tab-",
+          "total_input": 56587,
+          "api_iterations": 1,
+          "subtype": "success",
+          "text": "Before I audit, one correction: v1 also has `DELIMITER = None`, so it isn't a sibling that already uses a tab. I'll check the whole importers directory for which files set a tab. <TOOL:Grep> <TOOL:Grep> The audit turned up two things that affect the fix. I changed nothing.\n\n**No sibling uses a tab**\n- `legacy_tsv_v1.py`, `legacy_tsv_v2.py` and `legacy_tsv_v3.py` all have `DELIMITER = None`, so all three split on whitespace.\n- The only files with an explicit delimiter are the `bank_csv_v1`, `v2` and `v3` importers, which use `\",\"`.\n- The other formats (`gateway_json`, `erp_fixed_width`, `ledger"
+        },
+        {
+          "turn": 4,
+          "prompt": "Read every module under src/ledger/adapters and list, for each one, the exception classes ",
+          "total_input": 96331,
+          "api_iterations": 1,
+          "subtype": "success",
+          "text": "<TOOL:Glob> <TOOL:Grep> The output was too noisy. I'll narrow it to the class definitions and the currency tuples. <TOOL:Bash> There are 32 adapter modules: 8 providers times 4 regions (`eu`, `uk`, `us`, `apac`). Every module has the same shape.\n\n**Exception classes (2 per module)**\n- `<Name><Region>Error(RuntimeError)` is the base error.\n- `<Name><Region>Declined(<Name><Region>Error)` is the decline error.\n\n**Supported currencies:** every module has `SUPPORTED_CURRENCIES = (\"GBP\", \"EUR\", \"USD\", \"CAD\", \"AUD\")`.\n\n| Module prefix | Class name stem | Regions |\n|---|---|---|\n| `stripe_` | `Stripe`"
+        },
+        {
+          "turn": 5,
+          "prompt": "Now read every module under src/ledger/reporting and list, for each one, its COLUMNS tuple",
+          "total_input": 159120,
+          "api_iterations": 1,
+          "subtype": "success",
+          "text": "<TOOL:Bash> The grep shows `COLUMNS`, but the actual grouping key is inside `grouped()`. I'll read one module in full and then check whether that method differs anywhere. <TOOL:Read> <TOOL:Bash> The hashes fall into six groups of three, one group per report type, but that doesn't show what the key is. I'll grep the key line directly. <TOOL:Bash> There are 18 reporting modules: 6 reports times 3 periods (`daily`, `monthly`, `quarterly`). The three period variants of each report have identical `COLUMNS` and the same grouping key.\n\n| Report | `COLUMNS` | Grouping key |\n|---|---|---|\n| `aged_recei"
+        },
+        {
+          "turn": 6,
+          "prompt": "Now read every module under src/ledger/importers and tell me which ones use an explicit de",
+          "total_input": 87253,
+          "api_iterations": 1,
+          "subtype": "success",
+          "text": "I already have each module's `DELIMITER` and `RECORD_KIND` from the earlier grep. `DELIMITER = None` only means whitespace splitting if the module's `split_fields` behaves like the TSV one, so I'll check that for each module. <TOOL:Bash> All 15 importers have the identical `split_fields`. If `DELIMITER is None` it splits on whitespace with `line.split()`, and otherwise it splits on `DELIMITER` and strips each piece.\n\n**Explicit delimiter (`\",\"`)**\n\n| Module | RECORD_KIND |\n|---|---|\n| `bank_csv_v1` | `statement` |\n| `bank_csv_v2` | `statement` |\n| `bank_csv_v3` | `statement` |\n\n**Whitespace sp"
+        },
+        {
+          "turn": 7,
+          "prompt": "Now read every module under src/ledger/validation and list each one's MAX_LENGTH and the l",
+          "total_input": 139431,
+          "api_iterations": 1,
+          "subtype": "success",
+          "text": "<TOOL:Bash> `MAX_LENGTH` is clear, but there's no `LABEL` constant in that output. I'll read one module to see where the label comes from. <TOOL:Read> <TOOL:Bash> The validation package has 15 modules: 5 validators times 3 country suffixes (`de`, `fr`, `gb`). There is no `LABEL` constant. What each module validates is named in its docstring and in its error messages, so I've used that as the label.\n\n| Modules | Validates | `MAX_LENGTH` |\n|---|---|---|\n| `currency_code_de`, `_fr`, `_gb` | ISO 4217 currency | 3 |\n| `iban_de`, `_fr`, `_gb` | IBAN | 34 |\n| `invoice_number_de`, `_fr`, `_gb` | invoi"
+        },
+        {
+          "turn": 8,
+          "prompt": "Across all the adapter modules, group them by their DECLINE_STATUS value and tell me which",
+          "total_input": 149120,
+          "api_iterations": 1,
+          "subtype": "success",
+          "text": "<TOOL:Bash> <TOOL:Bash> All 32 adapter modules define `DECLINE_STATUS`. The value depends only on the provider, so each status is shared by that provider's four regional modules and by no other provider.\n\n| `DECLINE_STATUS` | Modules |\n|---|---|\n| 400 | `worldpay_apac`, `worldpay_eu`, `worldpay_uk`, `worldpay_us` |\n| 402 | `stripe_apac`, `stripe_eu`, `stripe_uk`, `stripe_us` |\n| 403 | `checkout_apac`, `checkout_eu`, `checkout_uk`, `checkout_us` |\n| 409 | `braintree_apac`, `braintree_eu`, `braintree_uk`, `braintree_us` |\n| 410 | `mollie_apac`, `mollie_eu`, `mollie_uk`, `mollie_us` |\n| 422 | `ad"
+        },
+        {
+          "turn": 9,
+          "prompt": "List every call site of Money.from_str across the whole codebase, with the file and the li",
+          "total_input": 110171,
+          "api_iterations": 1,
+          "subtype": "success",
+          "text": "<TOOL:Grep> There are 220 call sites of `Money.from_str`, plus the definition at `src/ledger/money.py:17`, which I've left out. The grep hit every file listed below, and I did not run the code. Every module in a family has its calls on the same lines.\n\n**Tests: 9 calls in `tests/test_engine.py`**\n- Lines 17, 18 and 19 build line items.\n- Line 25 is the subtotal assertion.\n- Lines 29 and 30 are the fee assertions.\n- Lines 40, 46 and 53 are the `settle(...)` calls.\n\n**Importers: 15 calls, one per module, all at line 61**\nThe line is `amount = Money.from_str(fields[1])`, in:\n- `legacy_tsv_v1`, `v"
+        },
+        {
+          "turn": 10,
+          "prompt": "Which modules import ledger.money directly? Give me the complete list, grouped by package.",
+          "total_input": 183785,
+          "api_iterations": 1,
+          "subtype": "success",
+          "text": "The modules import it with relative imports (`from ..money import ...`), so I'll search for both the relative and absolute forms. <TOOL:Bash> The counts add up to 69 modules. I'll check the test's import form and whether any modules get `Money` indirectly through the package instead. <TOOL:Bash> 69 modules import `ledger.money` directly, and no others do. The `src/` files use relative imports (`from .money import ...`, `from ..money import ...`). The test file uses the absolute form.\n\n**`src/ledger` (3)**\n- `__init__.py`: `from .money import Money, ZERO`\n- `engine.py`: `from .money import Mone"
+        },
+        {
+          "turn": 11,
+          "prompt": "Summarise the audit findings so far in a short table.",
+          "total_input": 62707,
+          "api_iterations": 1,
+          "subtype": "success",
+          "text": "| Area | Finding |\n|---|---|\n| Test suite | Green: 6 passed. No tests touch the importers. |\n| Promo discount (`rules.py`, `money.py`) | Flat 7.4% of the amount, rounded half up to the cent. Only calculated there, not applied. `fee_for` returns a flat 2.50 and ignores its argument. |\n| `legacy_tsv_v2` (the bug) | `DELIMITER = None`, so it splits on any whitespace. |\n| TSV siblings | `legacy_tsv_v1` and `v3` have the same `None`, so no sibling uses a tab. |\n| Importers (15) | Only `bank_csv_v1`\u2013`v3` use an explicit delimiter (`\",\"`). The other 12 split on whitespace, including `gateway_json`, `"
+        },
+        {
+          "turn": 12,
+          "prompt": "Reply with exactly: OK",
+          "total_input": 63755,
+          "api_iterations": 1,
+          "subtype": "success",
+          "text": "OK"
+        },
+        {
+          "turn": 13,
+          "prompt": "/compact",
+          "total_input": 0,
+          "api_iterations": 0,
+          "subtype": "success",
+          "text": ""
+        },
+        {
+          "turn": 14,
+          "prompt": "Reply with exactly: OK",
+          "total_input": 25800,
+          "api_iterations": 1,
+          "subtype": "success",
+          "text": "OK"
+        },
+        {
+          "turn": 15,
+          "prompt": "Reply with exactly: OK",
+          "total_input": 25862,
+          "api_iterations": 1,
+          "subtype": "success",
+          "text": "OK"
+        },
+        {
+          "turn": 16,
+          "prompt": "Do not use any tools and do not read any files. Answer purely from what you still have in ",
+          "total_input": 26016,
+          "api_iterations": 1,
+          "subtype": "success",
+          "text": "UNKNOWN"
+        },
+        {
+          "turn": 17,
+          "prompt": "Do not use any tools and do not read any files. Answer only from what you still have in co",
+          "total_input": 26168,
+          "api_iterations": 1,
+          "subtype": "success",
+          "text": "src/ledger/importers/legacy_tsv_v2.py"
+        }
+      ],
+      "indices": {
+        "probe_before": 12,
+        "compact": 13,
+        "probe_contaminated": 14,
+        "probe_after": 15,
+        "canary": 16,
+        "target_facts": {
+          "s3-agreed-file": 17
+        }
+      },
+      "context_before_compaction": 63755,
+      "context_after_compaction": 25862,
+      "context_after_compaction_contaminated": 25800,
+      "context_reduction_tokens": 37893,
+      "context_reduction_pct": 59.4,
+      "canary": {
+        "file": "src/ledger/adapters/adyen_uk.py",
+        "const": "API_KEY_PREFIX",
+        "value": "AQE1",
+        "seed_turn": 4
+      },
+      "canary_answer": "UNKNOWN",
+      "canary_recalled": false,
+      "canary_said_unknown": true,
+      "canary_used_tool": false,
+      "target_facts": {
+        "s3-agreed-file": {
+          "target_fact": "s3-agreed-file",
+          "answer": "src/ledger/importers/legacy_tsv_v2.py",
+          "markers": [
+            "legacy_tsv_v2"
+          ],
+          "markers_found": [
+            "legacy_tsv_v2"
+          ],
+          "said_unknown": false,
+          "used_tool": false,
+          "recalled": true,
+          "turn": 17,
+          "answered": true
+        }
+      },
+      "valid": true,
+      "compaction_is_lossy": true
+    }
+  ],
+  "preregistration_version": "1.0.0",
+  "preregistration_sha256": "4658a1a538411e0f15bf9c5d57ee50ede85bcd2d7929b8c7045262732c2eb1ad",
+  "minimum_replicates_per_arm": 4
+}
