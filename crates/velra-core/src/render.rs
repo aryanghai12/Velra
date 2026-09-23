@@ -80,6 +80,9 @@ const _: () = assert!(
 /// holds for every budget at or above it.
 pub const MIN_BUDGET_TOKENS: u32 = 64;
 
+/// Shortest a test identifier is ever cut to by the ladder's path rungs.
+const TEST_ID_MIN_CHARS: usize = 120;
+
 pub const HARD_CEILING_TOKENS: u32 = 1_000;
 pub const ABSOLUTE_MAX_CHARS: usize = 9_500;
 
@@ -237,11 +240,17 @@ pub struct Snapshot {
 #[derive(Debug, Clone, Copy)]
 struct Limits {
     working_max: usize,
+    /// List working files the capsule already prints in an earlier section.
+    working_named_above: bool,
     constraints_max: usize,
     constraint_chars: usize,
     attempts_max: usize,
     dead_ends_max: usize,
-    dead_excerpts_removed: usize,
+    /// Oldest dead ends whose replaced (`-`) line is no longer printed.
+    dead_original_removed: usize,
+    /// Oldest dead ends whose attempted line is no longer printed.
+    dead_attempt_removed: usize,
+    dead_attempt_chars: usize,
     failure_lines: usize,
     latest_chars: usize,
     root_chars: usize,
@@ -256,6 +265,8 @@ struct Limits {
     test_detail: bool,
     earlier: bool,
     earlier_chars: usize,
+    /// Print the earlier message only up to the sentence that names code.
+    earlier_code_only: bool,
 }
 
 impl Limits {
@@ -264,12 +275,16 @@ impl Limits {
         test_detail: true,
         earlier: true,
         earlier_chars: 200,
+        earlier_code_only: false,
         working_max: 8,
+        working_named_above: true,
         constraints_max: 3,
         constraint_chars: 200,
         attempts_max: 4,
         dead_ends_max: 4,
-        dead_excerpts_removed: 0,
+        dead_original_removed: 0,
+        dead_attempt_removed: 0,
+        dead_attempt_chars: 160,
         failure_lines: 8,
         latest_chars: 200,
         root_chars: 240,
@@ -316,24 +331,134 @@ fn outcome_word(o: Outcome) -> &'static str {
     o.as_str()
 }
 
+/// Retention class of a capsule line, lowest first: the order in which the
+/// hard stop ([`enforce_ceiling`]) gives sections up once both ladders are
+/// exhausted. It restates, for whole lines, the policy the ladders apply to
+/// detail (see [`SPEC_STEPS`]).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+enum Keep {
+    /// INFERRED, and derivable from `[TEST_RESULT]`.
+    FailureLocation,
+    RecentEdits,
+    FileActivity,
+    /// Regenerable by running the command again; `[TEST_STATUS]` keeps the id.
+    TestResult,
+    Subtask,
+    Earlier,
+    Latest,
+    /// The rejected routes: not recoverable from disk once reverted.
+    RevertedEdits,
+    TestStatus,
+    Constraints,
+    /// Never dropped by line: the frame, the objective and `[WORKSPACE_STATE]`.
+    Frame,
+}
+
+/// [`Keep`] classes in the order the hard stop removes them.
+const DROP_ORDER: &[Keep] = &[
+    Keep::FailureLocation,
+    Keep::RecentEdits,
+    Keep::FileActivity,
+    Keep::TestResult,
+    Keep::Subtask,
+    Keep::Earlier,
+    Keep::Latest,
+    Keep::RevertedEdits,
+    Keep::TestStatus,
+    Keep::Constraints,
+];
+
+struct Line {
+    text: String,
+    keep: Keep,
+    /// Index of the section the line belongs to; headers open a new one.
+    section: usize,
+    header: bool,
+}
+
 struct Out {
-    lines: Vec<String>,
+    lines: Vec<Line>,
     trace: bool,
+    keep: Keep,
+    section: usize,
 }
 
 impl Out {
-    fn push(&mut self, line: impl Into<String>, src: &str) {
-        let mut line = line.into();
+    fn line(&mut self, line: impl Into<String>, src: &str, header: bool) {
+        let mut text = line.into();
         if self.trace && !src.is_empty() {
-            line.push_str("  #src=");
-            line.push_str(src);
+            text.push_str("  #src=");
+            text.push_str(src);
         }
-        self.lines.push(line);
+        self.lines.push(Line {
+            text,
+            keep: self.keep,
+            section: self.section,
+            header,
+        });
     }
 
-    fn plain(&mut self, line: impl Into<String>) {
-        self.lines.push(line.into());
+    /// Opens a section of class `keep` with its header line.
+    fn header(&mut self, keep: Keep, line: impl Into<String>, src: &str) {
+        self.keep = keep;
+        self.section += 1;
+        self.line(line, src, true);
     }
+
+    fn push(&mut self, line: impl Into<String>, src: &str) {
+        self.line(line, src, false);
+    }
+
+    /// A frame line: tags, the preamble, the record-detail pointer.
+    fn plain(&mut self, line: impl Into<String>) {
+        self.keep = Keep::Frame;
+        self.section += 1;
+        self.line(line, "", true);
+    }
+}
+
+/// The failure excerpt with rule lines compacted.
+///
+/// Test runners frame their output with banners: pytest's
+/// `===== FAILURES =====` runs to 79 characters, and the estimator charges a
+/// run of `=` about one token per character, so that one line cost 85 of the
+/// capsule's 740 tokens in a real VS Code session -- more than the objective
+/// that the ladder cut to make room for it. A run of four or more of the same
+/// rule character is collapsed to three, which keeps the word it frames
+/// (`=== FAILURES ===`, `___ test_x ___`), and a line that was nothing but a
+/// rule is dropped. Presentation only: the snapshot and `inspect --section
+/// failure` keep the output as captured.
+fn compact_rules(line: &str) -> Option<std::borrow::Cow<'_, str>> {
+    const RULE: &[char] = &['=', '-', '_', '*', '#', '~'];
+    let mut out = String::with_capacity(line.len());
+    let mut changed = false;
+    let mut chars = line.chars().peekable();
+    while let Some(c) = chars.next() {
+        if RULE.contains(&c) {
+            let mut run = 1;
+            while chars.peek() == Some(&c) {
+                chars.next();
+                run += 1;
+            }
+            let keep = if run >= 4 {
+                changed = true;
+                3
+            } else {
+                run
+            };
+            out.extend(std::iter::repeat_n(c, keep));
+        } else {
+            out.push(c);
+        }
+    }
+    if out.chars().all(|c| c.is_whitespace() || RULE.contains(&c)) {
+        return None;
+    }
+    Some(if changed {
+        std::borrow::Cow::Owned(out)
+    } else {
+        std::borrow::Cow::Borrowed(line)
+    })
 }
 
 fn ids(prefix: &str, ids: &[i64]) -> String {
@@ -353,13 +478,67 @@ fn mechanism_text(d: &DeadEndView, cmd_chars: usize) -> String {
     }
 }
 
+/// `text` up to and including its first sentence that names code
+/// ([`crate::text::names_identifier`]); all of it when no sentence does.
+///
+/// The earlier message is carried *because* it names code (see
+/// `snapshot::earlier_message`), so under pressure that sentence is what it is
+/// for, and whatever follows it is the first thing to go -- typically a
+/// time-scoped aside like "Don't change it yet", the kind of sentence
+/// `crate::constraint` already declines to carry across a boundary.
+fn through_code_sentence(text: &str) -> &str {
+    let mut start = 0;
+    for (i, c) in text.char_indices() {
+        let end = i + c.len_utf8();
+        let boundary = matches!(c, '.' | '?' | '!') && text[end..].starts_with(char::is_whitespace);
+        if boundary {
+            if crate::text::names_identifier(&text[start..end]) {
+                return &text[..end];
+            }
+            start = end;
+        }
+    }
+    text
+}
+
+/// Whether `line` prints `path` as a whole path: not as the tail of a longer
+/// one (`src/a.py` does not name `a.py`) nor the head of one (`a.pyc`).
+fn names_path(line: &str, path: &str) -> bool {
+    if path.is_empty() {
+        return false;
+    }
+    let part = |c: char| c.is_alphanumeric() || matches!(c, '_' | '-' | '.' | '/' | '\\');
+    line.match_indices(path).any(|(at, _)| {
+        let before = line[..at].chars().next_back();
+        let after = line[at + path.len()..].chars().next();
+        !before.is_some_and(part)
+            && !after.is_some_and(|c| c.is_alphanumeric() || matches!(c, '_' | '-' | '/'))
+    })
+}
+
 fn render_with(s: &Snapshot, lim: &Limits, trace: bool) -> String {
+    join(&render_lines(s, lim, trace))
+}
+
+fn join(lines: &[Line]) -> String {
+    let texts: Vec<&str> = lines.iter().map(|l| l.text.as_str()).collect();
+    texts.join("\n")
+}
+
+fn render_lines(s: &Snapshot, lim: &Limits, trace: bool) -> Vec<Line> {
     let tz = s.tz_offset_secs;
     let mut o = Out {
         lines: Vec::with_capacity(48),
         trace,
+        keep: Keep::Frame,
+        section: 0,
     };
     let path = |p: &str| truncate_chars_front(p, lim.path_chars).into_owned();
+    // A test identifier is only useful whole: `...:test_x` names no file to run.
+    // The path rungs that shorten file paths therefore stop at a floor for it,
+    // and a pathological identifier is left to the hard stop.
+    let test_id =
+        |p: &str| truncate_chars_front(p, lim.path_chars.max(TEST_ID_MIN_CHARS)).into_owned();
 
     o.plain(format!(
         "<VELRA_WORKSPACE_STATE v=\"1\" checkpoint=\"{}\" captured=\"{}\" trigger=\"{}\">",
@@ -373,7 +552,8 @@ fn render_with(s: &Snapshot, lim: &Limits, trace: bool) -> String {
     match &s.root {
         Some(r) => {
             let src = format!("intents:{}", r.id);
-            o.push(
+            o.header(
+                Keep::Frame,
                 format!(
                     "[FIRST_MESSAGE] (OBSERVED | user prompt | {})",
                     hh_mm(r.ts_ms, tz)
@@ -383,26 +563,35 @@ fn render_with(s: &Snapshot, lim: &Limits, trace: bool) -> String {
             o.push(truncate_chars(&r.text, lim.root_chars), &src);
         }
         None => {
-            o.push("[FIRST_MESSAGE]", "intents:none");
+            o.header(Keep::Frame, "[FIRST_MESSAGE]", "intents:none");
             o.push("(not captured)", "intents:none");
         }
     }
-    // A constraint whose sentence *is* the whole first message has already been
-    // printed, word for word, two lines above. Reprinting it buys nothing and
-    // costs the capsule budget twice. Anything narrower than the whole message
-    // is kept: that is the case the section exists for, where a rule sits in
-    // one sentence of a longer prompt and the ladder is about to trim the rest
-    // of that prompt away.
-    let root_text = s.root.as_ref().map(|r| r.text.as_str());
+    // A constraint sentence the objective line above already prints, word for
+    // word, is not printed twice: that costs the budget twice and, in the D64
+    // busy session, a 52-token duplicate outlived a real constraint the ceiling
+    // ladder dropped to pay for it. The test is against the objective *as
+    // rendered*: once the ladder trims the objective, a sentence it no longer
+    // shows comes back here, which is the case the section exists for -- a rule
+    // in one sentence of a longer prompt whose tail is about to be cut.
+    let shown_root = s
+        .root
+        .as_ref()
+        .map(|r| truncate_chars(&r.text, lim.root_chars));
     let constraints: Vec<&ConstraintView> = s
         .constraints
         .iter()
-        .filter(|c| root_text != Some(c.text.as_str()))
+        .filter(|c| {
+            !shown_root
+                .as_deref()
+                .is_some_and(|r| r.contains(c.text.as_str()))
+        })
         .take(lim.constraints_max)
         .collect();
     if !constraints.is_empty() {
         let all: Vec<i64> = constraints.iter().map(|c| c.id).collect();
-        o.push(
+        o.header(
+            Keep::Constraints,
             "[STATED_CONSTRAINTS] (OBSERVED | user prompt | quoted verbatim)",
             &ids("constraints", &all),
         );
@@ -421,7 +610,8 @@ fn render_with(s: &Snapshot, lim: &Limits, trace: bool) -> String {
 
     if let Some(st) = s.subtask.as_ref().filter(|_| lim.subtask) {
         let src = format!("intents:{}", st.id);
-        o.push(
+        o.header(
+            Keep::Subtask,
             format!(
                 "[SUBTASK_MESSAGE] (OBSERVED | subtask: prompt | {})",
                 hh_mm(st.ts_ms, tz)
@@ -433,14 +623,20 @@ fn render_with(s: &Snapshot, lim: &Limits, trace: bool) -> String {
     // Chronological: the earlier message is printed above the latest one.
     if let Some(e) = s.earlier.as_ref().filter(|_| lim.earlier) {
         let src = format!("intents:{}", e.id);
-        o.push(
+        o.header(
+            Keep::Earlier,
             format!(
                 "[EARLIER_MESSAGE] (OBSERVED | user prompt | {})",
                 hh_mm(e.ts_ms, tz)
             ),
             &src,
         );
-        o.push(truncate_chars(&e.text, lim.earlier_chars), &src);
+        let text = if lim.earlier_code_only {
+            through_code_sentence(&e.text)
+        } else {
+            &e.text
+        };
+        o.push(truncate_chars(text, lim.earlier_chars), &src);
     }
     if let Some(l) = s
         .latest
@@ -448,7 +644,8 @@ fn render_with(s: &Snapshot, lim: &Limits, trace: bool) -> String {
         .filter(|l| lim.latest && s.root.as_ref().is_none_or(|r| r.text != l.text))
     {
         let src = format!("intents:{}", l.id);
-        o.push(
+        o.header(
+            Keep::Latest,
             format!(
                 "[LATEST_MESSAGE] (OBSERVED | user prompt | {})",
                 hh_mm(l.ts_ms, tz)
@@ -467,7 +664,7 @@ fn render_with(s: &Snapshot, lim: &Limits, trace: bool) -> String {
             .map(|t| format!(",commands:{}", t.id))
             .unwrap_or_default()
     );
-    o.push("[WORKSPACE_STATE]", &status_src);
+    o.header(Keep::Frame, "[WORKSPACE_STATE]", &status_src);
     let git = match &s.git {
         Some(g) => {
             let branch = truncate_chars(g.branch.as_deref().unwrap_or("detached"), 60).into_owned();
@@ -505,7 +702,8 @@ fn render_with(s: &Snapshot, lim: &Limits, trace: bool) -> String {
                 }
             }
         }
-        o.push(
+        o.header(
+            Keep::TestStatus,
             "[TEST_STATUS] (OBSERVED | latest run covering each)",
             &ids("commands", &cmd_ids),
         );
@@ -515,7 +713,7 @@ fn render_with(s: &Snapshot, lim: &Limits, trace: bool) -> String {
                     (Some(d), true) => format!(" | {}", truncate_chars(d, 60)),
                     _ => String::new(),
                 };
-                format!("- FAIL {}{detail}", path(&t.id))
+                format!("- FAIL {}{detail}", test_id(&t.id))
             } else {
                 let how = match (&t.passed, lim.test_detail) {
                     (Some(p), true) => {
@@ -528,7 +726,7 @@ fn render_with(s: &Snapshot, lim: &Limits, trace: bool) -> String {
                 };
                 format!(
                     "- PASS {} | failed {}, then passed {}{how}",
-                    path(&t.id),
+                    test_id(&t.id),
                     hh_mm(t.last_fail_ms, tz),
                     t.passed_ms
                         .map_or_else(|| "?".to_string(), |ms| hh_mm(ms, tz)),
@@ -544,7 +742,8 @@ fn render_with(s: &Snapshot, lim: &Limits, trace: bool) -> String {
 
     if let Some(f) = &s.failure {
         let src = format!("commands:{}", f.id);
-        o.push(
+        o.header(
+            Keep::TestResult,
             format!(
                 "[TEST_RESULT] (OBSERVED | {} run | {})",
                 f.kind.as_str(),
@@ -565,9 +764,10 @@ fn render_with(s: &Snapshot, lim: &Limits, trace: bool) -> String {
         );
         // A line that only names a test already listed under [TEST_STATUS]
         // says nothing new; the budget goes to the assertion context instead.
-        let excerpt: Vec<&String> = f
+        let excerpt: Vec<std::borrow::Cow<'_, str>> = f
             .excerpt
             .iter()
+            .filter_map(|line| compact_rules(line))
             .filter(|line| {
                 let line = line.replace('\\', "/");
                 !tests.iter().any(|t| line.contains(t.id.as_str()))
@@ -593,7 +793,11 @@ fn render_with(s: &Snapshot, lim: &Limits, trace: bool) -> String {
     groups.truncate(lim.dead_ends_max);
     if !groups.is_empty() {
         let all: Vec<i64> = groups.iter().flatten().map(|(_, d)| d.id).collect();
-        o.push("[REVERTED_EDITS] (OBSERVED)", &ids("dead_ends", &all));
+        o.header(
+            Keep::RevertedEdits,
+            "[REVERTED_EDITS] (OBSERVED)",
+            &ids("dead_ends", &all),
+        );
         let n = s.dead_ends.len();
         for group in &groups {
             let (_, last) = group[0];
@@ -633,16 +837,28 @@ fn render_with(s: &Snapshot, lim: &Limits, trace: bool) -> String {
             o.push(header, &src);
             for (i, d) in group {
                 let member_src = format!("dead_ends:{},{}", d.id, ids("edits", &d.edit_ids));
-                // Dead ends are listed most recent first; excerpts are removed
-                // oldest first, counted across every dead end, not per group.
-                let excerpt_removed = n - i <= lim.dead_excerpts_removed;
-                if !excerpt_removed {
-                    if let Some(m) = &d.minus {
-                        o.push(format!("    - {m}"), &member_src);
-                    }
-                    if let Some(p) = &d.plus {
-                        o.push(format!("    + {p}"), &member_src);
-                    }
+                // Dead ends are listed most recent first; excerpt lines are
+                // removed oldest first, counted across every dead end, not per
+                // group. The line an attempt *added* is what identifies the
+                // rejected route, and after a revert it exists nowhere but here;
+                // the line it replaced is back on disk. So the replaced line goes
+                // first, and the added one is shortened long before it is
+                // dropped. An attempt that only deleted has no added line, and
+                // then the deleted line is the attempt.
+                let (original, attempted) = match (&d.minus, &d.plus) {
+                    (m, Some(p)) => (m.as_ref(), Some(('+', p))),
+                    (Some(m), None) => (None, Some(('-', m))),
+                    (None, None) => (None, None),
+                };
+                let age = n - i;
+                if let Some(m) = original.filter(|_| age > lim.dead_original_removed) {
+                    o.push(format!("    - {m}"), &member_src);
+                }
+                if let Some((sign, a)) = attempted.filter(|_| age > lim.dead_attempt_removed) {
+                    o.push(
+                        format!("    {sign} {}", truncate_chars(a, lim.dead_attempt_chars)),
+                        &member_src,
+                    );
                 }
                 if let (true, Some(c)) = (lim.observed, &d.observed_after) {
                     o.push(
@@ -661,7 +877,11 @@ fn render_with(s: &Snapshot, lim: &Limits, trace: bool) -> String {
     let attempts: Vec<&AttemptView> = s.attempts.iter().take(lim.attempts_max).collect();
     if !attempts.is_empty() {
         let all: Vec<i64> = attempts.iter().map(|a| a.edit_id).collect();
-        o.push("[RECENT_EDITS] (OBSERVED)", &ids("edits", &all));
+        o.header(
+            Keep::RecentEdits,
+            "[RECENT_EDITS] (OBSERVED)",
+            &ids("edits", &all),
+        );
         for a in attempts {
             let num = |v: Option<u32>| v.map_or_else(|| "?".to_string(), |n| n.to_string());
             let after = match &a.afterward {
@@ -690,9 +910,22 @@ fn render_with(s: &Snapshot, lim: &Limits, trace: bool) -> String {
         }
     }
 
-    let working: Vec<&WorkingFileView> = s.working_files.iter().take(lim.working_max).collect();
+    // A file the capsule already prints above -- as a test id's file, a
+    // reverted file, a recent edit, inside a command -- adds only its read and
+    // edit counts here. Those are the cheapest detail in the capsule and go
+    // before any line of the objective does.
+    let printed: Vec<&str> = o.lines.iter().map(|l| l.text.as_str()).collect();
+    let working: Vec<&WorkingFileView> = s
+        .working_files
+        .iter()
+        .take(lim.working_max)
+        .filter(|w| {
+            lim.working_named_above || !printed.iter().any(|l| names_path(l, &path(&w.path)))
+        })
+        .collect();
     if !working.is_empty() {
-        o.push(
+        o.header(
+            Keep::FileActivity,
             "[FILE_ACTIVITY] (OBSERVED)",
             &format!("file_stats:{}/epoch:{}", s.session_id, s.epoch),
         );
@@ -715,7 +948,8 @@ fn render_with(s: &Snapshot, lim: &Limits, trace: bool) -> String {
     }
 
     if let (true, Some(t)) = (lim.next_target, &s.next_target) {
-        o.push(
+        o.header(
+            Keep::FailureLocation,
             format!("[FAILURE_LOCATION] (INFERRED | {})", t.rule),
             &t.source,
         );
@@ -729,7 +963,7 @@ fn render_with(s: &Snapshot, lim: &Limits, trace: bool) -> String {
     // `velra inspect --section` prints when given a name it does not know.
     o.plain("Full detail for any section: `velra inspect --section <name>`");
     o.plain("</VELRA_WORKSPACE_STATE>");
-    o.lines.join("\n")
+    o.lines
 }
 
 /// One rung of the truncation ladder: a name for diagnostics, and a move that
@@ -739,19 +973,51 @@ struct Rung {
     apply: fn(&mut Limits, &Snapshot) -> bool,
 }
 
-/// Spec truncation order (§16.3), revised in v0.1.2 for identifier retention.
+/// Spec truncation order (§16.3), revised in v0.1.2 for retention priority.
 ///
-/// The ladder removes the least information per token first. The v0.1.2
-/// Token-Burn qualification showed the old order doing the opposite: all four
-/// restored capsules kept "Observed afterward" lines' worth of budget and the
-/// inferred `[FAILURE_LOCATION]` right up to the ceiling ladder, while
-/// `[FILE_ACTIVITY]` went to zero and the failure excerpt -- the only place the
-/// failing test's name lived -- went from eight lines to none. Two of the
-/// moves that follow were ceiling-only before and now run here: prose that an
-/// agent can regenerate (the observed-afterward lines, the inferred location,
-/// excerpt context whose identifiers `[TEST_STATUS]` already carries) goes
-/// before any exact identifier does. See DECISIONS.md, D64.
+/// # The retention policy
+///
+/// The capsule exists so that a new session can carry on without re-deriving
+/// the task. What it must never lose is what the next session cannot get back
+/// by reading the repository; what it should lose first is what it can. Every
+/// rung below, and the hard stop's section order ([`DROP_ORDER`]), applies
+/// that one rule:
+///
+/// | class | state | why |
+/// |---|---|---|
+/// | CRITICAL | objective (`[FIRST_MESSAGE]`), stated constraints, exact failing test ids, the active failure's command and result, each rejected route's header (its file, that it was reverted, and how), the top working files | only the session knew them |
+/// | IMPORTANT | the line a rejected attempt added, later messages (the earlier one naming the next target above the latest), the failure's assertion context, test detail, recent edits, the inferred failure location | useful, but narrower or partly re-derivable; the attempt's line is off disk once reverted, which is why it outlives everything else here in the spec ladder |
+/// | LOW | lists past their first entries, verbose runner output and its banners, "observed afterward" prose, the line a reverted edit replaced, a constraint the objective already quotes | regenerable or redundant: re-run the command, read the file |
+///
+/// Injected metadata (the IDE's open-file notice, task notifications) is not
+/// in the table because it never reaches a snapshot: `crate::prompt` removes it
+/// before a message becomes an intent.
+///
+/// Every CRITICAL item is shortened only after every LOW and IMPORTANT
+/// reduction in the spec ladder has run, and removed only in the ceiling
+/// ladder or by the hard stop. A rung that would save nothing is not taken.
+///
+/// # What moved, and why
+///
+/// A real VS Code session (1 edit, 1 revert, 2 files, 1 failing test) crossed
+/// the 740-token target, and the ladder cut the objective from 240 to 160
+/// characters at its sixth rung and the reverted edit's excerpt at its third,
+/// while a 79-character pytest `=====` banner (about 85 estimated tokens), the
+/// "observed afterward" line and the inferred location all survived. The
+/// objective's loss was compounded by the IDE block taking its first 150
+/// characters, fixed in `crate::prompt`; the order was wrong on its own:
+///
+/// * `first_message 240->160` now runs after every non-critical rung;
+/// * the reverted-edit excerpt is split: the replaced line (on disk again) goes
+///   early, the attempted line is shortened last in the spec ladder and
+///   dropped only in the ceiling ladder, before any of the user's own words;
+/// * the failure excerpt's rule lines are compacted before it is budgeted
+///   ([`compact_rules`]), so a banner no longer costs a line of the objective.
+///
+/// The v0.1.2 identifier rules stand (D64): prose an agent can regenerate goes
+/// before any exact identifier does.
 const SPEC_STEPS: &[Rung] = &[
+    // LOW: bulk and regenerable detail.
     Rung {
         name: "working_files 8->4",
         apply: |l, _| std::mem::replace(&mut l.working_max, 4) != 4,
@@ -761,10 +1027,18 @@ const SPEC_STEPS: &[Rung] = &[
         apply: |l, _| std::mem::replace(&mut l.attempts_max, 2) != 2,
     },
     Rung {
-        name: "reverted_edits excerpt, oldest first",
+        name: "test_result excerpt 8->3",
+        apply: |l, _| std::mem::replace(&mut l.failure_lines, 3) != 3,
+    },
+    Rung {
+        name: "observed_afterward off",
+        apply: |l, _| std::mem::replace(&mut l.observed, false),
+    },
+    Rung {
+        name: "reverted_edits replaced line, oldest first",
         apply: |l, s| {
-            if l.dead_excerpts_removed < s.dead_ends.len() {
-                l.dead_excerpts_removed += 1;
+            if l.dead_original_removed < s.dead_ends.len() {
+                l.dead_original_removed += 1;
                 true
             } else {
                 false
@@ -772,28 +1046,21 @@ const SPEC_STEPS: &[Rung] = &[
         },
     },
     Rung {
-        name: "test_result excerpt 8->3",
-        apply: |l, _| std::mem::replace(&mut l.failure_lines, 3) != 3,
+        name: "working_files already named above off",
+        apply: |l, _| std::mem::replace(&mut l.working_named_above, false),
     },
+    Rung {
+        name: "failure_location off",
+        apply: |l, _| std::mem::replace(&mut l.next_target, false),
+    },
+    // IMPORTANT: shortened, then the regenerable parts removed.
     Rung {
         name: "latest_message 200->120 chars",
         apply: |l, _| std::mem::replace(&mut l.latest_chars, 120) != 120,
     },
     Rung {
-        name: "first_message 240->160 chars",
-        apply: |l, _| std::mem::replace(&mut l.root_chars, 160) != 160,
-    },
-    Rung {
-        name: "observed_afterward off",
-        apply: |l, _| std::mem::replace(&mut l.observed, false),
-    },
-    Rung {
         name: "test_result excerpt 3->0",
         apply: |l, _| std::mem::replace(&mut l.failure_lines, 0) != 0,
-    },
-    Rung {
-        name: "failure_location off",
-        apply: |l, _| std::mem::replace(&mut l.next_target, false),
     },
     // The rung that used to be missing. Before v0.1.2 the ladder stepped
     // `working_max` from 4 straight to 0, so `[FILE_ACTIVITY]` went from four
@@ -821,6 +1088,15 @@ const SPEC_STEPS: &[Rung] = &[
         name: "earlier_message 200->120 chars",
         apply: |l, _| std::mem::replace(&mut l.earlier_chars, 120) != 120,
     },
+    // CRITICAL: shortened last, never removed here.
+    Rung {
+        name: "reverted_edits attempted line 160->80 chars",
+        apply: |l, _| std::mem::replace(&mut l.dead_attempt_chars, 80) != 80,
+    },
+    Rung {
+        name: "first_message 240->160 chars",
+        apply: |l, _| std::mem::replace(&mut l.root_chars, 160) != 160,
+    },
     Rung {
         name: "test_status 6->3",
         apply: |l, _| std::mem::replace(&mut l.tests_max, 3) != 3,
@@ -840,7 +1116,9 @@ const SPEC_STEPS: &[Rung] = &[
 ///
 /// The last working files, the last test identifier and the earlier message go
 /// before the latest message and the constraints: those two are the user's own
-/// words about what to do next and what not to do.
+/// words about what to do next and what not to do. The objective is the user's
+/// own words about what the task is, so it is shortened only once the later
+/// messages have been shortened and dropped.
 const CEILING_STEPS: &[Rung] = &[
     Rung {
         name: "subtask 200->80 chars",
@@ -855,20 +1133,12 @@ const CEILING_STEPS: &[Rung] = &[
         apply: |l, _| std::mem::replace(&mut l.command_chars, 80) != 80,
     },
     Rung {
-        name: "reverted_edits 4->2 files",
-        apply: |l, _| std::mem::replace(&mut l.dead_ends_max, 2) != 2,
-    },
-    Rung {
         name: "working_files 2->0",
         apply: |l, _| std::mem::replace(&mut l.working_max, 0) != 0,
     },
     Rung {
         name: "test_status 3->1",
         apply: |l, _| std::mem::replace(&mut l.tests_max, 1) != 1,
-    },
-    Rung {
-        name: "first_message 160->100 chars",
-        apply: |l, _| std::mem::replace(&mut l.root_chars, 100) != 100,
     },
     // Shorten a message before dropping it: a whole message is 50-90 tokens,
     // and the ladder is rarely more than a few dozen over by this point.
@@ -886,6 +1156,26 @@ const CEILING_STEPS: &[Rung] = &[
         name: "latest_message off (an earlier message names code)",
         apply: |l, s| s.earlier.is_some() && std::mem::replace(&mut l.latest, false),
     },
+    // A rejected route keeps its header -- the file, that it was reverted, and
+    // how -- which is the claim the section exists to make. The literal line
+    // the attempt added is detail on top of that claim, so it goes before the
+    // user's own words: any stated constraint, the earlier message that names
+    // the next target, the objective.
+    Rung {
+        name: "reverted_edits attempted line off, oldest first",
+        apply: |l, s| {
+            if l.dead_attempt_removed < s.dead_ends.len() {
+                l.dead_attempt_removed += 1;
+                true
+            } else {
+                false
+            }
+        },
+    },
+    Rung {
+        name: "earlier_message to its sentence naming code",
+        apply: |l, _| !std::mem::replace(&mut l.earlier_code_only, true),
+    },
     Rung {
         name: "constraints 3->2",
         apply: |l, _| std::mem::replace(&mut l.constraints_max, 2) != 2,
@@ -902,6 +1192,17 @@ const CEILING_STEPS: &[Rung] = &[
         name: "latest_message off",
         apply: |l, _| std::mem::replace(&mut l.latest, false),
     },
+    // Whole rejected routes go only after every message but the objective
+    // has been shortened or dropped: a route's header is the one claim the
+    // section exists to make.
+    Rung {
+        name: "reverted_edits 4->2 files",
+        apply: |l, _| std::mem::replace(&mut l.dead_ends_max, 2) != 2,
+    },
+    Rung {
+        name: "first_message 160->100 chars",
+        apply: |l, _| std::mem::replace(&mut l.root_chars, 100) != 100,
+    },
     Rung {
         name: "constraints 2->1",
         apply: |l, _| std::mem::replace(&mut l.constraints_max, 1) != 1,
@@ -909,10 +1210,6 @@ const CEILING_STEPS: &[Rung] = &[
     Rung {
         name: "subtask off",
         apply: |l, _| std::mem::replace(&mut l.subtask, false),
-    },
-    Rung {
-        name: "reverted_edits 2->1 files",
-        apply: |l, _| std::mem::replace(&mut l.dead_ends_max, 1) != 1,
     },
     Rung {
         name: "paths 60->40 chars",
@@ -926,62 +1223,75 @@ const CEILING_STEPS: &[Rung] = &[
         name: "first_message 100->60 chars",
         apply: |l, _| std::mem::replace(&mut l.root_chars, 60) != 60,
     },
+    // Last: a whole rejected route is one fact, and the objective at sixty
+    // characters still states the task; paths and commands are already short.
+    Rung {
+        name: "reverted_edits 2->1 files",
+        apply: |l, _| std::mem::replace(&mut l.dead_ends_max, 1) != 1,
+    },
 ];
 
 /// Last-resort guarantee that the block never exceeds `ceiling` (E2).
 ///
 /// Every ladder step above is a judgement about which content matters least.
-/// This is not a judgement -- it is the backstop that turns "at or below the
-/// target, always" from an expectation into a property. It works in two moves,
-/// and only the second one is unconditional:
+/// This is the backstop that turns "at or below the target, always" from an
+/// expectation into a property. It works in two moves, and only the second one
+/// is unconditional:
 ///
-///  1. Drop whole lines from the end of the body, keeping the opening tag
-///     through `[WORKSPACE_STATE]` and the `[RECORD_DETAIL]` tail, so whatever
+///  1. Drop whole lines, lowest retention class first ([`DROP_ORDER`]), and
+///     within a class from the end of the capsule. A section's header goes with
+///     its last body line, so no header is left standing alone. The frame, the
+///     objective and `[WORKSPACE_STATE]` are never dropped here, so whatever
 ///     survives is still a well formed capsule that closes its own tag.
-///  2. If even the protected head is too large -- a pathological checkpoint id,
-///     a 300-character constraint, an estimator that reads the head alone above
-///     the target -- shrink the head by binary search on characters until it
-///     fits, then close the tag.
+///  2. If even that is too large -- a pathological checkpoint id, an estimator
+///     that reads the frame alone above the target -- shrink by binary search
+///     on characters until it fits, then close the tag.
 ///
-/// Step 2 is what makes the guarantee real. It used to truncate to a fixed
-/// 2,000 characters and hope, which meant a small `budget_tokens` could still
-/// return something above it.
-fn enforce_ceiling(text: String, ceiling: u32, max_chars: usize) -> String {
+/// Until v0.1.2 the first move dropped lines by *position*, from the end of the
+/// body up, so `[REVERTED_EDITS]` went before any line of `[TEST_RESULT]`
+/// simply because it is printed later -- the opposite of the policy the ladders
+/// apply.
+fn enforce_ceiling(lines: &[Line], ceiling: u32, max_chars: usize) -> String {
     let fits = |t: &str| estimate_tokens(t) <= ceiling && t.chars().count() <= max_chars;
+    let mut alive = vec![true; lines.len()];
+    let kept = |alive: &[bool]| {
+        let texts: Vec<&str> = lines
+            .iter()
+            .zip(alive)
+            .filter(|(_, a)| **a)
+            .map(|(l, _)| l.text.as_str())
+            .collect();
+        texts.join("\n")
+    };
+    let text = kept(&alive);
     if fits(&text) {
         return text;
     }
-    let lines: Vec<&str> = text.split('\n').collect();
-    // Everything from [RECORD_DETAIL] on is the tail that must survive, closing tag
-    // included. If the marker is somehow absent, keep the last line, which is
-    // that tag: a capsule that does not close itself is worse than a short one.
-    let recovery = lines
-        .iter()
-        .position(|l| l.starts_with("[RECORD_DETAIL]"))
-        .unwrap_or_else(|| lines.len().saturating_sub(1));
-    // The protected head: the opening tag, [ABOUT_THIS_RECORD] and its paragraph, the
-    // objective, and [WORKSPACE_STATE] with its line.
-    let head = lines
-        .iter()
-        .position(|l| l.starts_with("[WORKSPACE_STATE]"))
-        .map_or(6, |i| i + 2)
-        .min(recovery);
-    let joined = |end: usize| {
-        let mut out: Vec<&str> = lines[..end].to_vec();
-        out.extend_from_slice(&lines[recovery..]);
-        out.join("\n")
-    };
-    for end in (head..recovery).rev() {
-        let candidate = joined(end);
-        if fits(&candidate) {
-            return candidate;
+    for &class in DROP_ORDER {
+        for i in (0..lines.len()).rev() {
+            if !alive[i] || lines[i].keep != class {
+                continue;
+            }
+            alive[i] = false;
+            let section = lines[i].section;
+            let body_left = lines
+                .iter()
+                .zip(&alive)
+                .any(|(l, a)| *a && l.section == section && !l.header);
+            if !body_left {
+                for (j, l) in lines.iter().enumerate() {
+                    if l.section == section {
+                        alive[j] = false;
+                    }
+                }
+            }
+            let candidate = kept(&alive);
+            if fits(&candidate) {
+                return candidate;
+            }
         }
     }
-    let candidate = joined(head);
-    if fits(&candidate) {
-        return candidate;
-    }
-    hard_trim(&candidate, ceiling, max_chars)
+    hard_trim(&kept(&alive), ceiling, max_chars)
 }
 
 /// The unconditional shrink. Halves the character budget until the result fits,
@@ -1044,11 +1354,27 @@ fn run_steps(
             if estimate_tokens(&text) <= target {
                 return text;
             }
+            let before = *lim;
             if !(step.apply)(lim, s) {
                 break;
             }
+            // A rung with nothing to remove in this state -- the working-file
+            // cap when two files are listed -- is not a step. Counting it made a
+            // two-file session report twelve rungs applied.
+            let next = render_with(s, lim, trace);
+            if next == text {
+                continue;
+            }
+            // Nor is one that saves nothing: shortening the objective past a
+            // constraint sentence it was carrying brings that sentence back
+            // under [STATED_CONSTRAINTS], and the objective would be cut for
+            // no budget at all.
+            if estimate_tokens(&next) >= estimate_tokens(&text) {
+                *lim = before;
+                break;
+            }
             *applied += 1;
-            text = render_with(s, lim, trace);
+            text = next;
             if let Some(t) = trail.as_deref_mut() {
                 t.push(LadderStep {
                     rung: step.name,
@@ -1105,11 +1431,11 @@ fn render_impl(
     // The hard stop. After this line the text is at or below `target` estimated
     // tokens and at or below ABSOLUTE_MAX_CHARS characters, for every input.
     let before = text.len();
-    text = enforce_ceiling(text, target, ABSOLUTE_MAX_CHARS);
+    text = enforce_ceiling(&render_lines(s, &lim, trace), target, ABSOLUTE_MAX_CHARS);
     if let Some(t) = trail {
         if text.len() != before {
             t.push(LadderStep {
-                rung: "hard stop (whole lines from the end)",
+                rung: "hard stop (whole lines, lowest retention class first)",
                 text: text.clone(),
             });
         }
@@ -1330,6 +1656,176 @@ mod tests {
         assert!(r.text.contains("[REVERTED_EDITS] (OBSERVED)"));
         assert!(r.text.contains("[TEST_RESULT]"));
         assert!(r.text.ends_with("</VELRA_WORKSPACE_STATE>"));
+    }
+
+    #[test]
+    fn rule_lines_are_compacted_and_bare_rules_dropped() {
+        let c = |l: &str| compact_rules(l).map(|c| c.into_owned());
+        assert_eq!(
+            c("================================== FAILURES ==================================="),
+            Some("=== FAILURES ===".into())
+        );
+        assert_eq!(
+            c("_____ test_retry_preserves_idempotency_key _____"),
+            Some("___ test_retry_preserves_idempotency_key ___".into())
+        );
+        assert_eq!(c("=========="), None);
+        assert_eq!(c("   "), None);
+        assert_eq!(c(""), None);
+        // Short runs and ordinary text are untouched, and borrowed.
+        assert!(matches!(
+            compact_rules("E   assert a == b -- x"),
+            Some(std::borrow::Cow::Borrowed(_))
+        ));
+        assert_eq!(c("a_b__c"), Some("a_b__c".into()));
+    }
+
+    #[test]
+    fn a_path_is_named_only_as_a_whole_path() {
+        assert!(names_path("- FAIL tests/x.py::test_y", "tests/x.py"));
+        assert!(names_path(
+            "reverted via `git restore src/a.py` at",
+            "src/a.py"
+        ));
+        assert!(names_path("see src/a.py.", "src/a.py"));
+        assert!(!names_path("- src/a.py | 1 edit", "a.py"));
+        assert!(!names_path("src/a.pyc", "src/a.py"));
+        assert!(!names_path("src/a.py/b", "src/a.py"));
+        assert!(!names_path("anything", ""));
+    }
+
+    #[test]
+    fn the_earlier_message_is_cut_after_the_sentence_that_names_code() {
+        assert_eq!(
+            through_code_sentence(
+                "Next, look at parse_chunk_size in src/http/codec.rs. Don't change it yet."
+            ),
+            "Next, look at parse_chunk_size in src/http/codec.rs."
+        );
+        assert_eq!(
+            through_code_sentence("Right. Now check retry_backoff() please. Thanks!"),
+            "Right. Now check retry_backoff() please."
+        );
+        assert_eq!(
+            through_code_sentence("no code here. none."),
+            "no code here. none."
+        );
+        assert_eq!(through_code_sentence("src/a.py"), "src/a.py");
+    }
+
+    /// The backstop removes by retention class, not by position: with the
+    /// ladders unable to reach the target, regenerable output goes before the
+    /// rejected routes, and those before the exact test ids.
+    #[test]
+    fn the_hard_stop_drops_the_lowest_class_first() {
+        let mut s = base();
+        s.root = Some(IntentView {
+            id: 1,
+            text: "fix the ledger rounding".into(),
+            ts_ms: 0,
+        });
+        s.tests = vec![TestStatusView {
+            id: "tests/test_a.py::test_round".into(),
+            failing: true,
+            detail: None,
+            last_fail: CommandRef {
+                id: 1,
+                command: "pytest".into(),
+                outcome: Outcome::Fail,
+            },
+            last_fail_ms: 0,
+            passed: None,
+            passed_ms: None,
+        }];
+        s.failure = Some(FailureView {
+            id: 1,
+            kind: CommandKind::Test,
+            command: "pytest -q".into(),
+            exit_code: Some(1),
+            excerpt: vec![],
+            ts_ms: 0,
+        });
+        s.dead_ends = vec![DeadEndView {
+            id: 1,
+            path: "src/money.py".into(),
+            subagent: false,
+            edit_ids: vec![1],
+            mechanism: Mechanism::InverseEdit,
+            command: None,
+            resolved_ms: 0,
+            minus: None,
+            plus: None,
+            observed_after: None,
+        }];
+        let full = render(
+            &s,
+            &RenderConfig {
+                budget_tokens: 1000,
+            },
+        )
+        .text;
+        let full_tokens = estimate_tokens(&full);
+        let test_result = estimate_tokens(
+            "\n[TEST_RESULT] (OBSERVED | test run | 00:00)\nCommand: pytest -q\nResult: FAIL (exit 1)",
+        );
+        // Just enough pressure that one section must go.
+        let tight = render(
+            &s,
+            &RenderConfig {
+                budget_tokens: full_tokens - test_result / 2,
+            },
+        )
+        .text;
+        // The last line of [TEST_RESULT] went; nothing printed after it did.
+        assert!(!tight.contains("Result: FAIL (exit 1)"), "{tight}");
+        assert!(tight.contains("[REVERTED_EDITS]"), "{tight}");
+        assert!(tight.contains("- src/money.py |"), "{tight}");
+        assert!(tight.contains("tests/test_a.py::test_round"), "{tight}");
+        assert!(tight.contains("fix the ledger rounding"), "{tight}");
+    }
+
+    /// A rung that would cost as much as it saves is not taken: shortening the
+    /// objective past a constraint it quotes brings the constraint back.
+    #[test]
+    fn a_rung_that_saves_nothing_is_not_taken() {
+        let mut s = base();
+        let text = format!(
+            "{} Never change the public API of the server module.",
+            "Find why the parser disagrees with the spec and fix it. ".repeat(3)
+        );
+        s.root = Some(IntentView {
+            id: 1,
+            text: text.clone(),
+            ts_ms: 0,
+        });
+        s.constraints = vec![ConstraintView {
+            id: 1,
+            text: "Never change the public API of the server module.".into(),
+            kind: ConstraintKind::Prohibition,
+            cue: "never ".into(),
+            prompt_ordinal: 0,
+            ts_ms: 0,
+        }];
+        let full = render(
+            &s,
+            &RenderConfig {
+                budget_tokens: 1000,
+            },
+        );
+        assert!(!full.text.contains("[STATED_CONSTRAINTS]"), "{}", full.text);
+        let ladder = render_ladder(
+            &s,
+            &RenderConfig {
+                budget_tokens: full.tokens - 2,
+            },
+        );
+        for w in ladder.windows(2) {
+            assert!(
+                estimate_tokens(&w[1].text) < estimate_tokens(&w[0].text),
+                "rung `{}` did not reduce the estimate",
+                w[1].rung
+            );
+        }
     }
 
     #[test]

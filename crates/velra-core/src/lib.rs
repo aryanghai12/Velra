@@ -14,6 +14,7 @@ pub mod hash;
 pub mod intent;
 pub mod model;
 pub mod paths;
+pub mod prompt;
 pub mod provenance;
 pub mod redact;
 pub mod reducer;

@@ -10,8 +10,8 @@
 //! ledger            the reducer's projections (intents, commands, files, ...)
 //! snapshot          `snapshot::build`, the selection a capsule is made from
 //! renderer          `render::render` under the configured budget
-//! restore           the renderer's text after redaction -- what `velra
-//!                   restore` stages
+//! restore           what `velra restore` stages: rendered with restore's own
+//!                   framing (its checkpoint id, so its budget), then redacted
 //! capsule           the capsule actually staged for this workspace, if any
 //! ```
 //!
@@ -158,7 +158,7 @@ fn ledger_hits(
     let mut stmt = conn.prepare(
         "SELECT i.id, i.level, i.epoch, i.superseded_ms, \
            (SELECT MIN(n.id) FROM intents n WHERE n.session_id = i.session_id AND n.epoch = i.epoch \
-             AND n.level = i.level AND n.id > i.id) \
+             AND n.level = i.level AND n.id > i.id), i.text \
          FROM intents i WHERE i.session_id = ?1 \
          AND lower(replace(i.text, '\\', '/')) LIKE ?2 ORDER BY i.id",
     )?;
@@ -169,11 +169,18 @@ fn ledger_hits(
             r.get::<_, i64>(2)?,
             r.get::<_, Option<i64>>(3)?,
             r.get::<_, Option<i64>>(4)?,
+            r.get::<_, String>(5)?,
         ))
     })?;
     for row in rows {
-        let (id, level, e, superseded, next) = row?;
-        let omission = other_epoch(e).or_else(|| {
+        let (id, level, e, superseded, next, text) = row?;
+        // A row written before v0.1.2 can hold injected context; the snapshot
+        // reads through it (`snapshot::user_text`), and that is the reason to
+        // report, ahead of any supersession.
+        let injected = (!contains(&snapshot::user_text(&text), needle))
+            .then(|| injected_reason(&text, needle))
+            .flatten();
+        let omission = other_epoch(e).or(injected).or_else(|| {
             superseded.map(|_| {
                 let by = next.map_or_else(String::new, |n| format!(" by intents:{n}"));
                 format!(
@@ -375,7 +382,9 @@ fn ledger_hits(
             Some(if reapplied != 0 {
                 format!("invalidated: dead_ends:{id} was reapplied")
             } else {
-                "lower priority: beyond the dead-end cap (4 most recent kept)".to_string()
+                "lower priority: beyond the dead-end cap (4 kept: the most recent revert of \
+                 each file first, then further reverts by recency)"
+                    .to_string()
             })
         });
         hits.push(LedgerHit {
@@ -384,6 +393,42 @@ fn ledger_hits(
         });
     }
     Ok(hits)
+}
+
+/// When `needle` occurs in `prompt` only inside injected context
+/// (`crate::prompt`), the reason it is not carried as the user's words.
+fn injected_reason(prompt: &str, needle: &str) -> Option<String> {
+    let parts = crate::prompt::split(prompt);
+    if contains(parts.authored, needle) {
+        return None;
+    }
+    let block = parts.injected.iter().find(|b| contains(b.text, needle))?;
+    Some(format!(
+        "injected context: it occurs only inside a `<{}>` block ({}) that the client added \
+         around the user's prompt, which is not carried as the user's words",
+        block.tag,
+        block.origin.as_str()
+    ))
+}
+
+/// [`injected_reason`] over every stored prompt of the session that holds it.
+fn injected_in_prompts(
+    conn: &Connection,
+    events: &[i64],
+    needle: &str,
+) -> rusqlite::Result<Option<String>> {
+    let mut stmt = conn
+        .prepare("SELECT payload FROM events WHERE id = ?1 AND hook_event = 'UserPromptSubmit'")?;
+    for id in events {
+        let payload: Option<String> = stmt.query_row([id], |r| r.get(0)).optional()?;
+        let prompt = payload
+            .and_then(|p| serde_json::from_str::<serde_json::Value>(&p).ok())
+            .and_then(|v| v["prompt"].as_str().map(str::to_string));
+        if let Some(reason) = prompt.and_then(|p| injected_reason(&p, needle)) {
+            return Ok(Some(format!("{reason} (events:{id})")));
+        }
+    }
+    Ok(None)
 }
 
 fn transcript_presence(conn: &Connection, session_id: &str, needle: &str) -> LayerResult {
@@ -515,7 +560,22 @@ pub fn trace_marker(
         )],
     });
 
-    let restored = crate::redact::redact(&rendered).into_owned();
+    // What `velra restore` would stage now: its own framing (the source
+    // checkpoint's id in the opening tag, where the preview prints `preview`),
+    // so its own budget, then redaction. Rendering the preview here instead
+    // could report PRESENT for a line the real restore had to cut.
+    let restore_meta = crate::restore::snapshot_meta(
+        crate::restore::source_checkpoint(conn, session_id)?.as_deref(),
+        inputs.meta.created_ms,
+        inputs.meta.tz_offset_secs,
+    );
+    let restore_snap = snapshot::build(conn, session_id, &restore_meta)?;
+    let restore_ladder = render::render_ladder(&restore_snap, inputs.cfg);
+    let restore_rendered = restore_ladder
+        .last()
+        .map(|s| s.text.clone())
+        .unwrap_or_default();
+    let restored = crate::redact::redact(&restore_rendered).into_owned();
     layers.push(LayerResult {
         layer: "restore",
         presence: if contains(&restored, &needle) {
@@ -523,7 +583,10 @@ pub fn trace_marker(
         } else {
             Presence::Absent
         },
-        evidence: vec!["the renderer's text after redaction, as `velra restore` stages it".into()],
+        evidence: vec![format!(
+            "rendered as `velra restore` stages it (checkpoint=\"{}\"), after redaction",
+            restore_meta.checkpoint_id
+        )],
     });
 
     layers.push(match inputs.staged {
@@ -557,15 +620,27 @@ pub fn trace_marker(
         last_known = Some(l.presence);
     }
 
+    let injected = match first_loss {
+        Some("ledger") => injected_in_prompts(conn, &events, &needle)?,
+        _ => None,
+    };
+    let budget_rung = |ladder: &[render::LadderStep]| {
+        ladder
+            .windows(2)
+            .find(|w| contains(&w[0].text, &needle) && !contains(&w[1].text, &needle))
+            .map(|w| w[1].rung)
+    };
     let reason = first_loss.map(|layer| match layer {
         "normalized_state" => "not captured: no hook payload Velra stored contains it (assistant \
                                prose and reasoning are not hooked)"
             .to_string(),
-        "ledger" => format!(
-            "not extracted: it occurs only in raw hook payloads ({} event(s)); no reducer field \
-             keeps that part of the payload",
-            events.len()
-        ),
+        "ledger" => injected.clone().unwrap_or_else(|| {
+            format!(
+                "not extracted: it occurs only in raw hook payloads ({} event(s)); no reducer \
+                 field keeps that part of the payload",
+                events.len()
+            )
+        }),
         "snapshot" => {
             let mut reasons: Vec<String> = Vec::new();
             for h in &hits {
@@ -587,11 +662,7 @@ pub fn trace_marker(
             if !in_full {
                 "not rendered: the snapshot field holding it has no capsule line".to_string()
             } else {
-                let step = ladder
-                    .windows(2)
-                    .find(|w| contains(&w[0].text, &needle) && !contains(&w[1].text, &needle))
-                    .map(|w| w[1].rung);
-                match step {
+                match budget_rung(&ladder) {
                     Some(rung) => format!(
                         "budgeted out: removed by ladder rung `{rung}` (target {} estimated tokens)",
                         inputs.cfg.budget_tokens
@@ -600,7 +671,20 @@ pub fn trace_marker(
                 }
             }
         }
-        "restore" => "redacted: the redaction pass replaced it".to_string(),
+        "restore" => {
+            if contains(&restore_rendered, &needle) {
+                "redacted: the redaction pass replaced it".to_string()
+            } else {
+                match budget_rung(&restore_ladder) {
+                    Some(rung) => format!(
+                        "budgeted out in the restore render, whose framing differs from the \
+                         preview: removed by ladder rung `{rung}` (target {} estimated tokens)",
+                        inputs.cfg.budget_tokens
+                    ),
+                    None => "other: the restore render does not carry it".to_string(),
+                }
+            }
+        }
         "capsule" => "stale: the staged capsule predates the current ledger; re-run `velra restore`"
             .to_string(),
         _ => "other".to_string(),

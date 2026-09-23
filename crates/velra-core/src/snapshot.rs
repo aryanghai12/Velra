@@ -315,9 +315,130 @@ pub fn earlier_message(
             })
         })?
         .collect::<rusqlite::Result<_>>()?;
-    Ok(rows.into_iter().find(|v| {
-        names_identifier(&v.text) && v.text != latest.text && !exclude.contains(&v.text.as_str())
-    }))
+    Ok(rows
+        .into_iter()
+        .map(|v| IntentView {
+            text: user_text(&v.text),
+            ..v
+        })
+        .find(|v| {
+            names_identifier(&v.text)
+                && v.text != latest.text
+                && !exclude.contains(&v.text.as_str())
+        }))
+}
+
+/// Which dead ends a snapshot carries, given their paths most recent first:
+/// indices into `paths`, in the same order, at most `max`.
+///
+/// Every distinct file gets a slot before any file gets a second one. The
+/// capsule's promise about dead ends is that a rejected route is not taken
+/// again, and a route is identified by the file it changed; a fourth retry of
+/// one file tells the next session less than a single revert of another file
+/// it has never heard of. Until v0.1.2 this was simply "the `max` most recent",
+/// so a file reverted four times in a row hid every earlier dead end while
+/// `dead_end_total` still counted it. Within that, recency decides.
+pub fn pick_dead_ends(paths: &[&str], max: usize) -> Vec<usize> {
+    let mut chosen: Vec<usize> = Vec::new();
+    for (i, p) in paths.iter().enumerate() {
+        if chosen.len() < max && !chosen.iter().any(|&c| paths[c] == *p) {
+            chosen.push(i);
+        }
+    }
+    for i in 0..paths.len() {
+        if chosen.len() >= max {
+            break;
+        }
+        if !chosen.contains(&i) {
+            chosen.push(i);
+        }
+    }
+    chosen.sort_unstable();
+    chosen
+}
+
+/// One `intents` row as the snapshot reads it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct IntentRow {
+    pub id: i64,
+    pub level: Option<IntentLevel>,
+    /// As stored. Rows written before v0.1.2 may still carry injected context.
+    pub text: String,
+    pub ts_ms: i64,
+    /// Not superseded.
+    pub live: bool,
+}
+
+/// The messages a snapshot carries.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct Intents {
+    pub root: Option<IntentView>,
+    pub subtask: Option<IntentView>,
+    pub latest: Option<IntentView>,
+}
+
+/// The user's own words of a stored intent: injected context removed
+/// (`crate::prompt`) and whitespace collapsed as the reducer does.
+///
+/// The reducer has classified only authored text since v0.1.2, so for rows it
+/// wrote this is the identity. It matters for ledgers reduced earlier, where a
+/// VS Code session's ROOT begins with the editor's `<ide_opened_file>` block and
+/// a background task's `<task-notification>` can be the ROOT or the LATEST
+/// message outright. The ledger is not rewritten; the snapshot reads through
+/// it, so an existing session restores correctly without a migration.
+pub fn user_text(stored: &str) -> String {
+    crate::intent::normalize_prompt(crate::prompt::authored(stored))
+}
+
+/// Selects the objective, the subtask and the latest message from an epoch's
+/// intent rows (all of them, superseded included, in id order).
+///
+/// For rows the current reducer wrote, this is exactly "the live row of each
+/// level". The fallbacks exist for rows whose stored text turns out to be
+/// nothing but injected context:
+///
+/// * **objective** -- the first live ROOT that has text of its own; failing
+///   that, the earliest message of the epoch long enough to have become ROOT
+///   under the intent rules (`intent::ROOT_MIN_CHARS`). That is the message the
+///   reducer would have chosen had the injected prompt never arrived.
+/// * **latest** -- the most recent LATEST row with text of its own, superseded
+///   or not: a notification that superseded the user's message did not replace
+///   what the user last said.
+///
+/// Pure, so the rule is tested without a database.
+pub fn select_intents(rows: &[IntentRow]) -> Intents {
+    let view = |r: &IntentRow| IntentView {
+        id: r.id,
+        text: user_text(&r.text),
+        ts_ms: r.ts_ms,
+    };
+    let of = |level: IntentLevel| {
+        rows.iter()
+            .filter(move |r| r.level == Some(level))
+            .map(move |r| (r, view(r)))
+    };
+    let root = of(IntentLevel::Root)
+        .find(|(r, v)| r.live && !v.text.is_empty())
+        .map(|(_, v)| v)
+        .or_else(|| {
+            rows.iter()
+                .filter(|r| matches!(r.level, Some(IntentLevel::Root | IntentLevel::Latest)))
+                .map(view)
+                .find(|v| v.text.chars().count() >= crate::intent::ROOT_MIN_CHARS)
+        });
+    let subtask = of(IntentLevel::Subtask)
+        .filter(|(r, v)| r.live && !v.text.is_empty())
+        .map(|(_, v)| v)
+        .next_back();
+    let latest = of(IntentLevel::Latest)
+        .filter(|(_, v)| v.text.chars().count() >= crate::intent::LATEST_MIN_CHARS)
+        .map(|(_, v)| v)
+        .next_back();
+    Intents {
+        root,
+        subtask,
+        latest,
+    }
 }
 
 /// Builds the snapshot for `session_id`'s current epoch.
@@ -335,35 +456,27 @@ pub fn build(
     let sid = session_id;
 
     // Intents.
-    let mut root = None;
-    let mut subtask = None;
-    let mut latest = None;
-    {
-        let mut stmt = conn.prepare_cached(
-            "SELECT id, level, text, created_ms FROM intents \
-             WHERE session_id = ?1 AND epoch = ?2 AND superseded_ms IS NULL ORDER BY id",
-        )?;
-        let rows = stmt.query_map(params![sid, epoch], |r| {
-            Ok((
-                r.get::<_, i64>(0)?,
-                r.get::<_, String>(1)?,
-                r.get::<_, String>(2)?,
-                r.get::<_, i64>(3)?,
-            ))
-        })?;
-        for row in rows {
-            let (id, level, text, ts_ms) = row?;
-            let view = IntentView { id, text, ts_ms };
-            match IntentLevel::parse(&level) {
-                Some(IntentLevel::Root) => {
-                    root.get_or_insert(view);
-                }
-                Some(IntentLevel::Subtask) => subtask = Some(view),
-                Some(IntentLevel::Latest) => latest = Some(view),
-                None => {}
-            }
-        }
-    }
+    let rows: Vec<IntentRow> = conn
+        .prepare_cached(
+            "SELECT id, level, text, created_ms, superseded_ms IS NULL FROM intents \
+             WHERE session_id = ?1 AND epoch = ?2 ORDER BY id",
+        )?
+        .query_map(params![sid, epoch], |r| {
+            let level: String = r.get(1)?;
+            Ok(IntentRow {
+                id: r.get(0)?,
+                level: IntentLevel::parse(&level),
+                text: r.get(2)?,
+                ts_ms: r.get(3)?,
+                live: r.get(4)?,
+            })
+        })?
+        .collect::<rusqlite::Result<_>>()?;
+    let Intents {
+        root,
+        subtask,
+        latest,
+    } = select_intents(&rows);
 
     let shown: Vec<&str> = root
         .iter()
@@ -472,10 +585,18 @@ pub fn build(
         })?
         .collect::<rusqlite::Result<_>>()?;
     let dead_end_total = dead_rows.len() as u32;
+    let chosen = pick_dead_ends(
+        &dead_rows.iter().map(|r| r.1.as_str()).collect::<Vec<_>>(),
+        DEAD_ENDS_MAX,
+    );
+    let dead_rows: Vec<_> = dead_rows
+        .into_iter()
+        .enumerate()
+        .filter(|(i, _)| chosen.contains(i))
+        .map(|(_, row)| row)
+        .collect();
     let mut dead_ends = Vec::new();
-    for (id, path, edit_ids, mechanism, command, resolved_ms, observed) in
-        dead_rows.into_iter().take(DEAD_ENDS_MAX)
-    {
+    for (id, path, edit_ids, mechanism, command, resolved_ms, observed) in dead_rows {
         let edit_ids: Vec<i64> = serde_json::from_str(&edit_ids).unwrap_or_default();
         let mut subagent = false;
         let mut first_excerpt: Option<String> = None;
@@ -681,4 +802,56 @@ pub fn has_state(conn: &Connection, session_id: &str) -> rusqlite::Result<bool> 
              OR EXISTS (SELECT 1 FROM edits WHERE session_id = ?1 AND epoch = ?2)",
     )?
     .query_row(params![session_id, epoch], |r| r.get(0))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn every_file_gets_a_dead_end_slot_before_any_file_gets_a_second() {
+        let paths = ["a", "a", "a", "a", "b", "c"];
+        assert_eq!(pick_dead_ends(&paths, 4), [0, 1, 4, 5]);
+        assert_eq!(pick_dead_ends(&["a", "b"], 4), [0, 1]);
+        assert_eq!(pick_dead_ends(&["a", "a", "a"], 2), [0, 1]);
+        let many = ["a", "b", "c", "d", "e"];
+        assert_eq!(pick_dead_ends(&many, 4), [0, 1, 2, 3]);
+        assert!(pick_dead_ends(&[], 4).is_empty());
+    }
+
+    #[test]
+    fn intent_selection_is_the_live_row_for_rows_the_reducer_writes_now() {
+        let row = |id: i64, level: IntentLevel, text: &str, live: bool| IntentRow {
+            id,
+            level: Some(level),
+            text: text.into(),
+            ts_ms: id,
+            live,
+        };
+        let rows = [
+            row(
+                1,
+                IntentLevel::Root,
+                "fix the rounding bug in the ledger",
+                true,
+            ),
+            row(2, IntentLevel::Latest, "first look at src/ledger.rs", false),
+            row(3, IntentLevel::Subtask, "write the regression test", true),
+            row(4, IntentLevel::Latest, "then run   the suite", true),
+        ];
+        let got = select_intents(&rows);
+        assert_eq!(got.root.map(|r| r.id), Some(1));
+        assert_eq!(got.subtask.map(|r| r.id), Some(3));
+        let latest = got.latest.expect("latest");
+        assert_eq!((latest.id, latest.text.as_str()), (4, "then run the suite"));
+        assert_eq!(select_intents(&[]), Intents::default());
+    }
+
+    #[test]
+    fn user_text_strips_injected_context_and_is_idempotent() {
+        let raw =
+            "<ide_opened_file>The user opened the file x in the IDE.</ide_opened_file> fix  it";
+        assert_eq!(user_text(raw), "fix it");
+        assert_eq!(user_text(&user_text(raw)), "fix it");
+    }
 }

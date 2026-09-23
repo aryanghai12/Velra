@@ -348,7 +348,11 @@ fn set_intent(ctx: &Ctx<'_>, level: IntentLevel, text: &str) -> Result<()> {
 }
 
 fn apply_prompt(ctx: &mut Ctx<'_>) -> Result<()> {
-    let raw = ctx.ev.payload.prompt.as_deref().unwrap_or("");
+    // Only what the user wrote is classified. Context a client injected around
+    // it -- the VS Code extension's `<ide_opened_file>`, a background task's
+    // `<task-notification>` -- is neither an objective nor a constraint, and a
+    // prompt made of nothing else changes no intent (`crate::prompt`).
+    let raw = crate::prompt::authored(ctx.ev.payload.prompt.as_deref().unwrap_or(""));
     let norm = intent::normalize_prompt(raw);
     let has_root = live_intent_id(ctx, IntentLevel::Root)?.is_some();
     match intent::classify_prompt(&norm, has_root) {

@@ -172,30 +172,13 @@ pub fn build(
         });
     }
 
-    // The most recent frozen checkpoint of the source session, recorded for
-    // provenance. The capsule itself is rendered fresh from the ledger so that
-    // work done after the last compaction is not silently dropped.
-    let source_checkpoint_id: Option<String> = conn
-        .prepare(
-            "SELECT checkpoint_id FROM checkpoints WHERE session_id = ?1 \
-             ORDER BY created_ms DESC, rowid DESC LIMIT 1",
-        )
-        .and_then(|mut s| {
-            s.query_row([&session.session_id], |r| r.get::<_, String>(0))
-                .optional()
-        })
+    let source_checkpoint_id = source_checkpoint(conn, &session.session_id)
         .map_err(|e| RestoreError::Db(e.to_string()))?;
-
-    let meta = SnapshotMeta {
-        checkpoint_id: source_checkpoint_id
-            .clone()
-            .unwrap_or_else(|| "restore".to_string()),
-        created_ms: req.now_ms,
-        trigger: Trigger::Cli,
-        partial: false,
-        preview: false,
-        tz_offset_secs: crate::time::local_offset_secs(req.now_ms),
-    };
+    let meta = snapshot_meta(
+        source_checkpoint_id.as_deref(),
+        req.now_ms,
+        crate::time::local_offset_secs(req.now_ms),
+    );
     let snap = snapshot::build(conn, &session.session_id, &meta)
         .map_err(|e| RestoreError::Db(e.to_string()))?;
     let rendered = render::render(&snap, cfg);
@@ -230,6 +213,40 @@ pub fn build(
         summary,
         capsule,
     })
+}
+
+/// The most recent frozen checkpoint of a session, recorded in a restore for
+/// provenance. The capsule itself is rendered fresh from the ledger so that
+/// work done after the last compaction is not silently dropped.
+pub fn source_checkpoint(conn: &Connection, session_id: &str) -> rusqlite::Result<Option<String>> {
+    conn.prepare(
+        "SELECT checkpoint_id FROM checkpoints WHERE session_id = ?1 \
+             ORDER BY created_ms DESC, rowid DESC LIMIT 1",
+    )?
+    .query_row([session_id], |r| r.get::<_, String>(0))
+    .optional()
+}
+
+/// The snapshot framing `velra restore` renders with.
+///
+/// Public because it is not incidental: the checkpoint id is printed in the
+/// capsule's opening tag, so a restore and a preview of the same ledger spend
+/// different budgets on it and can keep different lines. Anything that claims
+/// to show "what restore stages" -- `velra inspect --trace` -- must render with
+/// exactly this.
+pub fn snapshot_meta(
+    source_checkpoint_id: Option<&str>,
+    now_ms: i64,
+    tz_offset_secs: i32,
+) -> SnapshotMeta {
+    SnapshotMeta {
+        checkpoint_id: source_checkpoint_id.unwrap_or("restore").to_string(),
+        created_ms: now_ms,
+        trigger: Trigger::Cli,
+        partial: false,
+        preview: false,
+        tz_offset_secs,
+    }
 }
 
 /// Whether the ledger holds anything restorable for a session.
