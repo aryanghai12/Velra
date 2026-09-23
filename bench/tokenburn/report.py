@@ -130,7 +130,7 @@ def summary(result: dict) -> str:
         pct = group["total_input_tokens_pct_change"]
         if pct["median"] is not None:
             lines.append(f"      total input change, median over "
-                         f"{pct['n_measured_pairs']} measured pairs: "
+                         f"{pct['n_measured_pairs']} comparable pairs: "
                          f"{pct['median']:+.1f}%")
         else:
             lines.append("      total input change: not measurable on both "
@@ -147,6 +147,11 @@ def markdown(result: dict) -> str:
            f"sha256 `{(result.get('preregistration_sha256') or '')[:16]}`.", "",
            f"Trials: {result['n_trials']}. "
            f"Matched pairs: {result['pairing']['n_pairs']}.", ""]
+    scored = result.get("scored_by") or {}
+    if scored.get("git_head"):
+        out += [f"Scored by the pipeline at `{scored['git_head']}`"
+                + (" (with uncommitted pipeline changes)"
+                   if scored.get("pipeline_dirty") else "") + ".", ""]
 
     if result["pairing"]["dropped"]:
         out += ["## Pairs dropped", "",
@@ -167,7 +172,7 @@ def markdown(result: dict) -> str:
                                 else telemetry.STATUS_INCONCLUSIVE),
           "baseline_correct": p["arms"]["baseline"]["final_correctness"],
           "velra_correct": p["arms"]["velra"]["final_correctness"],
-          "why": p.get("why", "")[:180]}
+          "why": p.get("why", "")[:320]}
          for p in result["pairs"]],
         ("pair_id", "benchmark", "verdict", "basis", "burden_change_pct",
          "baseline_correct", "velra_correct", "why")))
@@ -187,7 +192,8 @@ def markdown(result: dict) -> str:
                 f"velra {group['correctness']['velra_correct']}"
                 f"/{group['correctness']['of']}",
                 (f"* total input change, median over "
-                 f"{pct['n_measured_pairs']} measured pairs: "
+                 f"{pct['n_measured_pairs']} comparable pairs "
+                 f"({', '.join(f'{v:+.2f}%' for v in pct['values'])}): "
                  f"{pct['median']:+.2f}%" if pct["median"] is not None
                  else "* total input change: **not measurable** on both arms "
                       "in any pair of this group"),

@@ -215,3 +215,27 @@ def select(value: str | os.PathLike | None,
                 f"trials/ could be historical trials. Choose a new directory.")
     return RunRoot(root=root, readiness=root / "readiness.json",
                    explicit=True, given=os.fspath(value))
+
+
+def scoring_provenance() -> dict:
+    """Which pipeline scored the trials, which need not be the one that ran them.
+
+    Each trial records the commit it ran at; re-scoring later is legitimate
+    (the pre-registration hash pins the rules), but the aggregate has to say
+    which code applied them. ``pipeline_dirty`` covers this package only.
+    It lives here, not in the analysis path, because nothing there may be
+    able to start a process (`test_no_module_in_the_analysis_path_can_launch_claude`).
+    """
+    import subprocess
+
+    def git(*args: str) -> str | None:
+        try:
+            done = subprocess.run(["git", *args], cwd=HERE, capture_output=True,
+                                  text=True, timeout=10)
+        except (OSError, subprocess.SubprocessError):
+            return None
+        return done.stdout.strip() if done.returncode == 0 else None
+
+    status = git("status", "--porcelain", "--", ".")
+    return {"git_head": git("rev-parse", "HEAD"),
+            "pipeline_dirty": bool(status) if status is not None else None}

@@ -19,6 +19,11 @@ demonstrated, and the pair says so. The one asymmetry is deliberate and runs
 *against* Velra: a baseline that is correct where Velra is not wins regardless
 of telemetry, because correctness was fully observed on both arms and nothing
 about the token accounting could rescue a wrong answer.
+
+**A TIE needs two correct arms.** The mirror case -- Velra correct, the
+baseline not, and no material reduction -- has no registered rule: VELRA_WIN
+needs the reduction and TIE needs both arms correct. It is INCONCLUSIVE with
+link I named, the same way an undemonstrated link rounds down everywhere else.
 """
 
 from __future__ import annotations
@@ -194,6 +199,13 @@ def pair_verdict(pair: dict, chains: dict) -> dict:
                       broken_link=f"velra/{broken}")
         return result
 
+    # Past this point both arms ran the scenario as designed and the Velra
+    # mechanism held through F, so the burden is a comparison of the two
+    # arms whatever the verdict turns out to be. `pool` takes its median over
+    # exactly these pairs: pooling only the decided ones would drop a pair
+    # because its burden went against Velra.
+    result["burden_comparable"] = True
+
     # 3 -- correctness, which outranks every token comparison.
     if b_correct and not v_correct:
         result.update(verdict=BASELINE_WIN, failure_class="TASK_FAILURE",
@@ -237,6 +249,24 @@ def pair_verdict(pair: dict, chains: dict) -> dict:
                       burden_change_pct=change,
                       why=f"the baseline was correct and the Velra arm spent "
                           f"{change:.1f}% more total input")
+        return result
+    if not b_correct:
+        # Only the Velra arm was correct, and the reduction a VELRA_WIN needs
+        # did not happen. The registered order has no rule for this: TIE is
+        # registered for *both arms correct*, and the arms here did not reach
+        # the same correctness state. Link I is the one not demonstrated, so
+        # the pair rounds down, as an undemonstrated link does everywhere
+        # else, and the correctness split is kept on the record.
+        result.update(verdict=INCONCLUSIVE, basis="no registered rule",
+                      burden_change_pct=change,
+                      broken_link="pair/I_burden_reduced",
+                      correctness_outcome={"baseline": b_correct,
+                                           "velra": v_correct},
+                      why=f"only the Velra arm was correct, but its total "
+                          f"input changed by {change:+.1f}%, short of the "
+                          f"registered {threshold:.0f}% reduction a VELRA_WIN "
+                          f"requires; a TIE requires both arms correct, so no "
+                          f"registered rule decides this pair")
         return result
     result.update(verdict=TIE, basis="burden+correctness",
                   burden_change_pct=change,
@@ -286,9 +316,10 @@ def pool(verdicts: Sequence[dict]) -> dict:
                 classes[pair["failure_class"]] = classes.get(
                     pair["failure_class"], 0) + 1
         decided = [p for p in pairs if p["verdict"] != INCONCLUSIVE]
-        pcts = _measured_values(decided, "total_input_tokens",
+        comparable = [p for p in pairs if p.get("burden_comparable")]
+        pcts = _measured_values(comparable, "total_input_tokens",
                                 "percentage_difference")
-        deltas = _measured_values(decided, "total_input_tokens",
+        deltas = _measured_values(comparable, "total_input_tokens",
                                   "absolute_difference")
         groups[name] = {
             "n_pairs": len(pairs),
@@ -299,8 +330,10 @@ def pool(verdicts: Sequence[dict]) -> dict:
                 "n_measured_pairs": len(pcts),
                 "median": round(statistics.median(pcts), 3) if pcts else None,
                 "values": [round(p, 3) for p in pcts],
-                "note": ("median over pairs where the total was measured on "
-                         "both arms; pairs where it was not are excluded and "
+                "note": ("median over every pair whose Velra mechanism held "
+                         "(no unusable capture, no broken precondition link) "
+                         "and whose total was measured on both arms, "
+                         "whatever its verdict; other pairs are excluded and "
                          "counted in n_pairs"),
             },
             "total_input_tokens_absolute_delta": {

@@ -875,7 +875,8 @@ def _run_trials(args, plan, live_trial, claude, fixture_root,
             save_state(state)
 
     # Only this run root's trials: nothing outside it is discovered.
-    result = aggregate.run(RUN.trials, RUN.aggregate_dir)
+    result = aggregate.run(RUN.trials, RUN.aggregate_dir,
+                           scored_by=runroot.scoring_provenance())
     state["last_aggregate"] = now_stamp()
     state["verdicts"] = {v["pair_id"]: v["verdict"] for v in result["pairs"]}
     save_state(state)

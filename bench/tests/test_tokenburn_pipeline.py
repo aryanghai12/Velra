@@ -29,6 +29,7 @@ from tokenburn import pairing  # noqa: E402
 from tokenburn import parse  # noqa: E402
 from tokenburn import prereg  # noqa: E402
 from tokenburn import report as report_mod  # noqa: E402
+from tokenburn import runroot  # noqa: E402
 from tokenburn import scenarios  # noqa: E402
 from tokenburn import selftest as selftest_mod  # noqa: E402
 from tokenburn import telemetry  # noqa: E402
@@ -341,6 +342,68 @@ def test_baseline_wins_are_reported_correctly(tmp_path):
 def test_ties_are_reported_correctly(tmp_path):
     result = run_pair(tmp_path, spec("b", "baseline"), spec("v", "velra"))
     assert result["pairs"][0]["verdict"] == verdict_mod.TIE
+
+
+def test_a_tie_requires_both_arms_correct(tmp_path):
+    """Velra correct, baseline wrong, no material saving: not a TIE.
+
+    The registered TIE is "both arms correct and a burden change smaller than
+    the threshold". The v0.1.2 requalification printed A_cold_continuation#q2
+    as a TIE whose reason read "both arms were correct" beside a baseline
+    recorded incorrect; no registered rule decides that pair.
+    """
+    result = run_pair(tmp_path, spec("b", "baseline", correct=False),
+                      spec("v", "velra"))
+    pair = result["pairs"][0]
+    assert pair["arms"]["baseline"]["final_correctness"] is False
+    assert pair["arms"]["velra"]["final_correctness"] is True
+    assert pair["verdict"] == verdict_mod.INCONCLUSIVE
+    assert pair["broken_link"] == "pair/I_burden_reduced"
+    assert pair["correctness_outcome"] == {"baseline": False, "velra": True}
+    assert "both arms were correct" not in pair["why"]
+
+
+def test_every_tie_is_backed_by_two_correct_arms(tmp_path):
+    for index, (b_ok, v_ok) in enumerate(((True, True), (False, True),
+                                          (True, False), (False, False))):
+        root = tmp_path / str(index)
+        result = run_pair(root, spec("b", "baseline", correct=b_ok),
+                          spec("v", "velra", correct=v_ok))
+        pair = result["pairs"][0]
+        if pair["verdict"] == verdict_mod.TIE:
+            assert pair["arms"]["baseline"]["final_correctness"] is True
+            assert pair["arms"]["velra"]["final_correctness"] is True
+
+
+def test_the_pooled_burden_keeps_undecided_pairs(tmp_path):
+    """A pair does not leave the median because its burden went against Velra."""
+    trials = tmp_path / "trials"
+    write_trial(trials, spec("w-b", "baseline", pair_id="w#1", **HEAVY))
+    write_trial(trials, spec("w-v", "velra", pair_id="w#1", **LIGHT))
+    write_trial(trials, spec("u-b", "baseline", pair_id="u#1", correct=False,
+                             **LIGHT))
+    write_trial(trials, spec("u-v", "velra", pair_id="u#1", **HEAVY))
+    result = aggregate.run(trials, tmp_path, write=True)
+    verdicts = {p["pair_id"]: p["verdict"] for p in result["pairs"]}
+    assert verdicts == {"w#1": verdict_mod.VELRA_WIN,
+                        "u#1": verdict_mod.INCONCLUSIVE}
+    pct = result["pooled"]["groups"][A]["total_input_tokens_pct_change"]
+    assert pct["n_measured_pairs"] == 2
+    assert any(v > 0 for v in pct["values"])
+
+
+def test_the_aggregate_names_the_pipeline_that_scored_it(tmp_path):
+    trials = tmp_path / "trials"
+    write_trial(trials, spec("b", "baseline"))
+    write_trial(trials, spec("v", "velra"))
+    scorer = runroot.scoring_provenance()
+    assert set(scorer) == {"git_head", "pipeline_dirty"}
+    result = aggregate.run(trials, tmp_path, write=True, scored_by=scorer)
+    assert result["scored_by"] == scorer
+    saved = json.loads((tmp_path / "verdicts.json").read_text(encoding="utf-8"))
+    assert saved["scored_by"] == scorer
+    # Offline callers start no process, so they record nothing, not a guess.
+    assert aggregate.run(trials, tmp_path, write=False)["scored_by"] is None
 
 
 def test_token_reduction_without_correctness_is_not_a_win(tmp_path):

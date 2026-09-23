@@ -88,8 +88,12 @@ def analyse_trial(trial_dir: pathlib.Path) -> tuple[dict, dict]:
 
 
 def run(trials_root: pathlib.Path, out_dir: pathlib.Path,
-        *, write: bool = True) -> dict:
+        *, write: bool = True, scored_by: dict | None = None) -> dict:
     """The whole pipeline over one trials directory.
+
+    ``scored_by`` is :func:`runroot.scoring_provenance`, passed in by the callers
+    that may start a process (the CLI below, ``run.py --live``); the offline
+    selftest starts none, so it records ``None`` rather than guess.
 
     Reads only ``trials_root`` -- nothing outside it is discovered -- and
     with ``write`` refuses to touch protected evidence: aggregating writes
@@ -138,6 +142,7 @@ def run(trials_root: pathlib.Path, out_dir: pathlib.Path,
                            if e.get("scored") is False],
         "trial_rows": [report_mod.trial_row(e, chains[e["trial"]])
                        for e in evaluations if e.get("scored") is not False],
+        "scored_by": scored_by,
         **prereg.stamp(),
     }
 
@@ -147,7 +152,8 @@ def run(trials_root: pathlib.Path, out_dir: pathlib.Path,
             json.dumps(result, indent=2, default=str),
             encoding="utf-8", newline="")
         (out_dir / "verdicts.json").write_text(
-            json.dumps({"pairs": verdicts, "pooled": pooled, **prereg.stamp()},
+            json.dumps({"pairs": verdicts, "pooled": pooled,
+                        "scored_by": result["scored_by"], **prereg.stamp()},
                        indent=2, default=str),
             encoding="utf-8", newline="")
         (out_dir / "report.md").write_text(
@@ -162,7 +168,8 @@ def main() -> int:
     ap.add_argument("--out", required=True)
     ap.add_argument("--quiet", action="store_true")
     args = ap.parse_args()
-    result = run(pathlib.Path(args.trials), pathlib.Path(args.out))
+    result = run(pathlib.Path(args.trials), pathlib.Path(args.out),
+                 scored_by=runroot.scoring_provenance())
     if not args.quiet:
         print(report_mod.summary(result))
     return 0
