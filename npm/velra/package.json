@@ -1,7 +1,7 @@
 {
   "name": "velra",
   "version": "0.1.2",
-  "description": "Lossless compaction for Claude Code: your task survives /compact.",
+  "description": "Local-first session continuity for Claude Code: clear the context, keep the state.",
   "keywords": ["claude-code", "compaction", "hooks", "cli", "developer-tools"],
   "homepage": "https://github.com/aryanghai12/velra#readme",
   "bugs": {

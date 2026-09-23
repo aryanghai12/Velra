@@ -37,8 +37,9 @@
 //! other obvious answer, is wrong on Windows for the reason documented on
 //! [`acquire`].
 //!
-//! Phase 1 stages and claims. Wiring SessionStart to consume the claim is
-//! Phase 2's, and nothing in the hook path calls into this module yet.
+//! `velra restore` stages; the `SessionStart` hook (`hook.rs`,
+//! `deliver_staged`) claims through [`claim_with`] on every session start and
+//! emits the capsule only when the source is in the record's `deliver_on`.
 
 use crate::hash;
 use serde::{Deserialize, Serialize};

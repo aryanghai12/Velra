@@ -7,7 +7,7 @@
 #
 #   brew install aryanghai12/tap/velra
 class Velra < Formula
-  desc "Lossless compaction for Claude Code: your task survives /compact"
+  desc "Local-first session continuity for Claude Code"
   homepage "https://github.com/aryanghai12/Velra"
   version "0.1.0"
   license "MIT"

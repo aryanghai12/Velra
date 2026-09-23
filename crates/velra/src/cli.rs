@@ -25,7 +25,7 @@ pub const VERSION: &str = concat!(
 #[command(
     name = "velra",
     version = VERSION,
-    about = "Lossless compaction for Claude Code: your task survives /compact.",
+    about = "Local-first session continuity for Claude Code: clear the context, keep the state.",
     max_term_width = 100
 )]
 struct Cli {

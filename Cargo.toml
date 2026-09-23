@@ -10,7 +10,7 @@ license = "MIT"
 authors = ["Velra contributors"]
 repository = "https://github.com/aryanghai12/velra"
 homepage = "https://github.com/aryanghai12/Velra"
-description = "Lossless compaction for Claude Code: task continuity across context compactions."
+description = "Local-first session continuity for Claude Code: bounded task state carried across /compact, /clear and new sessions."
 keywords = ["claude-code", "compaction", "hooks", "developer-tools", "cli"]
 categories = ["command-line-utilities", "development-tools"]
 
