@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
 """Drive one live trial: a source session, a transition, a destination session.
 
-**Nothing in this module has been executed.** It is built so that the live
+It has driven two live runs: the preregistration 1.0.0 qualification (tag
+``tokenburn-qualification-v0.1.2``, invalidated) and the 1.1.0
+requalification (``bench/results/v0.1.2-requal``). It is built so that the live
 evaluation is a matter of authorization rather than of writing code under time
 pressure, and every function in it is reachable only through
 :mod:`run` in ``--live`` mode, behind :func:`safety.require_live`. Running it
 directly refuses for the same reason.
 
-What it does when it is eventually allowed to run
--------------------------------------------------
+What it does
+------------
 
 Both arms share everything except one step::
 
@@ -29,7 +31,10 @@ Both arms share everything except one step::
     Benchmark A -- new_session
     5a VELRA ARM ONLY: after the source session ends,
        `velra restore --session <source> --json`
-    6a start a brand-new session
+    6a start a brand-new session -- both arms. The baseline destination is
+       a new process too, never `--continue`/`--resume` of the source
+       (DECISIONS D68): A compares a fresh native session against a fresh
+       session plus the capsule, not against a native continuation
 
     Benchmark B -- clear
     5b VELRA ARM ONLY: with the source process still alive and one turn

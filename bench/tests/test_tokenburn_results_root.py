@@ -273,9 +273,24 @@ def test_aggregation_refuses_to_rewrite_frozen_trials():
 
 
 def test_a_sibling_whose_name_extends_the_frozen_one_is_allowed(tmp_path):
-    root = runroot.select("bench/results/v0.1.2-requal", cwd=REPO)
+    root = runroot.select("bench/results/v0.1.2-next", cwd=REPO)
     assert root.writable()
-    assert root.repo_relative() == "bench/results/v0.1.2-requal/"
+    assert root.repo_relative() == "bench/results/v0.1.2-next/"
+
+
+@pytest.mark.parametrize("value", [
+    "bench/results/v0.1.2-requal",
+    "bench/results/v0.1.2-requal/trials",
+])
+def test_the_requalification_evidence_is_never_a_writable_root(value):
+    with pytest.raises(runroot.ProtectedEvidenceError):
+        runroot.select(value, cwd=REPO).assert_writable()
+
+
+def test_aggregation_refuses_to_rewrite_the_requalification():
+    requal = BENCH / "results" / "v0.1.2-requal"
+    with pytest.raises(runroot.ProtectedEvidenceError):
+        aggregate.run(requal / "trials", requal, write=True)
 
 
 def test_a_tracked_change_inside_the_frozen_tree_is_never_excused():
@@ -290,8 +305,8 @@ def test_a_tracked_change_inside_the_frozen_tree_is_never_excused():
 def test_an_explicit_root_inside_the_repo_is_its_own_self_written_output(
         monkeypatch):
     monkeypatch.setattr(run_mod, "RUN",
-                        runroot.select("bench/results/v0.1.2-requal", cwd=REPO))
-    assert run_mod.is_self_written("?? bench/results/v0.1.2-requal/")
+                        runroot.select("bench/results/v0.1.2-next", cwd=REPO))
+    assert run_mod.is_self_written("?? bench/results/v0.1.2-next/")
     assert not run_mod.is_self_written("?? bench/results/v0.1.2/readiness.json")
 
 

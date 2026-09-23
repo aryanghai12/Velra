@@ -25,8 +25,8 @@ Protected trees
 ---------------
 
 ``bench/results/v0.1.2`` has been frozen evidence since commit 7a09e65 (tag
-``tokenburn-qualification-v0.1.2``), and the older result trees before it are
-historical record. A run root may not be inside, or contain, any of them, and
+``tokenburn-qualification-v0.1.2``), ``bench/results/v0.1.2-requal`` since
+54a7b8f, and the older result trees before them are historical record. A run root may not be inside, or contain, any of them, and
 no run-scoped write may land in one: the runner raises
 :class:`ProtectedEvidenceError` naming the path instead. Without
 ``--results-root`` the paths keep their original layout -- readiness at
@@ -49,10 +49,16 @@ REPO_ROOT = BENCH.parent
 #: The frozen v0.1.2 qualification evidence (7a09e65).
 FROZEN = BENCH / "results" / "v0.1.2"
 
-#: Every tree no run may write to. The first is the qualification evidence;
-#: the rest are the historical record `run.PRESERVED` already names.
+#: The v0.1.2 requalification under preregistration 1.1.0 (54a7b8f): the
+#: current benchmark evidence. Re-scoring it is a read (`aggregate.run(...,
+#: write=False)`) or a copy into a new root, never a write in place.
+REQUAL = BENCH / "results" / "v0.1.2-requal"
+
+#: Every tree no run may write to. The first two are the qualification
+#: evidence; the rest are the historical record `run.PRESERVED` already names.
 PROTECTED: tuple[pathlib.Path, ...] = (
     FROZEN,
+    REQUAL,
     BENCH / "results" / "trials",
     BENCH / "results" / "v0.1.1",
     BENCH / "results" / "v0.1.1_frozen_baseline",
