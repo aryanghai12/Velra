@@ -1,0 +1,273 @@
+{
+  "what": "every file under this results root that .gitignore keeps out of git, by hash",
+  "why_not_committed": [
+    "stream.jsonl / source_stream.jsonl / transcript.jsonl are the raw Claude Code captures; the transcripts carry account context Claude Code injects into every session (including the operator's email address), and all of them embed absolute local paths",
+    "velra_home/ holds each Velra arm's SQLite ledger, debug log and settings backup: the full event log of the source session on the operator's machine",
+    "memory_quarantine-*/ holds Claude Code auto-memory left by the earlier, invalidated run, moved aside (never deleted) before the trial so the memory directory was empty"
+  ],
+  "how_to_use": "anyone given the raw files can verify them against this list; `python bench/tokenburn/aggregate.py --trials <root>/trials --out <root>` over them reproduces analysis.json, causal_chain.json, aggregate.json, verdicts.json and report.md",
+  "n_files": 52,
+  "total_bytes": 7970825,
+  "files": [
+    {
+      "path": "trials/A_cold_continuation-q1-baseline/memory_quarantine-20260923T173443/feedback_idempotency_keys_pure.md",
+      "bytes": 1501,
+      "sha256": "792377cb6e4e972f41543103626c51a4eb2f229780934461d3fb1c18cadc01ce"
+    },
+    {
+      "path": "trials/A_cold_continuation-q1-baseline/memory_quarantine-20260923T173443/MEMORY.md",
+      "bytes": 128,
+      "sha256": "e02b489022786216533f98a57b04489d76d62d7e33ef761ca25ec249ed8ffeda"
+    },
+    {
+      "path": "trials/A_cold_continuation-q1-baseline/source_stream.jsonl",
+      "bytes": 522088,
+      "sha256": "b3005e1de85813cd22e41c62b65fbdbdea58ce24cffd95a25179f15283a2d50a"
+    },
+    {
+      "path": "trials/A_cold_continuation-q1-baseline/stream.jsonl",
+      "bytes": 72540,
+      "sha256": "8e97ce05198e18813a26d8dbda3aad4a5a851ca9a3216091d46554ce2e0204c8"
+    },
+    {
+      "path": "trials/A_cold_continuation-q1-baseline/transcript.jsonl",
+      "bytes": 282276,
+      "sha256": "5155b914a5175005eb261da46b16d3d298004ded0523211d27e15ad9e26768a8"
+    },
+    {
+      "path": "trials/A_cold_continuation-q1-velra/source_stream.jsonl",
+      "bytes": 490399,
+      "sha256": "c47c25c69e54d9c4c9c40c9bdf103f697c40624f8dcbf92b8132040eb615402f"
+    },
+    {
+      "path": "trials/A_cold_continuation-q1-velra/stream.jsonl",
+      "bytes": 78764,
+      "sha256": "1b57908b9b7124c394f3dd9b21deb7d5900e3b2612f57011c0f6968fa2315377"
+    },
+    {
+      "path": "trials/A_cold_continuation-q1-velra/transcript.jsonl",
+      "bytes": 277902,
+      "sha256": "3ef12c1ef3f8654c62a5c2868f0419dd8b119cf04733081dfe2d5fef54a2d312"
+    },
+    {
+      "path": "trials/A_cold_continuation-q1-velra/velra_home/backups/settings.json.20260923T120909Z.bak",
+      "bytes": 231,
+      "sha256": "59512d6536f41488476f1d9e586de4512795f7c0d2af9abb5e61d648239aa1d9"
+    },
+    {
+      "path": "trials/A_cold_continuation-q1-velra/velra_home/logs/debug.log",
+      "bytes": 20389,
+      "sha256": "8134b5fc8db53656171f1123dc92466ea4177a507d3d563b8642ae6916147c58"
+    },
+    {
+      "path": "trials/A_cold_continuation-q1-velra/velra_home/state.json",
+      "bytes": 443,
+      "sha256": "e8d22eea3c4b7465cfcb876a0d7af14916003191c9f92ad0968239fcab96f51e"
+    },
+    {
+      "path": "trials/A_cold_continuation-q1-velra/velra_home/velra.db",
+      "bytes": 245760,
+      "sha256": "21db1c19e84eebc364f6412cb642e91d37be68ce54cfeec9ba2be1ec9694ebcd"
+    },
+    {
+      "path": "trials/A_cold_continuation-q2-baseline/source_stream.jsonl",
+      "bytes": 465286,
+      "sha256": "56f7e738009798c95e20a6369b5234284bc708478e01e3b120cb1f5a715a69a9"
+    },
+    {
+      "path": "trials/A_cold_continuation-q2-baseline/stream.jsonl",
+      "bytes": 92946,
+      "sha256": "90cf43c162ca47e8efdd01f7c0ca2cafb4176174e4dc9fe1d3b3a5272241d523"
+    },
+    {
+      "path": "trials/A_cold_continuation-q2-baseline/transcript.jsonl",
+      "bytes": 306842,
+      "sha256": "84c7415d17bb043e0924fde1d970b429326860a97b7add7626c31953f10f550f"
+    },
+    {
+      "path": "trials/A_cold_continuation-q2-velra/memory_quarantine-20260923T174402/feedback_idempotency_no_process_state.md",
+      "bytes": 1707,
+      "sha256": "067174d5a0dd9abbcf261c3e93c4a5e65b03cb494461b136d5b8cb16b0feb88e"
+    },
+    {
+      "path": "trials/A_cold_continuation-q2-velra/memory_quarantine-20260923T174402/MEMORY.md",
+      "bytes": 189,
+      "sha256": "a250d973ff9582c38c4d423c309851be6a3d7c1a5a47080a428ef128341e9d2a"
+    },
+    {
+      "path": "trials/A_cold_continuation-q2-velra/source_stream.jsonl",
+      "bytes": 544784,
+      "sha256": "7ae853bd64eccd354bdf453467de62656bc90610086560446790a4bd955d4505"
+    },
+    {
+      "path": "trials/A_cold_continuation-q2-velra/stream.jsonl",
+      "bytes": 87328,
+      "sha256": "645ecdeffa310a0e919d862fdaaca124897bd11136dd31ae4df6d9e19cb175b2"
+    },
+    {
+      "path": "trials/A_cold_continuation-q2-velra/transcript.jsonl",
+      "bytes": 284411,
+      "sha256": "ab0cb9ea56ad806a8a9bc99b5d505df1b4ef850ac9570dfb1891a02b03b72bfa"
+    },
+    {
+      "path": "trials/A_cold_continuation-q2-velra/velra_home/backups/settings.json.20260923T121405Z.bak",
+      "bytes": 231,
+      "sha256": "59512d6536f41488476f1d9e586de4512795f7c0d2af9abb5e61d648239aa1d9"
+    },
+    {
+      "path": "trials/A_cold_continuation-q2-velra/velra_home/logs/debug.log",
+      "bytes": 19300,
+      "sha256": "a2072c3d1c6cb5ccd5d7f419fe708e001fa45660f60d0920a425ebae799ab8ee"
+    },
+    {
+      "path": "trials/A_cold_continuation-q2-velra/velra_home/state.json",
+      "bytes": 443,
+      "sha256": "5f00da51f147fdbd18b441b34a2c0230d2bcd211147119739b315754508237b5"
+    },
+    {
+      "path": "trials/A_cold_continuation-q2-velra/velra_home/velra.db",
+      "bytes": 258048,
+      "sha256": "d3cd7d1279277d87348b07e052a2e71a12290df625f130844f32782e60fe4023"
+    },
+    {
+      "path": "trials/B_clear_survival-q1-baseline/memory_quarantine-20260923T175539/MEMORY.md",
+      "bytes": 149,
+      "sha256": "771995d4cee1e60abc7ca16703a897b6918295e13bcb9a239f88485ad7a3d0ef"
+    },
+    {
+      "path": "trials/B_clear_survival-q1-baseline/memory_quarantine-20260923T175539/reconcile_window_policy.md",
+      "bytes": 1140,
+      "sha256": "a97387692ce6e5bb21d74b45d128a25fe2e34901e4cad43c61975a3602219374"
+    },
+    {
+      "path": "trials/B_clear_survival-q1-baseline/source_stream.jsonl",
+      "bytes": 408364,
+      "sha256": "aa815136911300e720ee5ad4b49a31da6bec3c8a1bb5810d4bb387c58c6a1182"
+    },
+    {
+      "path": "trials/B_clear_survival-q1-baseline/stream.jsonl",
+      "bytes": 86080,
+      "sha256": "aae9b139cb4377a53d237f0143abed6a690194f9d4560685da5fcb98a98176a4"
+    },
+    {
+      "path": "trials/B_clear_survival-q1-baseline/transcript.jsonl",
+      "bytes": 300312,
+      "sha256": "f95f78ecd72c68ab190d32e5022b1395ec441ca15412c62486d724fb3f135348"
+    },
+    {
+      "path": "trials/B_clear_survival-q1-velra/memory_quarantine-20260923T175929/MEMORY.md",
+      "bytes": 148,
+      "sha256": "5a7b96919e7102c2a030c1a04f00d37d489e513132569784a68ce589e1ec5e76"
+    },
+    {
+      "path": "trials/B_clear_survival-q1-velra/memory_quarantine-20260923T175929/reconcile_window_policy.md",
+      "bytes": 1223,
+      "sha256": "a0d004f30debb6b9bbbb9615d4c003362e6327ed4dfda1d9d24addeb1881fbff"
+    },
+    {
+      "path": "trials/B_clear_survival-q1-velra/source_stream.jsonl",
+      "bytes": 450796,
+      "sha256": "5f1707e06640f559940402e916373bec3904d66a5c90df8fcf69190efd581a65"
+    },
+    {
+      "path": "trials/B_clear_survival-q1-velra/stream.jsonl",
+      "bytes": 66930,
+      "sha256": "29152dcb0764a5bb785955056cfc9192b74f7d313f92c47bf6e0ec5a812227cd"
+    },
+    {
+      "path": "trials/B_clear_survival-q1-velra/transcript.jsonl",
+      "bytes": 264042,
+      "sha256": "842897805b099fde13ea04432de3aa993d09d0219fe28f75349af8872d06135f"
+    },
+    {
+      "path": "trials/B_clear_survival-q1-velra/velra_home/backups/settings.json.20260923T122933Z.bak",
+      "bytes": 231,
+      "sha256": "59512d6536f41488476f1d9e586de4512795f7c0d2af9abb5e61d648239aa1d9"
+    },
+    {
+      "path": "trials/B_clear_survival-q1-velra/velra_home/logs/debug.log",
+      "bytes": 17765,
+      "sha256": "479f804c3baa2331e07b93bc2156cb82530dd49d516f9107c628065b7090c079"
+    },
+    {
+      "path": "trials/B_clear_survival-q1-velra/velra_home/state.json",
+      "bytes": 440,
+      "sha256": "4faf68b945db5215db82d9f2565a376b595eadb03710bde0ed37981b241a2c2d"
+    },
+    {
+      "path": "trials/B_clear_survival-q1-velra/velra_home/velra.db",
+      "bytes": 237568,
+      "sha256": "1dffabc33af02b74c52d197ae707856b77d9d63e69a1b720ceaff11b222e8d95"
+    },
+    {
+      "path": "trials/B_clear_survival-q2-baseline/memory_quarantine-20260923T180645/MEMORY.md",
+      "bytes": 166,
+      "sha256": "44aa09625fb2007ebdef0687c89fe140931f1f6bca6b833541f7c7501ba359e1"
+    },
+    {
+      "path": "trials/B_clear_survival-q2-baseline/memory_quarantine-20260923T180645/reconcile_window_policy.md",
+      "bytes": 1113,
+      "sha256": "c63572d4eb6266f55e28cd2e1e86f84237786eda0538d70cdef0e82abac726a0"
+    },
+    {
+      "path": "trials/B_clear_survival-q2-baseline/source_stream.jsonl",
+      "bytes": 340285,
+      "sha256": "8ac8ec2779f06961215298de74c64ec1a471e6dc9c36c51aa823c89f258b6a4e"
+    },
+    {
+      "path": "trials/B_clear_survival-q2-baseline/stream.jsonl",
+      "bytes": 215780,
+      "sha256": "b66fa98fbc376dc3e274f1dcc7e8761a688bc907ec656ae2432c8c0bcdca6504"
+    },
+    {
+      "path": "trials/B_clear_survival-q2-baseline/transcript.jsonl",
+      "bytes": 432654,
+      "sha256": "ae4339ea835a371086f5b5878fe502c80002c592a28c2c6d5ac7f284a0d9266f"
+    },
+    {
+      "path": "trials/B_clear_survival-q2-velra/memory_quarantine-20260923T180303/MEMORY.md",
+      "bytes": 155,
+      "sha256": "3899d09e5ada1d136a4df11637966ed9b0b90573f8115d7a23c75983e3246b3b"
+    },
+    {
+      "path": "trials/B_clear_survival-q2-velra/memory_quarantine-20260923T180303/reconcile_window_policy.md",
+      "bytes": 1137,
+      "sha256": "dc931135f988332714b9a51c3087e9f83414cbcfff2a7c981f4addc692296a46"
+    },
+    {
+      "path": "trials/B_clear_survival-q2-velra/source_stream.jsonl",
+      "bytes": 452339,
+      "sha256": "745ab9c3b8eda6de7aeaa7585d766facaed1f72edf7f49b110daacd19d8467f7"
+    },
+    {
+      "path": "trials/B_clear_survival-q2-velra/stream.jsonl",
+      "bytes": 85319,
+      "sha256": "321fc870c22c2d663b89d7d4e6855f29f5143ffcfc72c02290b0fc4f1fe17526"
+    },
+    {
+      "path": "trials/B_clear_survival-q2-velra/transcript.jsonl",
+      "bytes": 283664,
+      "sha256": "5bb69c70c43836909cd2ab58f24bded242d79b70749fab5bda27e638f2f9299a"
+    },
+    {
+      "path": "trials/B_clear_survival-q2-velra/velra_home/backups/settings.json.20260923T123307Z.bak",
+      "bytes": 231,
+      "sha256": "59512d6536f41488476f1d9e586de4512795f7c0d2af9abb5e61d648239aa1d9"
+    },
+    {
+      "path": "trials/B_clear_survival-q2-velra/velra_home/logs/debug.log",
+      "bytes": 18562,
+      "sha256": "d069af3df768fb20ebdaaf43dc1f4b3071182a880e0acc8e58df69b43075750d"
+    },
+    {
+      "path": "trials/B_clear_survival-q2-velra/velra_home/state.json",
+      "bytes": 440,
+      "sha256": "a2d70d33b66dc9d5d0db56d38c91516e73be2edd6d15a052ed7a57f391dd0e98"
+    },
+    {
+      "path": "trials/B_clear_survival-q2-velra/velra_home/velra.db",
+      "bytes": 249856,
+      "sha256": "5b84b44c96aeb7871075635e19fdcf39b4cb92c017f0675657160c445e59f130"
+    }
+  ]
+}

@@ -1,0 +1,1238 @@
+{
+  "scenario": "A_cold_continuation",
+  "arm": "velra",
+  "replicate": 1,
+  "pair_id": "A_cold_continuation#q1",
+  "pair_key": {
+    "benchmark": "A_cold_continuation",
+    "scenario": "A_cold_continuation",
+    "pair_id": "A_cold_continuation#q1",
+    "fixture_seed": "f6233e55efb918ca",
+    "model": "sonnet",
+    "claude_version": "2.1.280 (Claude Code)",
+    "git_head": "51b96cb5fd03e1bcba9e4c5a5140727ddbe8055c",
+    "turn_script_hash": "e84715336b0762fc",
+    "permission_mode": "bypassPermissions",
+    "context_ladder_rung": 250000
+  },
+  "auto_memory_disabled": true,
+  "memory_scan_clean": true,
+  "source_handoff_valid": true,
+  "source_handoff_reason": "target FAIL, invariant as generated, worktree as generated",
+  "target_status_at_handoff": "FAIL",
+  "invariant_status_at_handoff": {
+    "holds": true,
+    "expected": true,
+    "matches_expected": true
+  },
+  "invalidation_reason": null,
+  "trial_validity": {
+    "valid": true,
+    "invalidation_reason": null
+  },
+  "memory_isolation": {
+    "controls": {
+      "CLAUDE_CODE_DISABLE_AUTO_MEMORY": "1",
+      "autoMemoryEnabled": false
+    },
+    "setting_applied": {
+      "path": "C:\\Users\\aryan\\.claude\\settings.json",
+      "applied": true,
+      "autoMemoryEnabled": false,
+      "autoMemoryDirectory": null
+    },
+    "effective": {
+      "before_source": {
+        "env": {
+          "CLAUDE_CODE_DISABLE_AUTO_MEMORY": "1",
+          "disables": true
+        },
+        "settings": {
+          "path": "C:\\Users\\aryan\\.claude\\settings.json",
+          "autoMemoryEnabled": false,
+          "disables": true,
+          "autoMemoryDirectory": null
+        },
+        "auto_memory_disabled": true
+      },
+      "before_destination": {
+        "env": {
+          "CLAUDE_CODE_DISABLE_AUTO_MEMORY": "1",
+          "disables": true
+        },
+        "settings": {
+          "path": "C:\\Users\\aryan\\.claude\\settings.json",
+          "autoMemoryEnabled": false,
+          "disables": true,
+          "autoMemoryDirectory": null
+        },
+        "auto_memory_disabled": true
+      }
+    },
+    "memory_dir": "C:\\Users\\aryan\\.claude\\projects\\C--Users-aryan-AppData-Local-Temp-velra-tokenburn-fixtures-A-cold-continuation-q1-velra\\memory",
+    "quarantined_prior_memory": null,
+    "scans": {
+      "before_source": {
+        "path": "C:\\Users\\aryan\\.claude\\projects\\C--Users-aryan-AppData-Local-Temp-velra-tokenburn-fixtures-A-cold-continuation-q1-velra\\memory",
+        "exists": true,
+        "files": [],
+        "term_hits": [],
+        "clean": true
+      },
+      "before_destination": {
+        "path": "C:\\Users\\aryan\\.claude\\projects\\C--Users-aryan-AppData-Local-Temp-velra-tokenburn-fixtures-A-cold-continuation-q1-velra\\memory",
+        "exists": true,
+        "files": [],
+        "term_hits": [],
+        "clean": true
+      },
+      "after_destination": {
+        "path": "C:\\Users\\aryan\\.claude\\projects\\C--Users-aryan-AppData-Local-Temp-velra-tokenburn-fixtures-A-cold-continuation-q1-velra\\memory",
+        "exists": true,
+        "files": [],
+        "term_hits": [],
+        "clean": true
+      }
+    },
+    "settings_restored_after_trial": true,
+    "identical_for_both_arms": true
+  },
+  "source_handoff": {
+    "source_handoff_valid": true,
+    "source_handoff_reason": "target FAIL, invariant as generated, worktree as generated",
+    "target_status_at_handoff": "FAIL",
+    "target_test": "tests/test_retry.py::test_retry_preserves_idempotency_key",
+    "target_output_tail": [
+      "",
+      "tests\\test_retry.py:34: AssertionError",
+      "=========================== short test summary info ===========================",
+      "FAILED tests/test_retry.py::test_retry_preserves_idempotency_key - AssertionE...",
+      "1 failed in 0.04s"
+    ],
+    "invariant_status_at_handoff": {
+      "holds": true,
+      "expected": true,
+      "matches_expected": true
+    },
+    "worktree_violations": [],
+    "validated_at": "after the source session ended"
+  },
+  "destination_skipped": false,
+  "model": "sonnet",
+  "session_id": "d6a12f6a-791d-4130-91cb-83c6059ef566",
+  "source_session_id": "9028c4e6-24f7-405b-90e3-8c45af82a40f",
+  "destination_session_id": "d6a12f6a-791d-4130-91cb-83c6059ef566",
+  "source_session": {
+    "session_id": "9028c4e6-24f7-405b-90e3-8c45af82a40f",
+    "turns": 17,
+    "transition": "new_session",
+    "turn_marks": [
+      {
+        "turn": 0,
+        "elapsed_s": 26.091,
+        "subtype": "success",
+        "total_cost_usd": 0.1499732,
+        "usage": {
+          "input_tokens": 16,
+          "cache_creation_input_tokens": 18309,
+          "cache_read_input_tokens": 287776,
+          "output_tokens": 1915,
+          "output_tokens_details": {
+            "thinking_tokens": 131
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 18309,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 526,
+              "cache_read_input_tokens": 40149,
+              "cache_creation_input_tokens": 1521,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 1521
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        }
+      },
+      {
+        "turn": 1,
+        "elapsed_s": 33.14,
+        "subtype": "success",
+        "total_cost_usd": 0.185436,
+        "usage": {
+          "input_tokens": 6,
+          "cache_creation_input_tokens": 1371,
+          "cache_read_input_tokens": 126784,
+          "output_tokens": 461,
+          "output_tokens_details": {
+            "thinking_tokens": 29
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 1371,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 39,
+              "cache_read_input_tokens": 42776,
+              "cache_creation_input_tokens": 265,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 265
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        }
+      },
+      {
+        "turn": 2,
+        "elapsed_s": 39.361,
+        "subtype": "success",
+        "total_cost_usd": 0.1998782,
+        "usage": {
+          "input_tokens": 2,
+          "cache_creation_input_tokens": 145,
+          "cache_read_input_tokens": 43041,
+          "output_tokens": 525,
+          "output_tokens_details": {
+            "thinking_tokens": 117
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 145,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 525,
+              "cache_read_input_tokens": 43041,
+              "cache_creation_input_tokens": 145,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 145
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        }
+      },
+      {
+        "turn": 3,
+        "elapsed_s": 45.737,
+        "subtype": "success",
+        "total_cost_usd": 0.2175694,
+        "usage": {
+          "input_tokens": 2,
+          "cache_creation_input_tokens": 635,
+          "cache_read_input_tokens": 43186,
+          "output_tokens": 651,
+          "output_tokens_details": {
+            "thinking_tokens": 131
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 635,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 651,
+              "cache_read_input_tokens": 43186,
+              "cache_creation_input_tokens": 635,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 635
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        }
+      },
+      {
+        "turn": 4,
+        "elapsed_s": 82.101,
+        "subtype": "success",
+        "total_cost_usd": 0.2617716,
+        "usage": {
+          "input_tokens": 2,
+          "cache_creation_input_tokens": 791,
+          "cache_read_input_tokens": 43821,
+          "output_tokens": 3227,
+          "output_tokens_details": {
+            "thinking_tokens": 2424
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 791,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 3227,
+              "cache_read_input_tokens": 43821,
+              "cache_creation_input_tokens": 791,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 791
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        }
+      },
+      {
+        "turn": 5,
+        "elapsed_s": 92.709,
+        "subtype": "success",
+        "total_cost_usd": 0.33032180000000005,
+        "usage": {
+          "input_tokens": 8,
+          "cache_creation_input_tokens": 5396,
+          "cache_read_input_tokens": 191301,
+          "output_tokens": 869,
+          "output_tokens_details": {
+            "thinking_tokens": 102
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 5396,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 237,
+              "cache_read_input_tokens": 49645,
+              "cache_creation_input_tokens": 363,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 363
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        }
+      },
+      {
+        "turn": 6,
+        "elapsed_s": 97.053,
+        "subtype": "success",
+        "total_cost_usd": 0.356702,
+        "usage": {
+          "input_tokens": 4,
+          "cache_creation_input_tokens": 825,
+          "cache_read_input_tokens": 100361,
+          "output_tokens": 300,
+          "output_tokens_details": {
+            "thinking_tokens": 0
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 825,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 173,
+              "cache_read_input_tokens": 50353,
+              "cache_creation_input_tokens": 480,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 480
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        }
+      },
+      {
+        "turn": 7,
+        "elapsed_s": 103.2,
+        "subtype": "success",
+        "total_cost_usd": 0.38491620000000004,
+        "usage": {
+          "input_tokens": 4,
+          "cache_creation_input_tokens": 967,
+          "cache_read_input_tokens": 101941,
+          "output_tokens": 395,
+          "output_tokens_details": {
+            "thinking_tokens": 117
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 967,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 173,
+              "cache_read_input_tokens": 51108,
+              "cache_creation_input_tokens": 692,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 692
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        }
+      },
+      {
+        "turn": 8,
+        "elapsed_s": 129.767,
+        "subtype": "success",
+        "total_cost_usd": 0.481055,
+        "usage": {
+          "input_tokens": 10,
+          "cache_creation_input_tokens": 4072,
+          "cache_read_input_tokens": 264604,
+          "output_tokens": 2691,
+          "output_tokens_details": {
+            "thinking_tokens": 728
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 4072,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 134,
+              "cache_read_input_tokens": 54230,
+              "cache_creation_input_tokens": 1642,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 1642
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        }
+      },
+      {
+        "turn": 9,
+        "elapsed_s": 150.302,
+        "subtype": "success",
+        "total_cost_usd": 0.5286930000000001,
+        "usage": {
+          "input_tokens": 4,
+          "cache_creation_input_tokens": 1945,
+          "cache_read_input_tokens": 112000,
+          "output_tokens": 1745,
+          "output_tokens_details": {
+            "thinking_tokens": 1383
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 1945,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 444,
+              "cache_read_input_tokens": 56128,
+              "cache_creation_input_tokens": 1689,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 1689
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        }
+      },
+      {
+        "turn": 10,
+        "elapsed_s": 160.231,
+        "subtype": "success",
+        "total_cost_usd": 0.5808788000000001,
+        "usage": {
+          "input_tokens": 6,
+          "cache_creation_input_tokens": 2604,
+          "cache_read_input_tokens": 175439,
+          "output_tokens": 667,
+          "output_tokens_details": {
+            "thinking_tokens": 295
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 2604,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 110,
+              "cache_read_input_tokens": 59255,
+              "cache_creation_input_tokens": 1166,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 1166
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        }
+      },
+      {
+        "turn": 11,
+        "elapsed_s": 167.199,
+        "subtype": "success",
+        "total_cost_usd": 0.6138632000000002,
+        "usage": {
+          "input_tokens": 4,
+          "cache_creation_input_tokens": 760,
+          "cache_read_input_tokens": 121082,
+          "output_tokens": 572,
+          "output_tokens_details": {
+            "thinking_tokens": 105
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 760,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 254,
+              "cache_read_input_tokens": 60661,
+              "cache_creation_input_tokens": 520,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 520
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        }
+      },
+      {
+        "turn": 12,
+        "elapsed_s": 192.08,
+        "subtype": "success",
+        "total_cost_usd": 0.6933674000000002,
+        "usage": {
+          "input_tokens": 8,
+          "cache_creation_input_tokens": 3464,
+          "cache_read_input_tokens": 248011,
+          "output_tokens": 1603,
+          "output_tokens_details": {
+            "thinking_tokens": 745
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 3464,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 786,
+              "cache_read_input_tokens": 63288,
+              "cache_creation_input_tokens": 1357,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 1357
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        }
+      },
+      {
+        "turn": 13,
+        "elapsed_s": 215.567,
+        "subtype": "success",
+        "total_cost_usd": 0.7690210000000002,
+        "usage": {
+          "input_tokens": 8,
+          "cache_creation_input_tokens": 3104,
+          "cache_read_input_tokens": 263358,
+          "output_tokens": 1055,
+          "output_tokens_details": {
+            "thinking_tokens": 208
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 3104,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 374,
+              "cache_read_input_tokens": 67173,
+              "cache_creation_input_tokens": 576,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 576
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        }
+      },
+      {
+        "turn": 14,
+        "elapsed_s": 223.72,
+        "subtype": "success",
+        "total_cost_usd": 0.8062712000000001,
+        "usage": {
+          "input_tokens": 4,
+          "cache_creation_input_tokens": 1039,
+          "cache_read_input_tokens": 135981,
+          "output_tokens": 589,
+          "output_tokens_details": {
+            "thinking_tokens": 172
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 1039,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 322,
+              "cache_read_input_tokens": 68232,
+              "cache_creation_input_tokens": 556,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 556
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        }
+      },
+      {
+        "turn": 15,
+        "elapsed_s": 233.232,
+        "subtype": "success",
+        "total_cost_usd": 0.8452620000000001,
+        "usage": {
+          "input_tokens": 4,
+          "cache_creation_input_tokens": 737,
+          "cache_read_input_tokens": 138024,
+          "output_tokens": 843,
+          "output_tokens_details": {
+            "thinking_tokens": 60
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 737,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 676,
+              "cache_read_input_tokens": 69236,
+              "cache_creation_input_tokens": 289,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 289
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        }
+      },
+      {
+        "turn": 16,
+        "elapsed_s": 234.722,
+        "subtype": "success",
+        "total_cost_usd": 0.8623810000000001,
+        "usage": {
+          "input_tokens": 2,
+          "cache_creation_input_tokens": 785,
+          "cache_read_input_tokens": 69525,
+          "output_tokens": 7,
+          "output_tokens_details": {
+            "thinking_tokens": 0
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 785,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 7,
+              "cache_read_input_tokens": 69525,
+              "cache_creation_input_tokens": 785,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 785
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        }
+      }
+    ]
+  },
+  "destination_session": {
+    "turns": 1,
+    "turn_marks": [
+      {
+        "turn": 0,
+        "elapsed_s": 54.301,
+        "subtype": "success",
+        "total_cost_usd": 0.1627144,
+        "usage": {
+          "input_tokens": 14,
+          "cache_creation_input_tokens": 18584,
+          "cache_read_input_tokens": 256302,
+          "output_tokens": 3709,
+          "output_tokens_details": {
+            "thinking_tokens": 1814
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 18584,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 669,
+              "cache_read_input_tokens": 41332,
+              "cache_creation_input_tokens": 613,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 613
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        }
+      }
+    ]
+  },
+  "repo_provenance": {
+    "git_head": "51b96cb5fd03e1bcba9e4c5a5140727ddbe8055c",
+    "git_branch": "fix/tokenburn-retention-specificity",
+    "working_tree_changes": 0,
+    "working_tree_change_lines": [],
+    "run_output_excluded": [
+      "?? bench/results/v0.1.2-requal/"
+    ],
+    "working_tree_clean": true,
+    "captured_at_trial_start": true
+  },
+  "arm_order_index": 1,
+  "arm_order": [
+    "baseline",
+    "velra"
+  ],
+  "transition_lifecycle": {
+    "transition": "new_session",
+    "restore_before_turn_index": null,
+    "restore_while_source_session_live": false,
+    "source_turns_total": 17,
+    "clear_turn_index": null,
+    "destination_is_a_new_process": true,
+    "continuation_prompt_identical_on_both_arms": true
+  },
+  "old_transcript_replayed": false,
+  "transcript_source": "C:\\Users\\aryan\\.claude\\projects\\C--Users-aryan-AppData-Local-Temp-velra-tokenburn-fixtures-A-cold-continuation-q1-velra\\d6a12f6a-791d-4130-91cb-83c6059ef566.jsonl",
+  "manifest": {
+    "fixture_head": "c14b88ca6d261d82b9583a58c3bf3cd1a648ed58",
+    "benchmark": "A_cold_continuation",
+    "title": "Cold-continuation token-burn trap",
+    "transition": "new_session",
+    "repo": "C:\\Users\\aryan\\AppData\\Local\\Temp\\velra-tokenburn-fixtures\\A_cold_continuation-q1-velra",
+    "turn_count": 17,
+    "transition_index": 16,
+    "continuation_prompt": "Continue where we left off and finish the task. Do not ask me what it was.",
+    "turn_script_hash": "e84715336b0762fc",
+    "fixture_seed": "f6233e55efb918ca",
+    "leak_terms": [
+      "outside the loop",
+      "before the loop",
+      "once per request",
+      "hoist",
+      "move the key",
+      "compute the key once",
+      "pure function of the request",
+      "no process-wide state",
+      "process-wide state",
+      "incident last quarter",
+      "memoise",
+      "memoize",
+      "module-level dict",
+      "_memo",
+      "the active task",
+      "currently working on",
+      "next action"
+    ],
+    "capsule_markers": [
+      "src/payments/retry.py",
+      "test_retry_preserves_idempotency_key",
+      "retry_backoff"
+    ],
+    "capsule_token_ceiling": 800,
+    "ladder": [
+      100000,
+      250000,
+      500000,
+      700000,
+      800000,
+      900000
+    ],
+    "state_recovery": {
+      "current_task": [
+        "test_retry_preserves_idempotency_key",
+        "idempotency key",
+        "retry"
+      ],
+      "active_failure": [
+        "test_retry_preserves_idempotency_key",
+        "idempotency"
+      ],
+      "relevant_files": [
+        "src/payments/retry.py",
+        "src/payments/idempotency.py"
+      ],
+      "next_action": [
+        "retry_backoff",
+        "src/payments/retry.py"
+      ]
+    },
+    "first_correct_action": {
+      "tools": [
+        "Read",
+        "Edit",
+        "Write",
+        "MultiEdit",
+        "Grep"
+      ],
+      "target_contains": [
+        "src/payments/retry.py"
+      ],
+      "must_not_precede": [
+        "src/payments/ledger.py",
+        "src/payments/reconcile.py"
+      ]
+    },
+    "final_correctness": {
+      "target_test_must_pass": true,
+      "max_suite_failures": 2,
+      "required_final_state": [
+        {
+          "file": "src/payments/retry.py",
+          "must_not_contain": [
+            "_memo",
+            "setdefault",
+            "global "
+          ]
+        }
+      ]
+    },
+    "invariant": {
+      "must_hold_in_file": "src/payments/retry.py",
+      "must_not_contain": [
+        "_memo",
+        "setdefault",
+        "global "
+      ]
+    },
+    "dead_end": {
+      "must_not_edit": [
+        "src/payments/ledger.py",
+        "src/payments/reconcile.py"
+      ],
+      "description": "the module-level memo in retry.py, tried at turn 8 and reverted at turn 9 without a commit"
+    },
+    "target_test": "tests/test_retry.py::test_retry_preserves_idempotency_key",
+    "ground_truth": {
+      "as_generated": {
+        "suite_exit": 1,
+        "suite_failures": 3,
+        "expected_suite_failures": 3,
+        "target": "tests/test_retry.py::test_retry_preserves_idempotency_key",
+        "expect_target": "fail",
+        "observed_target": "fail",
+        "observed_invariant": true
+      },
+      "true_fix": {
+        "expect_target": "pass",
+        "observed_target": "pass",
+        "expect_invariant": true,
+        "observed_invariant": true
+      },
+      "dead_end": {
+        "expect_target": "pass",
+        "observed_target": "pass",
+        "expect_invariant": false,
+        "observed_invariant": false
+      }
+    },
+    "leak_scan": {
+      "clean": true,
+      "terms": [
+        "outside the loop",
+        "before the loop",
+        "once per request",
+        "hoist",
+        "move the key",
+        "compute the key once",
+        "pure function of the request",
+        "no process-wide state",
+        "process-wide state",
+        "incident last quarter",
+        "memoise",
+        "memoize",
+        "module-level dict",
+        "_memo",
+        "the active task",
+        "currently working on",
+        "next action"
+      ],
+      "surfaces_scanned": [
+        "tree",
+        "filenames",
+        "git_history",
+        "git_refs",
+        "claude_md",
+        "project_memory",
+        "auto_memory",
+        "environment",
+        "post_prompt",
+        "pre_prompts"
+      ],
+      "auto_memory_dir": "C:\\Users\\aryan\\.claude\\projects\\C--Users-aryan-AppData-Local-Temp-velra-tokenburn-fixtures-A-cold-continuation-q1-velra\\memory",
+      "fatal_surfaces": [
+        "tree",
+        "filenames",
+        "git_history",
+        "git_refs",
+        "claude_md",
+        "project_memory",
+        "auto_memory",
+        "environment",
+        "post_prompt"
+      ],
+      "hits_by_surface": {
+        "pre_prompts": 6
+      },
+      "fatal_hits": [],
+      "hits": [
+        {
+          "surface": "pre_prompts",
+          "where": "turn 4",
+          "term": "pure function of the request",
+          "context": "he part that matters: whatever we do, the key has to stay a pure function of the request. No process-wide state. We had an incident last quarter fro"
+        },
+        {
+          "surface": "pre_prompts",
+          "where": "turn 4",
+          "term": "no process-wide state",
+          "context": "we do, the key has to stay a pure function of the request. No process-wide state. We had an incident last quarter from exactly that."
+        },
+        {
+          "surface": "pre_prompts",
+          "where": "turn 4",
+          "term": "process-wide state",
+          "context": "do, the key has to stay a pure function of the request. No process-wide state. We had an incident last quarter from exactly that."
+        },
+        {
+          "surface": "pre_prompts",
+          "where": "turn 4",
+          "term": "incident last quarter",
+          "context": "e function of the request. No process-wide state. We had an incident last quarter from exactly that."
+        },
+        {
+          "surface": "pre_prompts",
+          "where": "turn 8",
+          "term": "module-level dict",
+          "context": "Try memoising the key in a module-level dict in retry.py and re-run the retry tests."
+        },
+        {
+          "surface": "pre_prompts",
+          "where": "turn 9",
+          "term": "process-wide state",
+          "context": "That passes, but it's the process-wide state I told you to avoid. Revert it with git restore and confirm"
+        }
+      ],
+      "n_hits": 6
+    }
+  },
+  "leak_scan": {
+    "clean": true,
+    "terms": [
+      "outside the loop",
+      "before the loop",
+      "once per request",
+      "hoist",
+      "move the key",
+      "compute the key once",
+      "pure function of the request",
+      "no process-wide state",
+      "process-wide state",
+      "incident last quarter",
+      "memoise",
+      "memoize",
+      "module-level dict",
+      "_memo",
+      "the active task",
+      "currently working on",
+      "next action"
+    ],
+    "surfaces_scanned": [
+      "tree",
+      "filenames",
+      "git_history",
+      "git_refs",
+      "claude_md",
+      "project_memory",
+      "auto_memory",
+      "environment",
+      "post_prompt",
+      "pre_prompts"
+    ],
+    "auto_memory_dir": "C:\\Users\\aryan\\.claude\\projects\\C--Users-aryan-AppData-Local-Temp-velra-tokenburn-fixtures-A-cold-continuation-q1-velra\\memory",
+    "fatal_surfaces": [
+      "tree",
+      "filenames",
+      "git_history",
+      "git_refs",
+      "claude_md",
+      "project_memory",
+      "auto_memory",
+      "environment",
+      "post_prompt"
+    ],
+    "hits_by_surface": {
+      "pre_prompts": 6
+    },
+    "fatal_hits": [],
+    "hits": [
+      {
+        "surface": "pre_prompts",
+        "where": "turn 4",
+        "term": "pure function of the request",
+        "context": "he part that matters: whatever we do, the key has to stay a pure function of the request. No process-wide state. We had an incident last quarter fro"
+      },
+      {
+        "surface": "pre_prompts",
+        "where": "turn 4",
+        "term": "no process-wide state",
+        "context": "we do, the key has to stay a pure function of the request. No process-wide state. We had an incident last quarter from exactly that."
+      },
+      {
+        "surface": "pre_prompts",
+        "where": "turn 4",
+        "term": "process-wide state",
+        "context": "do, the key has to stay a pure function of the request. No process-wide state. We had an incident last quarter from exactly that."
+      },
+      {
+        "surface": "pre_prompts",
+        "where": "turn 4",
+        "term": "incident last quarter",
+        "context": "e function of the request. No process-wide state. We had an incident last quarter from exactly that."
+      },
+      {
+        "surface": "pre_prompts",
+        "where": "turn 8",
+        "term": "module-level dict",
+        "context": "Try memoising the key in a module-level dict in retry.py and re-run the retry tests."
+      },
+      {
+        "surface": "pre_prompts",
+        "where": "turn 9",
+        "term": "process-wide state",
+        "context": "That passes, but it's the process-wide state I told you to avoid. Revert it with git restore and confirm"
+      }
+    ],
+    "n_hits": 6
+  },
+  "context_fixture": {
+    "kind": "synthetic_load_fixture",
+    "fixture_version": 1,
+    "scenario": "A_cold_continuation",
+    "seed": 0,
+    "seed_string": "A_cold_continuation|250000|1|0",
+    "target_context_size": 250000,
+    "synthetic_context_size": 250728,
+    "token_basis": "estimated",
+    "chars_per_token_assumed": 3.6,
+    "chars": 902619,
+    "bytes_on_disk": 902619,
+    "files": [
+      {
+        "path": "build-01.log",
+        "chars": 306722,
+        "blocks": 396,
+        "sha256": "3fecfc080dea703b947556d1a11f4701"
+      },
+      {
+        "path": "test-01.log",
+        "chars": 234804,
+        "blocks": 332,
+        "sha256": "04d50ea8095fd8257a76d6312aa495b1"
+      },
+      {
+        "path": "build-02.log",
+        "chars": 216666,
+        "blocks": 286,
+        "sha256": "b765f392d1bb9905dc4c5da1f9b44f56"
+      },
+      {
+        "path": "test-02.log",
+        "chars": 144427,
+        "blocks": 204,
+        "sha256": "bc22f117002ffb45b04a74fad87f48ec"
+      }
+    ],
+    "context_generation_method": "programmatic synthetic build/test logs, read by the session as part of its turn script",
+    "reason_if_target_not_reached": null,
+    "actual_observed_context_size": null,
+    "warning": "synthetic_context_size is an ESTIMATE of a generated file's size at a declared chars-per-token ratio. It is NOT an observation of a Claude session's context and must never be reported as one.",
+    "verification": {
+      "ok": true,
+      "problems": [],
+      "measured_chars": 902619,
+      "declared_chars": 902619,
+      "target_chars": 900000,
+      "shortfall_fraction": -0.00291
+    }
+  },
+  "fixture": "C:\\Users\\aryan\\AppData\\Local\\Temp\\velra-tokenburn-fixtures\\A_cold_continuation-q1-velra",
+  "velra_home": "C:\\Users\\aryan\\Videos\\Velra\\bench\\results\\v0.1.2-requal\\trials\\A_cold_continuation-q1-velra\\velra_home",
+  "claude_binary": "C:\\Users\\aryan\\.vscode\\extensions\\anthropic.claude-code-2.1.280-win32-x64\\resources\\native-binary\\claude.exe",
+  "claude_version": "2.1.280 (Claude Code)",
+  "velra_binary": "C:\\Users\\aryan\\Videos\\Velra\\target\\release\\velra.exe",
+  "wall_seconds": 289.857,
+  "stderr": "",
+  "preregistration_id": "velra-tokenburn",
+  "preregistration_version": "1.1.0",
+  "preregistration_sha256": "c13150b6da58a0861a6319986b7a18c0e0d3659c043adba8ac44c6af326ffcd2"
+}

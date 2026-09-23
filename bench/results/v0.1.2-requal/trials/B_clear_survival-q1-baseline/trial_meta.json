@@ -1,0 +1,1245 @@
+{
+  "scenario": "B_clear_survival",
+  "arm": "baseline",
+  "replicate": 1,
+  "pair_id": "B_clear_survival#q1",
+  "pair_key": {
+    "benchmark": "B_clear_survival",
+    "scenario": "B_clear_survival",
+    "pair_id": "B_clear_survival#q1",
+    "fixture_seed": "a070849ef9ae109d",
+    "model": "sonnet",
+    "claude_version": "2.1.280 (Claude Code)",
+    "git_head": "51b96cb5fd03e1bcba9e4c5a5140727ddbe8055c",
+    "turn_script_hash": "8656331d0e9dd957",
+    "permission_mode": "bypassPermissions",
+    "context_ladder_rung": 250000
+  },
+  "auto_memory_disabled": true,
+  "memory_scan_clean": true,
+  "source_handoff_valid": true,
+  "source_handoff_reason": "target FAIL, invariant as generated, worktree as generated",
+  "target_status_at_handoff": "FAIL",
+  "invariant_status_at_handoff": {
+    "holds": false,
+    "expected": false,
+    "matches_expected": true
+  },
+  "invalidation_reason": null,
+  "trial_validity": {
+    "valid": true,
+    "invalidation_reason": null
+  },
+  "memory_isolation": {
+    "controls": {
+      "CLAUDE_CODE_DISABLE_AUTO_MEMORY": "1",
+      "autoMemoryEnabled": false
+    },
+    "setting_applied": {
+      "path": "C:\\Users\\aryan\\.claude\\settings.json",
+      "applied": true,
+      "autoMemoryEnabled": false,
+      "autoMemoryDirectory": null
+    },
+    "effective": {
+      "before_source": {
+        "env": {
+          "CLAUDE_CODE_DISABLE_AUTO_MEMORY": "1",
+          "disables": true
+        },
+        "settings": {
+          "path": "C:\\Users\\aryan\\.claude\\settings.json",
+          "autoMemoryEnabled": false,
+          "disables": true,
+          "autoMemoryDirectory": null
+        },
+        "auto_memory_disabled": true
+      },
+      "before_destination": {
+        "env": {
+          "CLAUDE_CODE_DISABLE_AUTO_MEMORY": "1",
+          "disables": true
+        },
+        "settings": {
+          "path": "C:\\Users\\aryan\\.claude\\settings.json",
+          "autoMemoryEnabled": false,
+          "disables": true,
+          "autoMemoryDirectory": null
+        },
+        "auto_memory_disabled": true
+      }
+    },
+    "memory_dir": "C:\\Users\\aryan\\.claude\\projects\\C--Users-aryan-AppData-Local-Temp-velra-tokenburn-fixtures-B-clear-survival-q1-baseline\\memory",
+    "quarantined_prior_memory": "C:\\Users\\aryan\\Videos\\Velra\\bench\\results\\v0.1.2-requal\\trials\\B_clear_survival-q1-baseline\\memory_quarantine-20260923T175539",
+    "scans": {
+      "before_source": {
+        "path": "C:\\Users\\aryan\\.claude\\projects\\C--Users-aryan-AppData-Local-Temp-velra-tokenburn-fixtures-B-clear-survival-q1-baseline\\memory",
+        "exists": false,
+        "files": [],
+        "term_hits": [],
+        "clean": true
+      },
+      "before_destination": {
+        "path": "C:\\Users\\aryan\\.claude\\projects\\C--Users-aryan-AppData-Local-Temp-velra-tokenburn-fixtures-B-clear-survival-q1-baseline\\memory",
+        "exists": false,
+        "files": [],
+        "term_hits": [],
+        "clean": true
+      },
+      "after_destination": {
+        "path": "C:\\Users\\aryan\\.claude\\projects\\C--Users-aryan-AppData-Local-Temp-velra-tokenburn-fixtures-B-clear-survival-q1-baseline\\memory",
+        "exists": false,
+        "files": [],
+        "term_hits": [],
+        "clean": true
+      }
+    },
+    "settings_restored_after_trial": true,
+    "identical_for_both_arms": true
+  },
+  "source_handoff": {
+    "source_handoff_valid": true,
+    "source_handoff_reason": "target FAIL, invariant as generated, worktree as generated",
+    "target_status_at_handoff": "FAIL",
+    "target_test": "tests/test_reconcile.py::test_march_window_totals",
+    "target_output_tail": [
+      "",
+      "tests\\test_reconcile.py:25: AssertionError",
+      "=========================== short test summary info ===========================",
+      "FAILED tests/test_reconcile.py::test_march_window_totals - assert 0 == 100",
+      "1 failed in 0.04s"
+    ],
+    "invariant_status_at_handoff": {
+      "holds": false,
+      "expected": false,
+      "matches_expected": true
+    },
+    "worktree_violations": [],
+    "validated_at": "pause before the transition turn"
+  },
+  "destination_skipped": false,
+  "model": "sonnet",
+  "session_id": "e14ef789-c5cc-4510-aa1e-067d24a4368f",
+  "source_session_id": "819dd370-77f8-4d40-99d2-0b9a262f50d1",
+  "destination_session_id": "e14ef789-c5cc-4510-aa1e-067d24a4368f",
+  "source_session": {
+    "session_id": "819dd370-77f8-4d40-99d2-0b9a262f50d1",
+    "turns": 17,
+    "transition": "clear",
+    "turn_marks": [
+      {
+        "turn": 0,
+        "elapsed_s": 26.445,
+        "subtype": "success",
+        "total_cost_usd": 0.1400496,
+        "usage": {
+          "input_tokens": 14,
+          "cache_creation_input_tokens": 17564,
+          "cache_read_input_tokens": 250328,
+          "output_tokens": 1970,
+          "output_tokens_details": {
+            "thinking_tokens": 377
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 17564,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 123,
+              "cache_read_input_tokens": 40325,
+              "cache_creation_input_tokens": 600,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 600
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        }
+      },
+      {
+        "turn": 1,
+        "elapsed_s": 30.449,
+        "subtype": "success",
+        "total_cost_usd": 0.1627422,
+        "usage": {
+          "input_tokens": 4,
+          "cache_creation_input_tokens": 782,
+          "cache_read_input_tokens": 82083,
+          "output_tokens": 314,
+          "output_tokens_details": {
+            "thinking_tokens": 0
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 782,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 101,
+              "cache_read_input_tokens": 41158,
+              "cache_creation_input_tokens": 549,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 549
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        }
+      },
+      {
+        "turn": 2,
+        "elapsed_s": 34.075,
+        "subtype": "success",
+        "total_cost_usd": 0.1842996,
+        "usage": {
+          "input_tokens": 4,
+          "cache_creation_input_tokens": 621,
+          "cache_read_input_tokens": 83627,
+          "output_tokens": 234,
+          "output_tokens_details": {
+            "thinking_tokens": 0
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 621,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 128,
+              "cache_read_input_tokens": 41920,
+              "cache_creation_input_tokens": 408,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 408
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        }
+      },
+      {
+        "turn": 3,
+        "elapsed_s": 37.861,
+        "subtype": "success",
+        "total_cost_usd": 0.1978772,
+        "usage": {
+          "input_tokens": 2,
+          "cache_creation_input_tokens": 237,
+          "cache_read_input_tokens": 42328,
+          "output_tokens": 416,
+          "output_tokens_details": {
+            "thinking_tokens": 205
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 237,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 416,
+              "cache_read_input_tokens": 42328,
+              "cache_creation_input_tokens": 237,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 237
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        }
+      },
+      {
+        "turn": 4,
+        "elapsed_s": 40.933,
+        "subtype": "success",
+        "total_cost_usd": 0.2104962,
+        "usage": {
+          "input_tokens": 2,
+          "cache_creation_input_tokens": 568,
+          "cache_read_input_tokens": 42565,
+          "output_tokens": 183,
+          "output_tokens_details": {
+            "thinking_tokens": 0
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 568,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 183,
+              "cache_read_input_tokens": 42565,
+              "cache_creation_input_tokens": 568,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 568
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        }
+      },
+      {
+        "turn": 5,
+        "elapsed_s": 51.045,
+        "subtype": "success",
+        "total_cost_usd": 0.2659774,
+        "usage": {
+          "input_tokens": 4,
+          "cache_creation_input_tokens": 7451,
+          "cache_read_input_tokens": 86546,
+          "output_tokens": 836,
+          "output_tokens_details": {
+            "thinking_tokens": 273
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 7451,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 670,
+              "cache_read_input_tokens": 43413,
+              "cache_creation_input_tokens": 7171,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 7171
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        }
+      },
+      {
+        "turn": 6,
+        "elapsed_s": 55.084,
+        "subtype": "success",
+        "total_cost_usd": 0.293748,
+        "usage": {
+          "input_tokens": 4,
+          "cache_creation_input_tokens": 1359,
+          "cache_read_input_tokens": 101933,
+          "output_tokens": 194,
+          "output_tokens_details": {
+            "thinking_tokens": 0
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 1359,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 36,
+              "cache_read_input_tokens": 51349,
+              "cache_creation_input_tokens": 594,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 594
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        }
+      },
+      {
+        "turn": 7,
+        "elapsed_s": 71.713,
+        "subtype": "success",
+        "total_cost_usd": 0.37206480000000003,
+        "usage": {
+          "input_tokens": 10,
+          "cache_creation_input_tokens": 2760,
+          "cache_read_input_tokens": 264334,
+          "output_tokens": 1439,
+          "output_tokens_details": {
+            "thinking_tokens": 278
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 2760,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 104,
+              "cache_read_input_tokens": 54101,
+              "cache_creation_input_tokens": 602,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 602
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        }
+      },
+      {
+        "turn": 8,
+        "elapsed_s": 101.987,
+        "subtype": "success",
+        "total_cost_usd": 0.43212100000000003,
+        "usage": {
+          "input_tokens": 4,
+          "cache_creation_input_tokens": 2780,
+          "cache_read_input_tokens": 109641,
+          "output_tokens": 2700,
+          "output_tokens_details": {
+            "thinking_tokens": 2192
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 2780,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 578,
+              "cache_read_input_tokens": 54938,
+              "cache_creation_input_tokens": 2545,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 2545
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        }
+      },
+      {
+        "turn": 9,
+        "elapsed_s": 114.152,
+        "subtype": "success",
+        "total_cost_usd": 0.48798460000000005,
+        "usage": {
+          "input_tokens": 6,
+          "cache_creation_input_tokens": 3044,
+          "cache_read_input_tokens": 174878,
+          "output_tokens": 870,
+          "output_tokens_details": {
+            "thinking_tokens": 357
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 3044,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 89,
+              "cache_read_input_tokens": 59230,
+              "cache_creation_input_tokens": 1297,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 1297
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        }
+      },
+      {
+        "turn": 10,
+        "elapsed_s": 122.937,
+        "subtype": "success",
+        "total_cost_usd": 0.5614964,
+        "usage": {
+          "input_tokens": 6,
+          "cache_creation_input_tokens": 7341,
+          "cache_read_input_tokens": 182329,
+          "output_tokens": 767,
+          "output_tokens_details": {
+            "thinking_tokens": 120
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 7341,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 273,
+              "cache_read_input_tokens": 61071,
+              "cache_creation_input_tokens": 6797,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 6797
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        }
+      },
+      {
+        "turn": 11,
+        "elapsed_s": 143.892,
+        "subtype": "success",
+        "total_cost_usd": 0.6326339999999999,
+        "usage": {
+          "input_tokens": 6,
+          "cache_creation_input_tokens": 2912,
+          "cache_read_input_tokens": 204738,
+          "output_tokens": 1853,
+          "output_tokens_details": {
+            "thinking_tokens": 934
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 2912,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 831,
+              "cache_read_input_tokens": 68624,
+              "cache_creation_input_tokens": 2156,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 2156
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        }
+      },
+      {
+        "turn": 12,
+        "elapsed_s": 155.312,
+        "subtype": "success",
+        "total_cost_usd": 0.7153007999999998,
+        "usage": {
+          "input_tokens": 6,
+          "cache_creation_input_tokens": 7407,
+          "cache_read_input_tokens": 214534,
+          "output_tokens": 1012,
+          "output_tokens_details": {
+            "thinking_tokens": 77
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 7407,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 470,
+              "cache_read_input_tokens": 72037,
+              "cache_creation_input_tokens": 6150,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 6150
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        }
+      },
+      {
+        "turn": 13,
+        "elapsed_s": 164.613,
+        "subtype": "success",
+        "total_cost_usd": 0.7613489999999998,
+        "usage": {
+          "input_tokens": 4,
+          "cache_creation_input_tokens": 1444,
+          "cache_read_input_tokens": 156971,
+          "output_tokens": 887,
+          "output_tokens_details": {
+            "thinking_tokens": 336
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 1444,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 677,
+              "cache_read_input_tokens": 78784,
+              "cache_creation_input_tokens": 847,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 847
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        }
+      },
+      {
+        "turn": 14,
+        "elapsed_s": 168.052,
+        "subtype": "success",
+        "total_cost_usd": 0.7999569999999998,
+        "usage": {
+          "input_tokens": 4,
+          "cache_creation_input_tokens": 1118,
+          "cache_read_input_tokens": 160040,
+          "output_tokens": 212,
+          "output_tokens_details": {
+            "thinking_tokens": 0
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 1118,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 61,
+              "cache_read_input_tokens": 80409,
+              "cache_creation_input_tokens": 340,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 340
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        }
+      },
+      {
+        "turn": 15,
+        "elapsed_s": 169.579,
+        "subtype": "success",
+        "total_cost_usd": 0.8172307999999998,
+        "usage": {
+          "input_tokens": 2,
+          "cache_creation_input_tokens": 170,
+          "cache_read_input_tokens": 80749,
+          "output_tokens": 44,
+          "output_tokens_details": {
+            "thinking_tokens": 0
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 170,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 44,
+              "cache_read_input_tokens": 80749,
+              "cache_creation_input_tokens": 170,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 170
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        }
+      },
+      {
+        "turn": 16,
+        "elapsed_s": 170.573,
+        "subtype": "success",
+        "total_cost_usd": 0,
+        "usage": {
+          "output_tokens_details": {
+            "thinking_tokens": 0
+          },
+          "input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "cache_read_input_tokens": 0,
+          "output_tokens": 0,
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "",
+          "iterations": [],
+          "speed": "standard"
+        }
+      }
+    ]
+  },
+  "destination_session": {
+    "turns": 1,
+    "turn_marks": [
+      {
+        "turn": 0,
+        "elapsed_s": 53.299,
+        "subtype": "success",
+        "total_cost_usd": 0.2005504,
+        "usage": {
+          "input_tokens": 16,
+          "cache_creation_input_tokens": 22473,
+          "cache_read_input_tokens": 305882,
+          "output_tokens": 4945,
+          "output_tokens_details": {
+            "thinking_tokens": 2342
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 22473,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 418,
+              "cache_read_input_tokens": 45338,
+              "cache_creation_input_tokens": 496,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 496
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        }
+      }
+    ]
+  },
+  "repo_provenance": {
+    "git_head": "51b96cb5fd03e1bcba9e4c5a5140727ddbe8055c",
+    "git_branch": "fix/tokenburn-retention-specificity",
+    "working_tree_changes": 0,
+    "working_tree_change_lines": [],
+    "run_output_excluded": [
+      "?? bench/results/v0.1.2-requal/"
+    ],
+    "working_tree_clean": true,
+    "captured_at_trial_start": true
+  },
+  "arm_order_index": 0,
+  "arm_order": [
+    "baseline",
+    "velra"
+  ],
+  "transition_lifecycle": {
+    "transition": "clear",
+    "restore_before_turn_index": 16,
+    "restore_while_source_session_live": true,
+    "source_turns_total": 17,
+    "clear_turn_index": 16,
+    "destination_is_a_new_process": true,
+    "continuation_prompt_identical_on_both_arms": true
+  },
+  "old_transcript_replayed": false,
+  "transcript_source": "C:\\Users\\aryan\\.claude\\projects\\C--Users-aryan-AppData-Local-Temp-velra-tokenburn-fixtures-B-clear-survival-q1-baseline\\e14ef789-c5cc-4510-aa1e-067d24a4368f.jsonl",
+  "manifest": {
+    "fixture_head": "1d26879d0ed088cc3dd36bf78dd7360fe0285bc4",
+    "benchmark": "B_clear_survival",
+    "title": "/clear survival",
+    "transition": "clear",
+    "repo": "C:\\Users\\aryan\\AppData\\Local\\Temp\\velra-tokenburn-fixtures\\B_clear_survival-q1-baseline",
+    "turn_count": 17,
+    "transition_index": 16,
+    "continuation_prompt": "Continue the task and fix the bug.",
+    "turn_script_hash": "8656331d0e9dd957",
+    "fixture_seed": "a070849ef9ae109d",
+    "leak_terms": [
+      "booking date, never",
+      "never the value date",
+      "close on the booking",
+      "backdates",
+      "backdated",
+      "upstream backdate",
+      "window has to close on",
+      "booking_date is the one",
+      "widen the window",
+      "widening the window",
+      "_slack",
+      "slack of a day",
+      "timedelta(days=1)",
+      "double-count",
+      "double counts",
+      "the active task",
+      "currently working on",
+      "next action"
+    ],
+    "capsule_markers": [
+      "src/payments/reconcile.py",
+      "test_march_window_totals",
+      "booking",
+      "in_window"
+    ],
+    "capsule_token_ceiling": 800,
+    "ladder": [
+      100000,
+      250000,
+      500000,
+      700000,
+      800000,
+      900000
+    ],
+    "state_recovery": {
+      "current_task": [
+        "reconcile",
+        "test_march_window_totals",
+        "close_window"
+      ],
+      "active_failure": [
+        "test_march_window_totals",
+        "reconcile"
+      ],
+      "relevant_files": [
+        "src/payments/reconcile.py",
+        "src/payments/feed.py"
+      ],
+      "next_action": [
+        "in_window",
+        "src/payments/reconcile.py"
+      ]
+    },
+    "first_correct_action": {
+      "tools": [
+        "Read",
+        "Edit",
+        "Write",
+        "MultiEdit",
+        "Grep"
+      ],
+      "target_contains": [
+        "src/payments/reconcile.py"
+      ],
+      "must_not_precede": [
+        "src/payments/retry.py",
+        "src/payments/ledger.py"
+      ]
+    },
+    "final_correctness": {
+      "target_test_must_pass": true,
+      "max_suite_failures": 2,
+      "required_final_state": [
+        {
+          "file": "src/payments/reconcile.py",
+          "must_contain": [
+            "booking_date"
+          ],
+          "must_not_contain": [
+            "_SLACK",
+            "timedelta(days=1)"
+          ]
+        }
+      ]
+    },
+    "invariant": {
+      "must_hold_in_file": "src/payments/reconcile.py",
+      "must_contain": [
+        "booking_date"
+      ],
+      "must_not_contain": [
+        "_SLACK"
+      ]
+    },
+    "dead_end": {
+      "must_not_edit": [
+        "tests/test_reconcile.py",
+        "src/payments/retry.py"
+      ],
+      "description": "the one-day window slack in reconcile.py, tried at turn 7 and reverted at turn 8 without a commit"
+    },
+    "target_test": "tests/test_reconcile.py::test_march_window_totals",
+    "ground_truth": {
+      "as_generated": {
+        "suite_exit": 1,
+        "suite_failures": 3,
+        "expected_suite_failures": 3,
+        "target": "tests/test_reconcile.py::test_march_window_totals",
+        "expect_target": "fail",
+        "observed_target": "fail",
+        "observed_invariant": false
+      },
+      "true_fix": {
+        "expect_target": "pass",
+        "observed_target": "pass",
+        "expect_invariant": true,
+        "observed_invariant": true
+      },
+      "dead_end": {
+        "expect_target": "pass",
+        "observed_target": "pass",
+        "expect_invariant": false,
+        "observed_invariant": false
+      }
+    },
+    "leak_scan": {
+      "clean": true,
+      "terms": [
+        "booking date, never",
+        "never the value date",
+        "close on the booking",
+        "backdates",
+        "backdated",
+        "upstream backdate",
+        "window has to close on",
+        "booking_date is the one",
+        "widen the window",
+        "widening the window",
+        "_slack",
+        "slack of a day",
+        "timedelta(days=1)",
+        "double-count",
+        "double counts",
+        "the active task",
+        "currently working on",
+        "next action"
+      ],
+      "surfaces_scanned": [
+        "tree",
+        "filenames",
+        "git_history",
+        "git_refs",
+        "claude_md",
+        "project_memory",
+        "auto_memory",
+        "environment",
+        "post_prompt",
+        "pre_prompts"
+      ],
+      "auto_memory_dir": "C:\\Users\\aryan\\.claude\\projects\\C--Users-aryan-AppData-Local-Temp-velra-tokenburn-fixtures-B-clear-survival-q1-baseline\\memory",
+      "fatal_surfaces": [
+        "tree",
+        "filenames",
+        "git_history",
+        "git_refs",
+        "claude_md",
+        "project_memory",
+        "auto_memory",
+        "environment",
+        "post_prompt"
+      ],
+      "hits_by_surface": {
+        "pre_prompts": 7
+      },
+      "fatal_hits": [],
+      "hits": [
+        {
+          "surface": "pre_prompts",
+          "where": "turn 4",
+          "term": "booking date, never",
+          "context": ": the upstream feed backdates. A window has to close on the booking date, never the value date. Operations confirmed that on the call this"
+        },
+        {
+          "surface": "pre_prompts",
+          "where": "turn 4",
+          "term": "never the value date",
+          "context": "feed backdates. A window has to close on the booking date, never the value date. Operations confirmed that on the call this morning; it isn"
+        },
+        {
+          "surface": "pre_prompts",
+          "where": "turn 4",
+          "term": "close on the booking",
+          "context": "from the code: the upstream feed backdates. A window has to close on the booking date, never the value date. Operations confirmed that on th"
+        },
+        {
+          "surface": "pre_prompts",
+          "where": "turn 4",
+          "term": "backdates",
+          "context": "'s the thing you can't get from the code: the upstream feed backdates. A window has to close on the booking date, never the value"
+        },
+        {
+          "surface": "pre_prompts",
+          "where": "turn 4",
+          "term": "window has to close on",
+          "context": "you can't get from the code: the upstream feed backdates. A window has to close on the booking date, never the value date. Operations confirme"
+        },
+        {
+          "surface": "pre_prompts",
+          "where": "turn 7",
+          "term": "widening the window",
+          "context": "Try widening the window by a day on each side in reconcile.py and re-run the reconc"
+        },
+        {
+          "surface": "pre_prompts",
+          "where": "turn 8",
+          "term": "double-count",
+          "context": "Green, but wrong \u2014 that double-counts every row the adjacent window also claims. Revert it with"
+        }
+      ],
+      "n_hits": 7
+    }
+  },
+  "leak_scan": {
+    "clean": true,
+    "terms": [
+      "booking date, never",
+      "never the value date",
+      "close on the booking",
+      "backdates",
+      "backdated",
+      "upstream backdate",
+      "window has to close on",
+      "booking_date is the one",
+      "widen the window",
+      "widening the window",
+      "_slack",
+      "slack of a day",
+      "timedelta(days=1)",
+      "double-count",
+      "double counts",
+      "the active task",
+      "currently working on",
+      "next action"
+    ],
+    "surfaces_scanned": [
+      "tree",
+      "filenames",
+      "git_history",
+      "git_refs",
+      "claude_md",
+      "project_memory",
+      "auto_memory",
+      "environment",
+      "post_prompt",
+      "pre_prompts"
+    ],
+    "auto_memory_dir": "C:\\Users\\aryan\\.claude\\projects\\C--Users-aryan-AppData-Local-Temp-velra-tokenburn-fixtures-B-clear-survival-q1-baseline\\memory",
+    "fatal_surfaces": [
+      "tree",
+      "filenames",
+      "git_history",
+      "git_refs",
+      "claude_md",
+      "project_memory",
+      "auto_memory",
+      "environment",
+      "post_prompt"
+    ],
+    "hits_by_surface": {
+      "pre_prompts": 7
+    },
+    "fatal_hits": [],
+    "hits": [
+      {
+        "surface": "pre_prompts",
+        "where": "turn 4",
+        "term": "booking date, never",
+        "context": ": the upstream feed backdates. A window has to close on the booking date, never the value date. Operations confirmed that on the call this"
+      },
+      {
+        "surface": "pre_prompts",
+        "where": "turn 4",
+        "term": "never the value date",
+        "context": "feed backdates. A window has to close on the booking date, never the value date. Operations confirmed that on the call this morning; it isn"
+      },
+      {
+        "surface": "pre_prompts",
+        "where": "turn 4",
+        "term": "close on the booking",
+        "context": "from the code: the upstream feed backdates. A window has to close on the booking date, never the value date. Operations confirmed that on th"
+      },
+      {
+        "surface": "pre_prompts",
+        "where": "turn 4",
+        "term": "backdates",
+        "context": "'s the thing you can't get from the code: the upstream feed backdates. A window has to close on the booking date, never the value"
+      },
+      {
+        "surface": "pre_prompts",
+        "where": "turn 4",
+        "term": "window has to close on",
+        "context": "you can't get from the code: the upstream feed backdates. A window has to close on the booking date, never the value date. Operations confirme"
+      },
+      {
+        "surface": "pre_prompts",
+        "where": "turn 7",
+        "term": "widening the window",
+        "context": "Try widening the window by a day on each side in reconcile.py and re-run the reconc"
+      },
+      {
+        "surface": "pre_prompts",
+        "where": "turn 8",
+        "term": "double-count",
+        "context": "Green, but wrong \u2014 that double-counts every row the adjacent window also claims. Revert it with"
+      }
+    ],
+    "n_hits": 7
+  },
+  "context_fixture": {
+    "kind": "synthetic_load_fixture",
+    "fixture_version": 1,
+    "scenario": "B_clear_survival",
+    "seed": 0,
+    "seed_string": "B_clear_survival|250000|1|0",
+    "target_context_size": 250000,
+    "synthetic_context_size": 250571,
+    "token_basis": "estimated",
+    "chars_per_token_assumed": 3.6,
+    "chars": 902056,
+    "bytes_on_disk": 902056,
+    "files": [
+      {
+        "path": "build-01.log",
+        "chars": 306487,
+        "blocks": 396,
+        "sha256": "301340da0f7c18c8eaa7e5242661e14a"
+      },
+      {
+        "path": "test-01.log",
+        "chars": 234920,
+        "blocks": 332,
+        "sha256": "9c732ab5794d851924be3db6864c061e"
+      },
+      {
+        "path": "build-02.log",
+        "chars": 216515,
+        "blocks": 280,
+        "sha256": "9104c2612f5a9cc490817ef8f2c5512e"
+      },
+      {
+        "path": "test-02.log",
+        "chars": 144134,
+        "blocks": 206,
+        "sha256": "14e98785b3f2cef27a31458903c6b564"
+      }
+    ],
+    "context_generation_method": "programmatic synthetic build/test logs, read by the session as part of its turn script",
+    "reason_if_target_not_reached": null,
+    "actual_observed_context_size": null,
+    "warning": "synthetic_context_size is an ESTIMATE of a generated file's size at a declared chars-per-token ratio. It is NOT an observation of a Claude session's context and must never be reported as one.",
+    "verification": {
+      "ok": true,
+      "problems": [],
+      "measured_chars": 902056,
+      "declared_chars": 902056,
+      "target_chars": 900000,
+      "shortfall_fraction": -0.002284
+    }
+  },
+  "fixture": "C:\\Users\\aryan\\AppData\\Local\\Temp\\velra-tokenburn-fixtures\\B_clear_survival-q1-baseline",
+  "velra_home": "C:\\Users\\aryan\\Videos\\Velra\\bench\\results\\v0.1.2-requal\\trials\\B_clear_survival-q1-baseline\\velra_home",
+  "claude_binary": "C:\\Users\\aryan\\.vscode\\extensions\\anthropic.claude-code-2.1.280-win32-x64\\resources\\native-binary\\claude.exe",
+  "claude_version": "2.1.280 (Claude Code)",
+  "velra_binary": "C:\\Users\\aryan\\Videos\\Velra\\target\\release\\velra.exe",
+  "wall_seconds": 225.041,
+  "stderr": "",
+  "preregistration_id": "velra-tokenburn",
+  "preregistration_version": "1.1.0",
+  "preregistration_sha256": "c13150b6da58a0861a6319986b7a18c0e0d3659c043adba8ac44c6af326ffcd2"
+}

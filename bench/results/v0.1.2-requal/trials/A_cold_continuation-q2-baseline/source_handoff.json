@@ -1,0 +1,20 @@
+{
+  "source_handoff_valid": true,
+  "source_handoff_reason": "target FAIL, invariant as generated, worktree as generated",
+  "target_status_at_handoff": "FAIL",
+  "target_test": "tests/test_retry.py::test_retry_preserves_idempotency_key",
+  "target_output_tail": [
+    "",
+    "tests\\test_retry.py:34: AssertionError",
+    "=========================== short test summary info ===========================",
+    "FAILED tests/test_retry.py::test_retry_preserves_idempotency_key - AssertionE...",
+    "1 failed in 0.04s"
+  ],
+  "invariant_status_at_handoff": {
+    "holds": true,
+    "expected": true,
+    "matches_expected": true
+  },
+  "worktree_violations": [],
+  "validated_at": "after the source session ended"
+}
