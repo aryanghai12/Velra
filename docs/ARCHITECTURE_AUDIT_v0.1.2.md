@@ -1,5 +1,9 @@
 # Architecture audit — Velra as it stands before the v0.1.2 ledger work
 
+> **Historical audit** of Velra before the v0.1.2 ledger and restore work,
+> kept for the decisions that cite it. For the current architecture see
+> [ARCHITECTURE.md](ARCHITECTURE.md).
+
 Written from the code and the recorded artifacts, not from the README. Every
 claim below names the file it was read out of. Nothing here is aspirational.
 

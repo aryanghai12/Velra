@@ -31,6 +31,8 @@ Raw captures (`stream.jsonl`, `source_stream.jsonl`, `transcript.jsonl`,
 account context Claude Code injects into every session, and all of them embed
 local paths. [`raw_captures.sha256.json`](v0.1.2-requal/raw_captures.sha256.json)
 lists each by size and SHA-256, so they can be verified if they are shared.
+The tracked derived files are kept byte for byte as the run wrote them, which
+includes the run machine's absolute paths (fixture and settings locations).
 
 ## Historical — not part of the current release evidence
 

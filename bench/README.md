@@ -5,7 +5,7 @@ archive that is kept working and kept out of the scorecard.
 
 | | What it answers | Runner | Results |
 |---|---|---|---|
-| **v0.1.2 Token-Burn** | Does leaving a large conversation behind and restoring a bounded capsule into a fresh session cost less input — and still do the work correctly? | `bench/tokenburn/run.py` | `--results-root <PATH>` (frozen v0.1.2 qualification: `bench/results/v0.1.2/`) |
+| **v0.1.2 Token-Burn** | Does leaving a large conversation behind and restoring a bounded capsule into a fresh session cost less input — and still do the work correctly? | `bench/tokenburn/run.py` | `--results-root <PATH>`. **Current evidence: [`results/v0.1.2-requal/`](results/v0.1.2-requal/)** (preregistration 1.1.0), written up in [`docs/BENCHMARK.md`](../docs/BENCHMARK.md). Invalidated 1.0.0 run: `results/v0.1.2/tokenburn/` |
 | **archive** (v0.1, v0.1.1, v0.1.2-hardened) | Historical. Did the capsule change what the agent did *after compaction*? | `bench/legacy/` | `bench/results/` |
 
 The archive is described in [`legacy/README.md`](legacy/README.md). Nothing in
@@ -37,8 +37,14 @@ Two benchmarks, one fixture:
 
 | | Transition | The question |
 |---|---|---|
-| `A_cold_continuation` | end the session, start a new one | Does a large native continuation cost more input than a fresh session plus a bounded capsule? |
+| `A_cold_continuation` | end the session, start a new one | Does a fresh session plus a bounded capsule continue the work correctly, and at what input cost, against a fresh native session? |
 | `B_clear_survival` | `/clear` | After `/clear`, what does a fresh native session have to spend to get back to where the work was? |
+
+In both benchmarks **both arms' destinations are brand-new sessions**; the
+baseline is never `--continue`/`--resume` of the source (DECISIONS D68). The
+comparison is therefore fresh-native against fresh-plus-capsule. It does not
+measure the cost of resuming the large conversation itself, whatever older
+prose (including the preregistration's description of Baseline A) says.
 
 The fixture is a small payments service with **three genuinely failing tests**.
 Nothing in the tree says which one the developer was working on, which approach
@@ -77,10 +83,16 @@ A run writes everything it owns — `trials/`, `readiness.json`,
 `run_state.json`, `aggregate.json`, `verdicts.json`, `report.md`,
 `settings-backup/`, `quarantine/` — under its `--results-root`, and aggregates
 only that root's trials. Relative roots resolve against the current directory.
-`bench/results/v0.1.2/` is the frozen qualification evidence (7a09e65, tag
-`tokenburn-qualification-v0.1.2`): the runner refuses to write there, or to
-any root inside or containing it, and `--dry-run`/`--live` without a
-`--results-root` would write there, so they refuse too.
+Two roots are frozen evidence, and the runner refuses to write into either,
+or into any root inside or containing them:
+
+* `bench/results/v0.1.2-requal/`: the **current** requalification under
+  preregistration 1.1.0 (frozen in 54a7b8f);
+* `bench/results/v0.1.2/`: the invalidated 1.0.0 qualification (7a09e65, tag
+  `tokenburn-qualification-v0.1.2`), kept for the record.
+
+`--dry-run`/`--live` without a `--results-root` would write into the old
+layout, so they refuse too.
 
 `--resume`, `--only`, `--pairs` and `--force` make a partial run restartable
 without overwriting anything: a re-run quarantines the old trial rather than
@@ -154,10 +166,12 @@ Two stages, registered in `preregistration_tokenburn.json`:
 * **formal** — 4 matched pairs per benchmark, after the scenario is frozen.
   8 pairs, 16 trials.
 
-Few and brutal rather than many and weak: the hypothesis is that continuing a
-500K-token conversation costs an order of magnitude more input than a fresh
-session plus an 800-token capsule. An effect that size is visible in four pairs
-or it is not there. The registered materiality threshold is 25%.
+Few and brutal rather than many and weak: an effect worth claiming is visible
+in four pairs or it is not there. The registered materiality threshold is 25%.
+
+Only the qualification stage has been run under preregistration 1.1.0
+(`results/v0.1.2-requal/`: 4 pairs, 8 trials, all valid). The formal stage has
+not.
 
 ---
 
@@ -190,7 +204,7 @@ check, named as such in the release checklist.
 ```bash
 python -m pytest bench/tests -q            # both systems, ~4 s without --slow
 python -m pytest bench/tests -q -m slow    # fixture builds and the 900K rung
-python bench/tokenburn/selftest.py         # the 18 scripted cases
+python bench/tokenburn/selftest.py         # the 23 scripted cases
 python bench/harness/selftest.py           # the archive's pipeline
 python bench/tokenburn/smoke.py            # restore → SessionStart, offline
 ```
@@ -198,7 +212,9 @@ python bench/tokenburn/smoke.py            # restore → SessionStart, offline
 ## Reading the results
 
 Do not trust a verdict on its own. Every number is recomputable from the raw
-captures:
+captures. Frozen roots (`results/v0.1.2/`, `results/v0.1.2-requal/`) refuse to
+be written, so copy one to a new directory first; the raw captures are not in
+git, and `raw_captures.sha256.json` lists what they must hash to:
 
 ```bash
 python bench/tokenburn/parse.py --trial <trial-dir>

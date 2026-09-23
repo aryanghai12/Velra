@@ -9,7 +9,7 @@
 class Velra < Formula
   desc "Local-first session continuity for Claude Code"
   homepage "https://github.com/aryanghai12/Velra"
-  version "0.1.0"
+  version "0.1.2"
   license "MIT"
 
   on_macos do
