@@ -41,9 +41,14 @@
 //! Losing an injected sentence into the objective costs budget; losing the
 //! user's words costs the objective.
 //!
-//! Nothing here changes what is stored in `events`: the raw prompt is kept as
-//! delivered, so `velra inspect --trace` still finds an injected string at the
-//! source and can say why it went no further.
+//! A complete element must be judged on the prompt as delivered, never on a
+//! cut or redacted copy of it: either operation can remove a closing tag and
+//! turn context into the user's words. The hook therefore stores the prompt
+//! through [`for_storage`], which splits first and spends the byte budget on
+//! the user's text before any injected block, keeping blocks only whole. When
+//! the prompt fits, what is stored is the prompt as delivered with its parts
+//! redacted in place, so `velra inspect --trace` still finds an injected string
+//! in the log and can say why it went no further.
 
 /// Who generated an injected block.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -115,7 +120,20 @@ pub struct PromptParts<'a> {
     pub authored: &'a str,
     /// Injected blocks, leading ones first (in order), then trailing ones.
     pub injected: Vec<Injected<'a>>,
+    /// Text past [`MAX_EDGE_BLOCKS`] injected blocks at one edge, which was
+    /// not classified; `authored` is then empty. See [`split`].
+    pub unparsed: Option<&'a str>,
 }
+
+/// Injected blocks peeled from one edge of a prompt before [`split`] stops.
+///
+/// Peeling is linear, but its cost per block is not zero, and the hook splits
+/// the whole delivered prompt (up to its 64 MiB stdin cap) under a 250 ms
+/// watchdog. Measured on the release build, a 16 MiB prompt of nothing but
+/// `<system-reminder>x</system-reminder>` -- 466,000 blocks -- took the hook
+/// past its deadline, and a watchdog that fires before the event is written
+/// loses the prompt outright. No client sends more than a handful of blocks.
+pub const MAX_EDGE_BLOCKS: usize = 1024;
 
 fn is_name_start(c: u8) -> bool {
     c.is_ascii_alphabetic()
@@ -129,6 +147,93 @@ fn is_name_char(c: u8) -> bool {
 /// is short; anything longer is prose that happens to contain `<`.
 const MAX_OPEN_TAG: usize = 512;
 
+/// Candidate opening tags [`element_at_end`] examines before giving up. A
+/// trailing element with more same-name openings than this inside it is not a
+/// shape any client sends, and the cap keeps the search linear on a prompt the
+/// hook reads in full (up to its 64 MiB stdin cap) rather than at 4 KiB.
+const MAX_END_CANDIDATES: usize = 64;
+
+/// What follows a tag name up to and including the `>` that ends the opening
+/// tag, as a byte length: attributes separated from the name by whitespace, no
+/// `<`, at most [`MAX_OPEN_TAG`] bytes. `None` when `rest` does not continue an
+/// opening tag.
+///
+/// The search is bounded to the window it can succeed in, so a long run of
+/// text after a lone `<name` costs [`MAX_OPEN_TAG`] bytes, not the prompt.
+fn open_tag_rest(rest: &str) -> Option<usize> {
+    let b = rest.as_bytes();
+    let window = &b[..b.len().min(MAX_OPEN_TAG + 1)];
+    let close_open = window.iter().position(|&c| c == b'>')?;
+    if window[..close_open].contains(&b'<') {
+        return None;
+    }
+    // Attributes must be separated from the name by whitespace.
+    if close_open > 0 && !window[0].is_ascii_whitespace() && window[0] != b'/' {
+        return None;
+    }
+    Some(close_open + 1)
+}
+
+/// Byte offset just past the `</name>` that closes an element whose body
+/// starts at `from`, counting nested openings of the same name.
+///
+/// Without the count, `<r>outer <r>inner</r> tail</r>` ends at the first
+/// `</r>`, and ` tail</r>` -- injected text -- is left standing in the user's
+/// message. An element whose openings and closings never balance is not an
+/// element: it is kept as the user wrote it, like any other malformed block.
+fn matching_close(s: &str, name: &str, from: usize) -> Option<usize> {
+    // Searched for as `<` / `</` followed by the name, without building the
+    // tag strings: this runs once per element, and a prompt can carry
+    // thousands of them.
+    let b = s.as_bytes();
+    let nb = name.as_bytes();
+    let close_at = |from: usize| -> Option<usize> {
+        let mut i = from;
+        while let Some(p) = s[i..].find("</") {
+            let at = i + p;
+            let rest = &b[at + 2..];
+            if rest.starts_with(nb) && rest.get(nb.len()) == Some(&b'>') {
+                return Some(at);
+            }
+            i = at + 2;
+        }
+        None
+    };
+    let close_len = nb.len() + 3;
+    let open_len = nb.len() + 1;
+    let mut depth = 1usize;
+    let mut at = from;
+    loop {
+        let next_close = close_at(at)?;
+        let mut scan = at;
+        while let Some(o) = s[scan..next_close].find('<') {
+            let lt = scan + o;
+            scan = lt + 1;
+            if !b[lt + 1..next_close].starts_with(nb) {
+                continue;
+            }
+            let after = lt + open_len;
+            let boundary = b
+                .get(after)
+                .is_some_and(|c| c.is_ascii_whitespace() || matches!(c, b'>' | b'/'));
+            if boundary {
+                if let Some(len) = open_tag_rest(&s[after..]) {
+                    // `<name/>` opens nothing.
+                    if b[after + len - 2] != b'/' {
+                        depth += 1;
+                    }
+                }
+            }
+            scan = after;
+        }
+        depth -= 1;
+        if depth == 0 {
+            return Some(next_close + close_len);
+        }
+        at = next_close + close_len;
+    }
+}
+
 /// A complete element at the very start of `s` (no leading whitespace):
 /// `(tag name, byte length of the whole element)`.
 fn element_at_start(s: &str) -> Option<(&str, usize)> {
@@ -141,20 +246,8 @@ fn element_at_start(s: &str) -> Option<(&str, usize)> {
         i += 1;
     }
     let name = &s[1..i];
-    // The opening tag ends at the first `>`; it may carry attributes, but not
-    // another `<`, and not more than MAX_OPEN_TAG bytes.
-    let rest = &s[i..];
-    let close_open = rest.find('>')?;
-    if close_open > MAX_OPEN_TAG || rest[..close_open].contains('<') {
-        return None;
-    }
-    // Attributes must be separated from the name by whitespace.
-    if close_open > 0 && !rest.as_bytes()[0].is_ascii_whitespace() && rest.as_bytes()[0] != b'/' {
-        return None;
-    }
-    let body_start = i + close_open + 1;
-    let closing = format!("</{name}>");
-    let end = s[body_start..].find(&closing)? + body_start + closing.len();
+    let body_start = i + open_tag_rest(&s[i..])?;
+    let end = matching_close(s, name, body_start)?;
     Some((name, end))
 }
 
@@ -168,10 +261,13 @@ fn element_at_end(s: &str) -> Option<(&str, usize)> {
     if nb.is_empty() || !is_name_start(nb[0]) || !nb.iter().all(|&c| is_name_char(c)) {
         return None;
     }
-    // The nearest opening tag of the same name before the closing one.
+    // The nearest opening tag of the same name before the closing one whose
+    // element runs exactly to the end.
     let head = &s[..close_start];
+    let open = format!("<{name}");
     let mut search = head.len();
-    while let Some(at) = head[..search].rfind(&format!("<{name}")) {
+    for _ in 0..MAX_END_CANDIDATES {
+        let at = head[..search].rfind(&open)?;
         if let Some((n, len)) = element_at_start(&s[at..]) {
             if n == name && at + len == s.len() {
                 return Some((name, at));
@@ -198,6 +294,9 @@ pub fn split(raw: &str) -> PromptParts<'_> {
         let Some(origin) = origin(tag) else {
             break;
         };
+        if injected.len() == MAX_EDGE_BLOCKS {
+            return capped(raw, start, end, injected);
+        }
         injected.push(Injected {
             tag,
             origin,
@@ -216,6 +315,11 @@ pub fn split(raw: &str) -> PromptParts<'_> {
         let Some(origin) = origin(tag) else {
             break;
         };
+        if trailing.len() == MAX_EDGE_BLOCKS {
+            trailing.reverse();
+            injected.extend(trailing);
+            return capped(raw, start, end, injected);
+        }
         trailing.push(Injected {
             tag,
             origin,
@@ -228,12 +332,885 @@ pub fn split(raw: &str) -> PromptParts<'_> {
     PromptParts {
         authored: raw[start..end].trim(),
         injected,
+        unparsed: None,
+    }
+}
+
+/// The split of a prompt with more than [`MAX_EDGE_BLOCKS`] injected blocks
+/// at one edge: what lies between the blocks peeled so far is not
+/// classified, and is not the user's text.
+///
+/// That is the conservative direction. Classifying the rest would take the
+/// hook past its deadline; calling it the user's text would promote every
+/// block left in it to the user's words (the rule in the module docs). No
+/// client sends such a prompt, and the event records what was not classified
+/// (`Payload::prompt_omitted`) rather than holding less without saying so.
+fn capped<'a>(
+    raw: &'a str,
+    start: usize,
+    end: usize,
+    injected: Vec<Injected<'a>>,
+) -> PromptParts<'a> {
+    let rest = raw[start..end].trim();
+    PromptParts {
+        // Empty, and still a slice of `raw`: offsets are taken from it.
+        authored: &raw[start..start],
+        injected,
+        unparsed: (!rest.is_empty()).then_some(rest),
     }
 }
 
 /// The user's own text of a prompt; see [`split`].
 pub fn authored(raw: &str) -> &str {
     split(raw).authored
+}
+
+/// Bytes of the user's own text that [`for_storage`] examines: all of it up
+/// to this size; beyond it, the first and the last half of this, cut at line
+/// ends. See "The processing bound" on [`for_storage`].
+pub const SCAN_LIMIT: usize = 1 << 20;
+
+/// Most identifiers recorded from text the stored prompt left out.
+pub const IDENTIFIERS_MAX: usize = 16;
+
+/// Longer identifiers are not recorded: past this, a "word" is a blob.
+const IDENTIFIER_MAX_CHARS: usize = 200;
+
+/// What was read from the whole of the user's text before it was bounded
+/// for storage. The reducer takes durable state from here, never from the
+/// bounded text, so where the storage cut falls cannot decide what state
+/// exists.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct Facts {
+    /// The user's own text as delivered, in bytes.
+    pub authored_bytes: usize,
+    /// How much of it extraction examined: all of it unless it exceeded
+    /// [`SCAN_LIMIT`].
+    pub scanned_bytes: usize,
+    /// Bytes of the user's text (after redaction) that the stored prompt does
+    /// not hold, the unexamined middle included.
+    pub elided_bytes: usize,
+    /// Constraint sentences of the whole (examined) text, in order, capped as
+    /// `constraint::extract` caps them.
+    pub constraints: Vec<crate::constraint::Extracted>,
+    /// How many sentences qualified before the caps.
+    pub constraints_found: usize,
+    /// Identifiers (paths, test ids, symbols) named only in text the stored
+    /// prompt left out, first seen first, at most [`IDENTIFIERS_MAX`].
+    pub identifiers: Vec<String>,
+}
+
+/// A prompt prepared for the event log under a byte budget.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Stored {
+    /// Redacted, at most the budget, and classified by [`split`] exactly as
+    /// the full prompt was: every block it keeps is a complete element at an
+    /// edge, and its authored text begins as the user's text does.
+    pub text: String,
+    /// Injected blocks left out whole because they did not fit, in prompt
+    /// order: `(tag, bytes as delivered)`. At most [`OMITTED_LISTED`];
+    /// `omitted_total` counts them all.
+    pub omitted: Vec<(String, usize)>,
+    /// Every injected block left out.
+    pub omitted_total: usize,
+    /// Bytes past [`MAX_EDGE_BLOCKS`] blocks that were not classified
+    /// ([`PromptParts::unparsed`]) and are not stored.
+    pub unparsed_bytes: usize,
+    /// Some of the user's own text is not in `text`.
+    pub authored_truncated: bool,
+    pub facts: Facts,
+}
+
+/// Omitted blocks listed by name in [`Stored::omitted`]; the rest are only
+/// counted, so that a prompt of thousands of tiny blocks cannot turn the
+/// record of what was left out into the bulk of the event.
+pub const OMITTED_LISTED: usize = 32;
+
+/// Byte offset of `part` inside `whole`. `part` must be a subslice of it.
+fn offset_in(whole: &str, part: &str) -> usize {
+    part.as_ptr() as usize - whole.as_ptr() as usize
+}
+
+/// An injected block with its body redacted, or `None` when the redacted
+/// block would no longer parse as the same single element.
+///
+/// Only the attributes and the body are redacted, never the tags. Redacting
+/// the element as one string lets a greedy `key=value` match swallow the
+/// closing tag (`password=hunter2hunter2</system-reminder>` has no whitespace
+/// to stop at), and an element without its closing tag is -- by the rule in
+/// the module docs -- the user's own text. The re-parse check catches the
+/// subtler case of a match that removes a nested opening but not its close.
+fn redact_block(block: &Injected<'_>) -> Option<String> {
+    let text = block.text;
+    let name_end = 1 + block.tag.len();
+    let open_len = name_end + open_tag_rest(&text[name_end..])?;
+    let close_len = block.tag.len() + 3;
+    let attrs = &text[name_end..open_len - 1];
+    let body = &text[open_len..text.len() - close_len];
+    let out = format!(
+        "<{}{}>{}{}",
+        block.tag,
+        crate::redact::redact(attrs),
+        crate::redact::redact(body),
+        &text[text.len() - close_len..]
+    );
+    matches!(element_at_start(&out), Some((n, len)) if n == block.tag && len == out.len())
+        .then_some(out)
+}
+
+/// The text Velra puts where it left `bytes` of the user's words out. Square
+/// brackets, never angle brackets: a marker can never parse as an element.
+pub fn omission_marker(bytes: usize) -> String {
+    format!("[velra: {bytes} bytes not stored]")
+}
+
+/// Bytes a marker and the blank lines around it can take: the longest
+/// possible count has twenty digits.
+const MARKER_RESERVE: usize = 2 + 26 + 20 + 2;
+
+/// One run of the user's text the digest keeps or leaves out whole: a
+/// paragraph, or the part of one that is all prose or all material.
+#[derive(Debug, Clone, Copy)]
+struct Piece {
+    start: usize,
+    end: usize,
+    /// Pasted output or code (`crate::material`).
+    material: bool,
+    /// The piece left over by a cut: never kept.
+    remainder: bool,
+}
+
+impl Piece {
+    fn len(&self) -> usize {
+        self.end - self.start
+    }
+}
+
+/// The pieces of `t`, offset by `base`.
+fn pieces_of(t: &str, base: usize, kinds: &[crate::material::Line], out: &mut Vec<Piece>) {
+    use crate::material::Line;
+    let mut cur: Option<Piece> = None;
+    for (line, &kind) in t.lines().zip(kinds) {
+        if kind == Line::Blank {
+            out.extend(cur.take());
+            continue;
+        }
+        let start = base + offset_in(t, line);
+        let end = start + line.len();
+        let material = matches!(kind, Line::Output | Line::Fenced);
+        match &mut cur {
+            Some(p) if p.material == material => p.end = end,
+            _ => {
+                out.extend(cur.take());
+                cur = Some(Piece {
+                    start,
+                    end,
+                    material,
+                    remainder: false,
+                });
+            }
+        }
+    }
+    out.extend(cur);
+}
+
+/// The largest char boundary of `s` at or below `at`, moved back to just
+/// after the last whitespace in the final 64 bytes when there is one, so a
+/// cut does not end mid-word.
+fn cut_back(s: &str, at: usize) -> usize {
+    let mut at = at.min(s.len());
+    while !s.is_char_boundary(at) {
+        at -= 1;
+    }
+    let mut window = at.saturating_sub(64);
+    while !s.is_char_boundary(window) {
+        window += 1;
+    }
+    match s[window..at].rfind(char::is_whitespace) {
+        Some(ws) if window + ws > 0 => window + ws,
+        _ => at,
+    }
+}
+
+/// The smallest char boundary of `s` at or above `at`, moved forward to the
+/// start of the next word within 64 bytes when there is one.
+fn cut_forward(s: &str, at: usize) -> usize {
+    let mut at = at.min(s.len());
+    while !s.is_char_boundary(at) {
+        at += 1;
+    }
+    let window = (at + 64).min(s.len());
+    let mut w = window;
+    while !s.is_char_boundary(w) {
+        w -= 1;
+    }
+    match s[at..w].find(char::is_whitespace) {
+        Some(ws) => {
+            let after = at + ws;
+            let skip = s[after..].len() - s[after..].trim_start().len();
+            after + skip
+        }
+        None => at,
+    }
+}
+
+/// The user's text `t`, within `budget` bytes, keeping whole paragraphs in
+/// the order that matters for a continuation: the opening, the closing
+/// request, the rest of the user's prose, then pasted material. A forced gap
+/// of `gap.1` unexamined bytes sits at byte `gap.0` of `t` (the scan bound).
+///
+/// Returns the digest, and the byte ranges of `t` it left out.
+fn digest(
+    t: &str,
+    budget: usize,
+    gap: Option<(usize, usize)>,
+    kinds: (&[crate::material::Line], &[crate::material::Line]),
+) -> (String, Vec<(usize, usize)>) {
+    let mut pieces: Vec<Piece> = Vec::new();
+    match gap {
+        Some((at, _)) => {
+            pieces_of(&t[..at], 0, kinds.0, &mut pieces);
+            pieces_of(&t[at..], at, kinds.1, &mut pieces);
+        }
+        None => pieces_of(t, 0, kinds.0, &mut pieces),
+    }
+    if pieces.is_empty() {
+        return (String::new(), Vec::new());
+    }
+    let gap_at = gap.map(|g| g.0);
+    let gap_bytes = gap.map_or(0, |g| g.1);
+
+    // The opening: a piece larger than its share keeps its start, where a
+    // `task:` / `subtask:` prefix and the first statement of the work are.
+    // Its share is what the closing request leaves: the request whole when it
+    // is short, at most half the budget when it is not, and half when the
+    // opening is the only paragraph (it then keeps its end as well).
+    let closing = (1..pieces.len()).rev().find(|&i| !pieces[i].material);
+    let reserve = match closing {
+        Some(c) => (pieces[c].len() + 2 * MARKER_RESERVE).min(budget / 2),
+        None if pieces.len() == 1 => budget / 2,
+        None => 0,
+    };
+    let share = budget - reserve;
+    let first = pieces[0];
+    if first.len() + MARKER_RESERVE > share {
+        let cut = cut_back(t, first.start + share.saturating_sub(MARKER_RESERVE));
+        let cut = cut.max(first.start);
+        pieces[0].end = cut;
+        let rest = Piece {
+            start: cut,
+            end: first.end,
+            material: first.material,
+            remainder: false,
+        };
+        // A single paragraph keeps its end too: the request that closes a
+        // long message without a paragraph break.
+        if pieces.len() == 1 {
+            pieces.push(rest);
+        } else {
+            pieces.insert(
+                1,
+                Piece {
+                    remainder: true,
+                    ..rest
+                },
+            );
+        }
+    }
+
+    let n = pieces.len();
+    let adjacent = |a: usize, b: usize, pieces: &[Piece]| {
+        b == a + 1
+            && !pieces[a].remainder
+            && !pieces[b].remainder
+            && pieces[a].end <= pieces[b].start
+            && !gap_at.is_some_and(|g| pieces[a].end <= g && pieces[b].start >= g)
+            && t[pieces[a].end..pieces[b].start].trim().is_empty()
+    };
+    let sep = |a: usize, b: Option<usize>, pieces: &[Piece]| -> usize {
+        match b {
+            Some(b) if adjacent(a, b, pieces) => pieces[b].start - pieces[a].end,
+            Some(_) => MARKER_RESERVE,
+            None => {
+                let trailing_gap = gap_at.is_some_and(|g| pieces[a].end <= g);
+                if a + 1 < n || trailing_gap {
+                    MARKER_RESERVE
+                } else {
+                    0
+                }
+            }
+        }
+    };
+
+    let mut kept = std::collections::BTreeSet::new();
+    kept.insert(0usize);
+    let mut used = pieces[0].len() + sep(0, None, &pieces);
+    let last_prose = (1..n)
+        .rev()
+        .find(|&i| !pieces[i].material && !pieces[i].remainder);
+    let mut order: Vec<usize> = Vec::with_capacity(n);
+    order.extend(last_prose);
+    order.extend((1..n).filter(|&i| !pieces[i].material && Some(i) != last_prose));
+    order.extend((1..n).filter(|&i| pieces[i].material));
+
+    for (rank, &i) in order.iter().enumerate() {
+        if pieces[i].remainder {
+            continue;
+        }
+        let prev = kept.range(..i).next_back().copied();
+        let next = kept.range(i + 1..).next().copied();
+        let before = prev.map_or(0, |p| sep(p, next, &pieces));
+        let with = |pieces: &[Piece]| {
+            pieces[i].len() + prev.map_or(0, |p| sep(p, Some(i), pieces)) + sep(i, next, pieces)
+        };
+        let delta = with(&pieces) as isize - before as isize;
+        if (used as isize + delta) as usize <= budget {
+            used = (used as isize + delta) as usize;
+            kept.insert(i);
+            continue;
+        }
+        // The closing request, too long to keep whole: keep its end.
+        if rank == 0 && Some(i) == last_prose {
+            let room = (budget + before)
+                .saturating_sub(used)
+                .saturating_sub(2 * MARKER_RESERVE);
+            if room >= 64 {
+                let p = pieces[i];
+                let cut = cut_forward(t, p.end - room.min(p.len())).min(p.end);
+                pieces[i].start = cut;
+                let with = with(&pieces);
+                let delta = with as isize - before as isize;
+                if (used as isize + delta) as usize <= budget {
+                    used = (used as isize + delta) as usize;
+                    kept.insert(i);
+                    // What was cut off its front is left out like any piece.
+                    pieces.push(Piece {
+                        start: p.start,
+                        end: cut,
+                        material: p.material,
+                        remainder: true,
+                    });
+                } else {
+                    pieces[i] = p;
+                }
+            }
+        }
+    }
+
+    // What the budget has left goes to the head of the first piece, in the
+    // same order, that did not fit whole: where the next paragraph or a
+    // pasted report begins -- the first error of a compiler run, the start of
+    // a traceback. Without this, a message that is one opening line and one
+    // large paste stored the line and a marker, and left the rest of the
+    // budget empty.
+    if let Some(&i) = order
+        .iter()
+        .find(|&&i| !kept.contains(&i) && !pieces[i].remainder)
+    {
+        let prev = kept.range(..i).next_back().copied();
+        let next = kept.range(i + 1..).next().copied();
+        let before = prev.map_or(0, |p| sep(p, next, &pieces));
+        let room = (budget + before)
+            .saturating_sub(used)
+            .saturating_sub(2 * MARKER_RESERVE);
+        let p = pieces[i];
+        if room >= 128 && room < p.len() {
+            // At a line end within the room when there is one, else a word.
+            let limit = cut_back(t, p.start + room).max(p.start);
+            let cut = t[p.start..limit]
+                .rfind('\n')
+                .map(|nl| p.start + nl)
+                .filter(|&c| c > p.start)
+                .unwrap_or(limit);
+            if cut > p.start {
+                pieces[i].end = cut;
+                let with = pieces[i].len()
+                    + prev.map_or(0, |q| sep(q, Some(i), &pieces))
+                    + sep(i, next, &pieces);
+                if (used as isize + with as isize - before as isize) as usize <= budget {
+                    kept.insert(i);
+                    pieces.push(Piece {
+                        start: cut,
+                        end: p.end,
+                        material: p.material,
+                        remainder: true,
+                    });
+                } else {
+                    pieces[i] = p;
+                }
+            }
+        }
+    }
+
+    // Assemble in text order; every run left out becomes one marker.
+    let mut left_out: Vec<(usize, usize)> = pieces
+        .iter()
+        .enumerate()
+        .filter(|(i, p)| !kept.contains(i) && p.len() > 0)
+        .map(|(_, p)| (p.start, p.end))
+        .collect();
+    left_out.sort_unstable();
+    let assemble = |kept: &[usize], left_out: &[(usize, usize)]| -> String {
+        let omitted_between = |from: usize, to: usize| -> usize {
+            let mut bytes: usize = left_out
+                .iter()
+                .filter(|(s, e)| *s >= from && *e <= to)
+                .map(|(s, e)| e - s)
+                .sum();
+            if gap_at.is_some_and(|g| g >= from && g <= to) {
+                bytes += gap_bytes;
+            }
+            bytes
+        };
+        let mut out = String::with_capacity(budget);
+        for (k, &i) in kept.iter().enumerate() {
+            if k > 0 {
+                let p = kept[k - 1];
+                if adjacent(p, i, &pieces) {
+                    out.push_str(&t[pieces[p].end..pieces[i].start]);
+                } else {
+                    out.push_str("\n\n");
+                    out.push_str(&omission_marker(omitted_between(
+                        pieces[p].end,
+                        pieces[i].start,
+                    )));
+                    out.push_str("\n\n");
+                }
+            }
+            out.push_str(&t[pieces[i].start..pieces[i].end]);
+        }
+        let last = *kept.last().expect("the opening is always kept");
+        let after = omitted_between(pieces[last].end, t.len());
+        if after > 0 {
+            out.push_str("\n\n");
+            out.push_str(&omission_marker(after));
+        }
+        out
+    };
+    let mut kept: Vec<usize> = kept.into_iter().collect();
+    let mut out = assemble(&kept, &left_out);
+    // Leaving the middle out can pair an opening tag in one kept paragraph
+    // with a closing tag in a later one, and turn the user's words into what
+    // parses as an injected element. Later paragraphs are dropped until the
+    // digest reads as the user's text alone; the opening, a prefix of the
+    // user's text followed by a marker, always does.
+    while kept.len() > 1 && !split(&out).injected.is_empty() {
+        let dropped = kept.pop().expect("more than one kept");
+        let p = pieces[dropped];
+        left_out.push((p.start, p.end));
+        left_out.sort_unstable();
+        out = assemble(&kept, &left_out);
+    }
+    (out, left_out)
+}
+
+/// Marks the edges of user text whose markup redaction changed (see
+/// [`for_storage`]).
+const RESHAPED: &str = "[velra: redaction changed this text's markup]";
+
+/// Identifiers named in the left-out ranges of `examined` and nowhere in
+/// `kept`, most specific first: test ids and qualified names (`::`), then
+/// paths and file names, then calls, then other code-shaped words; first
+/// seen first within each; an identifier contained in one already chosen is
+/// not repeated. At most [`IDENTIFIERS_MAX`].
+///
+/// The order is what makes a short list useful. A pasted test report names
+/// its failing test once, in the summary at the end, and a hundred helpers
+/// and exception names before it; first-seen alone kept the helpers.
+fn left_out_identifiers(examined: &str, left_out: &[(usize, usize)], kept: &str) -> Vec<String> {
+    let rank = |id: &str| -> usize {
+        if id.contains("::") {
+            0
+        } else if id.contains(['/', '\\'])
+            || id.rsplit_once('.').is_some_and(|(_, e)| {
+                (1..=8).contains(&e.len()) && e.bytes().any(|c| c.is_ascii_alphabetic())
+            })
+        {
+            1
+        } else if id.ends_with("()") {
+            2
+        } else {
+            3
+        }
+    };
+    let mut by_rank: [Vec<&str>; 4] = Default::default();
+    for &(s, e) in left_out {
+        for id in crate::text::identifiers(&examined[s..e]) {
+            let r = rank(id);
+            if by_rank[r].len() >= IDENTIFIERS_MAX
+                || id.chars().count() > IDENTIFIER_MAX_CHARS
+                || kept.contains(id)
+                || by_rank[r].contains(&id)
+            {
+                continue;
+            }
+            by_rank[r].push(id);
+        }
+    }
+    let mut out: Vec<String> = Vec::new();
+    for id in by_rank.iter().flatten() {
+        if out.len() >= IDENTIFIERS_MAX {
+            break;
+        }
+        if out.iter().any(|o| o.contains(id)) {
+            continue;
+        }
+        out.push((*id).to_string());
+    }
+    out
+}
+
+/// The prompt to store for a `UserPromptSubmit`, within `max_bytes`, and
+/// what was read from the whole of it.
+///
+/// # Why classification comes first
+///
+/// The hook used to redact the delivered prompt and cut it to 4 KiB as one
+/// string, and only the reducer, later, decided what the user had written.
+/// Both steps can destroy a closing tag: the cut lands inside a large
+/// `<ide_selection>` and the element never closes; a greedy redaction eats
+/// `</system-reminder>` along with the secret before it. Either way the block
+/// is no longer a complete element, so the reducer keeps it as the user's own
+/// words -- the editor's selection became the objective and the user's task,
+/// past the cut, was never stored. Truncation and redaction *raised* the trust
+/// of injected text. So the split happens here, on the whole prompt.
+///
+/// # Why extraction comes before the bound
+///
+/// A byte budget on the stored text used to be a budget on meaning: a rule,
+/// a rejected approach, the request after a long paste or a file named past
+/// byte 4096 never reached the reducer, which extracted state from the cut
+/// copy. Now the durable facts -- constraint sentences, rejections, and the
+/// identifiers of anything not kept -- are extracted here from the whole of
+/// the user's text, after redaction and before any bound, and recorded as
+/// [`Facts`] beside the prompt. The reducer takes state from the facts.
+///
+/// # What is stored
+///
+/// The budget is spent in order of whose words they are:
+///
+/// 1. the user's own text, redacted. When it does not fit, it is kept as a
+///    digest of whole paragraphs in the order a continuation needs them --
+///    the opening (where `task:` and the first statement of the work are),
+///    the closing request, the rest of the user's prose, then pasted output
+///    and code -- in text order, each run left out replaced by an explicit
+///    `[velra: N bytes not stored]` marker. An opening larger than half the
+///    budget keeps its start; a closing request too long to keep whole
+///    keeps its end;
+/// 2. injected blocks, each redacted inside its tags, in prompt order, kept
+///    only **whole** -- a block that does not fit is left out and recorded in
+///    [`Stored::omitted`], never cut open.
+///
+/// When everything fits, the stored text is the delivered prompt with its
+/// parts redacted in place and the whitespace between them kept, so the
+/// ledger still shows what the client sent.
+///
+/// # The processing bound
+///
+/// The hook runs under a 250 ms watchdog and reads up to 64 MiB of stdin,
+/// and a watchdog that fires before the event is written loses the prompt
+/// outright, task included. So extraction examines at most [`SCAN_LIMIT`]
+/// bytes of the user's text: all of it below that; above it, its first and
+/// its last `SCAN_LIMIT / 2` bytes, cut at line ends, which is where the
+/// task statement and the closing request of a pasted wall of text are. The
+/// unexamined middle is recorded -- [`Facts::scanned_bytes`] against
+/// [`Facts::authored_bytes`], and a marker in the digest -- never silently
+/// dropped. The limit is set from measurement (DECISIONS D79, D81).
+pub fn for_storage(raw: &str, max_bytes: usize) -> Stored {
+    let parts = split(raw);
+    let authored_at = offset_in(raw, parts.authored);
+    let full = parts.authored;
+
+    // The window extraction examines, redacted before anything reads it.
+    let (head, tail) = if full.len() > SCAN_LIMIT {
+        let mut h = crate::text::prefix_bytes(full, SCAN_LIMIT / 2);
+        if let Some(nl) = h.rfind('\n') {
+            h = &h[..nl];
+        }
+        let mut t = crate::text::suffix_bytes(full, SCAN_LIMIT / 2);
+        if let Some(nl) = t.find('\n') {
+            t = &t[nl + 1..];
+        }
+        (h, Some(t))
+    } else {
+        (full, None)
+    };
+    let head_red = crate::redact::redact(head);
+    let tail_red = tail.map(crate::redact::redact);
+    let skipped = full.len() - head.len() - tail.map_or(0, str::len);
+    // Classified once: extraction and the digest both read it.
+    let head_kinds = crate::material::classify(&head_red);
+    let tail_kinds = tail_red
+        .as_deref()
+        .map(crate::material::classify)
+        .unwrap_or_default();
+
+    // Constraint sentences, capped over the whole as `extract` caps one text.
+    let command = crate::constraint::opens_with_slash_command(&head_red);
+    let (mut constraints, mut found) = if command {
+        (Vec::new(), 0)
+    } else {
+        crate::constraint::extract_classified(&head_red, &head_kinds)
+    };
+    if let Some(t) = tail_red.as_deref().filter(|_| !command) {
+        let (more, more_found) = crate::constraint::extract_classified(t, &tail_kinds);
+        found += more_found;
+        let base = head_red.len() + skipped;
+        for mut c in more {
+            let is_rej = crate::constraint::is_rejection_cue(c.cue);
+            let (rules, rejs) = constraints.iter().fold((0, 0), |(r, j), e| {
+                if crate::constraint::is_rejection_cue(e.cue) {
+                    (r, j + 1)
+                } else {
+                    (r + 1, j)
+                }
+            });
+            let room = if is_rej {
+                rejs < crate::constraint::MAX_REJECTIONS_PER_PROMPT
+            } else {
+                rules < crate::constraint::MAX_PER_PROMPT
+            };
+            if room && !constraints.iter().any(|e| e.text == c.text) {
+                c.at += base;
+                constraints.push(c);
+            }
+        }
+    }
+
+    // The user's text as stored: whole, or its digest.
+    let examined: String = match &tail_red {
+        Some(t) => format!("{head_red}{t}"),
+        None => head_red.to_string(),
+    };
+    let gap = tail_red.as_ref().map(|_| (head_red.len(), skipped));
+    let bounded = |budget: usize| {
+        if examined.len() <= budget && gap.is_none() {
+            (examined.clone(), Vec::new())
+        } else {
+            digest(&examined, budget, gap, (&head_kinds, &tail_kinds))
+        }
+    };
+    let (mut authored, mut left_out) = bounded(max_bytes);
+    // The user's text never parses as an injected element on its own -- the
+    // split just decided so. Redaction can change that: a greedy value match
+    // that swallows a nested opening tag (`token=abcdefgh<system-reminder>`)
+    // can leave the rest balanced. When it does, a marker at each edge keeps
+    // the text where it belongs: with the user's words.
+    if !split(&authored).injected.is_empty() {
+        let wrap = 2 * (RESHAPED.len() + 2);
+        if authored.len() + wrap > max_bytes {
+            (authored, left_out) = bounded(max_bytes.saturating_sub(wrap));
+        }
+        authored = format!("{RESHAPED}\n\n{authored}\n\n{RESHAPED}");
+    }
+    let elided_bytes = left_out.iter().map(|(s, e)| e - s).sum::<usize>() + skipped;
+    let authored_truncated = elided_bytes > 0;
+    let identifiers = left_out_identifiers(&examined, &left_out, &authored);
+
+    // Parts in prompt order. The unparsed region (past MAX_EDGE_BLOCKS) is
+    // never stored, and never joined across as if it were whitespace.
+    #[derive(Clone, Copy)]
+    enum Part {
+        Authored,
+        Block(usize),
+        Unparsed,
+    }
+    let mut order: Vec<(usize, usize, Part)> = parts
+        .injected
+        .iter()
+        .enumerate()
+        .map(|(i, b)| {
+            let at = offset_in(raw, b.text);
+            (at, at + b.text.len(), Part::Block(i))
+        })
+        .collect();
+    order.push((
+        authored_at,
+        authored_at + parts.authored.len(),
+        Part::Authored,
+    ));
+    if let Some(u) = parts.unparsed {
+        let at = offset_in(raw, u);
+        order.push((at, at + u.len(), Part::Unparsed));
+    }
+    order.sort_by_key(|p| (p.0, !matches!(p.2, Part::Authored)));
+
+    // Blocks are redacted only when they are candidates to be kept: a prompt
+    // can carry a thousand of them, and at most a budget's worth is stored.
+    // Blocks too large to fit even after redaction are not redacted at all.
+    let n = parts.injected.len();
+    let mut redacted: Vec<Option<Option<String>>> = vec![None; n];
+    let ensure = |i: usize, redacted: &mut Vec<Option<Option<String>>>| -> bool {
+        if redacted[i].is_none() {
+            let b = &parts.injected[i];
+            redacted[i] = Some(if b.text.len() <= max_bytes.saturating_mul(4) {
+                redact_block(b)
+            } else {
+                None
+            });
+        }
+        matches!(redacted[i], Some(Some(_)))
+    };
+
+    let assemble = |keep: &[bool], redacted: &[Option<Option<String>>]| -> String {
+        let mut out = String::new();
+        let mut prev_end: Option<usize> = None;
+        let mut adjacent = true;
+        for &(start, end, part) in &order {
+            let text: &str = match part {
+                Part::Authored => &authored,
+                Part::Block(i) if keep[i] => redacted[i]
+                    .as_ref()
+                    .and_then(|r| r.as_deref())
+                    .unwrap_or(""),
+                Part::Block(_) | Part::Unparsed => {
+                    adjacent = false;
+                    continue;
+                }
+            };
+            if text.is_empty() {
+                continue;
+            }
+            if let Some(p) = prev_end {
+                out.push_str(if adjacent { &raw[p..start] } else { "\n" });
+            }
+            out.push_str(text);
+            prev_end = Some(end);
+            adjacent = true;
+        }
+        out
+    };
+
+    // Everything, when it fits: blocks are redacted in order only until the
+    // running size shows it cannot.
+    let mut keep = vec![false; n];
+    let mut all_fit = !authored_truncated && parts.unparsed.is_none();
+    if all_fit {
+        let mut total = authored.len();
+        for i in 0..n {
+            if !ensure(i, &mut redacted) {
+                continue;
+            }
+            total += redacted[i]
+                .as_ref()
+                .and_then(|r| r.as_ref())
+                .map_or(0, String::len);
+            if total > max_bytes {
+                all_fit = false;
+                break;
+            }
+            keep[i] = true;
+        }
+        all_fit = all_fit && assemble(&keep, &redacted).len() <= max_bytes;
+    }
+    if !all_fit {
+        // Greedy in prompt order: a block is kept only if it still fits whole.
+        // Each step re-assembles, so only the first MAX_FIT_CANDIDATES blocks
+        // are tried; a prompt carrying more blocks than that is not one any
+        // client sends, and the rest are recorded as omitted. When the user's
+        // own text did not fit, or part of the prompt was not classified, no
+        // block is kept.
+        const MAX_FIT_CANDIDATES: usize = 64;
+        keep = vec![false; n];
+        if !authored_truncated && parts.unparsed.is_none() {
+            let mut tried = 0;
+            for &(_, _, part) in &order {
+                let Part::Block(i) = part else { continue };
+                if !ensure(i, &mut redacted) {
+                    continue;
+                }
+                tried += 1;
+                if tried > MAX_FIT_CANDIDATES {
+                    break;
+                }
+                keep[i] = true;
+                if assemble(&keep, &redacted).len() > max_bytes {
+                    keep[i] = false;
+                }
+            }
+        }
+    }
+    // The stored prompt must classify as intended: the user's text as the
+    // authored part, and exactly the blocks kept. Anything else -- a kept
+    // block and the user's text combining into a different element -- keeps
+    // the user's text alone.
+    let mut text = assemble(&keep, &redacted);
+    let reparsed = split(&text);
+    if reparsed.authored != authored.trim()
+        || reparsed.injected.len() != keep.iter().filter(|k| **k).count()
+    {
+        keep = vec![false; n];
+        text = assemble(&keep, &redacted);
+    }
+    let omitted_total = keep.iter().filter(|k| !**k).count();
+    let omitted = parts
+        .injected
+        .iter()
+        .zip(&keep)
+        .filter(|(_, k)| !**k)
+        .take(OMITTED_LISTED)
+        .map(|(b, _)| (b.tag.to_string(), b.text.len()))
+        .collect();
+    Stored {
+        text,
+        omitted,
+        omitted_total,
+        unparsed_bytes: parts.unparsed.map_or(0, str::len),
+        authored_truncated,
+        facts: Facts {
+            authored_bytes: full.len(),
+            scanned_bytes: head.len() + tail.map_or(0, str::len),
+            elided_bytes,
+            constraints,
+            constraints_found: found,
+            identifiers,
+        },
+    }
+}
+
+/// The record of [`Stored::facts`] the event log keeps
+/// ([`crate::event::Payload::prompt_facts`]).
+pub fn facts_record(stored: &Stored) -> crate::event::PromptFacts {
+    let f = &stored.facts;
+    crate::event::PromptFacts {
+        v: crate::event::PROMPT_FACTS_VERSION,
+        authored_bytes: f.authored_bytes as u64,
+        scanned_bytes: f.scanned_bytes as u64,
+        elided_bytes: f.elided_bytes as u64,
+        constraints: f
+            .constraints
+            .iter()
+            .map(|c| crate::event::PromptConstraint {
+                text: c.text.clone(),
+                cue: c.cue.to_string(),
+                kind: c.kind.as_str().to_string(),
+                at: c.at as u64,
+                basis: c.basis.as_str().to_string(),
+            })
+            .collect(),
+        constraints_found: if f.constraints_found > f.constraints.len() {
+            f.constraints_found as u64
+        } else {
+            0
+        },
+        identifiers: f.identifiers.clone(),
+        omitted_blocks: stored.omitted_total as u64,
+        unparsed_bytes: stored.unparsed_bytes as u64,
+        unprocessed: false,
+    }
+}
+
+/// The record the hook arms before it processes a prompt, so that a watchdog
+/// firing mid-processing still leaves an event saying a prompt of `bytes`
+/// arrived -- with nothing of its text, which has not been redacted or
+/// classified yet.
+pub fn unprocessed_record(bytes: usize) -> crate::event::PromptFacts {
+    crate::event::PromptFacts {
+        v: crate::event::PROMPT_FACTS_VERSION,
+        authored_bytes: bytes as u64,
+        unprocessed: true,
+        ..Default::default()
+    }
 }
 
 #[cfg(test)]
@@ -340,9 +1317,10 @@ mod tests {
         assert_eq!(origin("commander"), None);
     }
 
-    /// The hook's worst case: a prompt at the 4 KiB cap made of nothing but
-    /// near-miss openings before a closing tag. Every candidate is examined and
-    /// rejected; nothing is removed.
+    /// A stored prompt (at most 4 KiB, as the reducer reads it) made of nothing
+    /// but near-miss openings before a closing tag. Every candidate is examined
+    /// and rejected; nothing is removed. The hook's own worst case, the whole
+    /// delivered prompt, is `a_huge_prompt_is_split_in_bounded_time`.
     #[test]
     fn a_pathological_prompt_is_kept_whole() {
         let raw = format!("{}</ide_x>", "<ide_x".repeat(680));
@@ -368,6 +1346,267 @@ mod tests {
                 proptest::prop_assert!(origin(block.tag).is_some());
             }
         }
+    }
+
+    #[test]
+    fn a_nested_block_of_the_same_name_is_one_element() {
+        let raw =
+            "<system-reminder>a <system-reminder>b</system-reminder> c</system-reminder> fix it";
+        let parts = split(raw);
+        assert_eq!(parts.authored, "fix it");
+        assert_eq!(parts.injected.len(), 1);
+        // Trailing, too.
+        let raw = "fix it <r-x>a <r-x>b</r-x> c</r-x>";
+        assert_eq!(split(raw).authored, raw, "unknown family stays");
+        let raw =
+            "fix it <system-reminder>a <system-reminder>b</system-reminder> c</system-reminder>";
+        assert_eq!(split(raw).authored, "fix it");
+        // Unbalanced: more openings than closings is not an element.
+        let raw = "<system-reminder>a <system-reminder>b</system-reminder> fix it";
+        assert_eq!(split(raw).authored, raw);
+        // A self-closing inner tag opens nothing.
+        let raw = "<system-reminder>a <system-reminder/> b</system-reminder> fix it";
+        assert_eq!(split(raw).authored, "fix it");
+    }
+
+    #[test]
+    fn a_huge_prompt_is_split_in_bounded_time() {
+        // Every `<ide_x` is a candidate; none has a `>` within the window.
+        let raw = format!("{}</ide_x>", "<ide_x ".repeat(200_000));
+        let started = std::time::Instant::now();
+        assert_eq!(split(&raw).authored, raw);
+        assert!(started.elapsed() < std::time::Duration::from_secs(2));
+        let big = format!(
+            "<ide_selection>{}</ide_selection> fix it",
+            "y".repeat(8 << 20)
+        );
+        let started = std::time::Instant::now();
+        assert_eq!(split(&big).authored, "fix it");
+        assert!(started.elapsed() < std::time::Duration::from_secs(2));
+    }
+
+    #[test]
+    fn storage_keeps_a_prompt_that_fits_as_delivered() {
+        let raw = format!("{IDE}\n\nFix the retry.  \n");
+        let s = for_storage(&raw, 4096);
+        assert_eq!(s.text, raw.trim());
+        assert!(s.omitted.is_empty());
+        assert!(!s.authored_truncated);
+    }
+
+    #[test]
+    fn storage_spends_the_budget_on_the_users_words_first() {
+        let sel = format!("<ide_selection>{}</ide_selection>", "code\n".repeat(1000));
+        let raw = format!("{IDE}{sel}\nFix the retry in src/retry.py.");
+        let s = for_storage(&raw, 4096);
+        assert!(s.text.len() <= 4096);
+        assert_eq!(authored(&s.text), "Fix the retry in src/retry.py.");
+        // The small block still fits and is kept whole; the large one is not.
+        assert!(s.text.starts_with(IDE));
+        assert_eq!(s.omitted, vec![("ide_selection".to_string(), sel.len())]);
+        assert!(!s.authored_truncated);
+    }
+
+    #[test]
+    fn storage_never_cuts_a_block_open() {
+        for extra in 0..40 {
+            let body = "z".repeat(4096 - 40 + extra);
+            let raw = format!("<ide_selection>{body}</ide_selection>\nfix it");
+            let s = for_storage(&raw, 4096);
+            assert!(s.text.len() <= 4096);
+            assert_eq!(authored(&s.text), "fix it", "extra {extra}");
+        }
+    }
+
+    #[test]
+    fn storage_cuts_long_user_text_without_exposing_a_quoted_tag() {
+        // The cut lands right after a reminder the user quoted mid-message.
+        let head = "a".repeat(4000);
+        let raw = format!("{head} <system-reminder>quoted</system-reminder> and more words here");
+        let cut = head.len() + " <system-reminder>quoted</system-reminder>".len();
+        let s = for_storage(&raw, cut);
+        assert!(s.authored_truncated);
+        assert_eq!(authored(&s.text), s.text, "nothing reclassified as context");
+        assert!(s.text.len() <= cut);
+        // The digest begins as the user's text does and says what it left out.
+        let first = s.text.split("\n\n[velra: ").next().unwrap();
+        assert!(raw.starts_with(first), "{first}");
+        assert!(s.text.contains(" bytes not stored]"), "{}", s.text);
+        assert!(!s.text.ends_with("</system-reminder>"));
+    }
+
+    #[test]
+    fn storage_redacts_inside_the_tags_only() {
+        let raw = "<system-reminder>password=correct-horse-battery</system-reminder>\nfix it";
+        let s = for_storage(raw, 4096);
+        assert!(!s.text.contains("correct-horse-battery"), "{}", s.text);
+        assert_eq!(authored(&s.text), "fix it");
+        assert_eq!(split(&s.text).injected.len(), 1);
+        // Secrets in the user's own words are redacted too.
+        let s = for_storage("use token=abcdefgh12345678 for the call", 4096);
+        assert!(!s.text.contains("abcdefgh12345678"));
+    }
+
+    /// The runs of a digest between omission markers, trimmed.
+    fn runs(stored: &str) -> Vec<&str> {
+        let mut out = Vec::new();
+        let mut rest = stored;
+        while let Some(at) = rest.find("[velra: ") {
+            out.push(rest[..at].trim());
+            let after = &rest[at..];
+            let end = after.find(']').expect("a marker closes") + 1;
+            rest = &after[end..];
+        }
+        out.push(rest.trim());
+        out
+    }
+
+    proptest::proptest! {
+        /// Storage never panics, never exceeds its budget, and stores only
+        /// the user's words as the user's words: the stored authored text
+        /// begins as the user's does, every run between markers is theirs
+        /// verbatim, and every block it keeps is a complete known element.
+        #[test]
+        fn storage_is_bounded_and_keeps_the_users_words(
+            raw in "(<(ide_selection|system-reminder|task-notification|b)>|</(ide_selection|system-reminder|task-notification|b)>|[a-z]{1,8} |\u{e9}\u{1f4b3}|\u{201c}|\"|`|\n|\n\n|\n\n\n|E   x must\n|- never y\n|task: |Do not touch src/x.rs. |here is the output:\n){0,60}",
+            budget in 256usize..6000,
+        ) {
+            let s = for_storage(&raw, budget);
+            proptest::prop_assert!(s.text.len() <= budget, "{} > {budget}", s.text.len());
+            let expected = split(&raw).authored;
+            let got = split(&s.text);
+            let pieces = runs(got.authored);
+            proptest::prop_assert!(expected.starts_with(pieces[0]), "{:?} / {:?}", got.authored, expected);
+            for p in &pieces {
+                proptest::prop_assert!(expected.contains(p), "{p:?} not in {expected:?}");
+            }
+            for b in &got.injected {
+                proptest::prop_assert!(origin(b.tag).is_some());
+            }
+            proptest::prop_assert_eq!(s.authored_truncated, s.facts.elided_bytes > 0);
+        }
+    }
+
+    #[test]
+    fn a_long_prompt_keeps_its_opening_its_closing_request_and_says_what_it_left_out() {
+        let opening = "Fix the payment retry in src/payments/retry.py.";
+        let mut paste = String::from("Here is the output:\n\n");
+        for i in 0..200 {
+            paste.push_str(&format!("E   AssertionError: case {i} must be positive\n"));
+        }
+        let closing = "Please make test_retry_keeps_the_key pass.";
+        let raw = format!("{opening}\n\n{paste}\n{closing}");
+        let s = for_storage(&raw, 4096);
+        assert!(s.text.len() <= 4096);
+        assert!(s.text.starts_with(opening), "{}", s.text);
+        assert!(s.text.ends_with(closing), "{}", s.text);
+        assert!(s.text.contains(" bytes not stored]"));
+        assert!(s.authored_truncated);
+        assert!(s.facts.elided_bytes > 0);
+        // Pasted output yields no rule, even though it says `must` 200 times.
+        assert!(s.facts.constraints.is_empty(), "{:?}", s.facts.constraints);
+    }
+
+    #[test]
+    fn a_rule_and_a_file_past_the_bound_are_facts() {
+        let prose = "The retry path grew by accretion over several incidents. ".repeat(120);
+        let raw = format!(
+            "Fix the retry.\n\n{prose}\n\nThe cause is in src/payments/ledger_sync.py.\n\n{prose}\n\n\
+             Do not modify the tests."
+        );
+        let s = for_storage(&raw, 4096);
+        assert!(s.text.len() <= 4096);
+        let texts: Vec<&str> = s
+            .facts
+            .constraints
+            .iter()
+            .map(|c| c.text.as_str())
+            .collect();
+        assert_eq!(texts, vec!["Do not modify the tests."]);
+        assert_eq!(&raw[s.facts.constraints[0].at..][..6], "Do not");
+        // The file sits in a paragraph the digest had no room for: it is kept
+        // as an identifier of the text left out, or in the digest itself.
+        assert!(
+            s.text.contains("src/payments/ledger_sync.py")
+                || s.facts
+                    .identifiers
+                    .iter()
+                    .any(|i| i == "src/payments/ledger_sync.py"),
+            "{:?} / {}",
+            s.facts.identifiers,
+            s.text
+        );
+    }
+
+    #[test]
+    fn identifiers_prefer_test_ids_and_paths_over_helpers() {
+        // A report too large to keep, naming 200 helpers before the one
+        // failing test in its summary.
+        let mut paste = String::from("test output:\n");
+        for i in 0..200 {
+            paste.push_str(&format!("    def helper_{i:03}(): AssertionError\n"));
+        }
+        paste.push_str("FAILED tests/test_retry.py::test_retry_keeps_the_key - boom\n");
+        let raw = format!("Fix it.\n\n{paste}\n\nThanks.");
+        let s = for_storage(&raw, 4096);
+        assert!(!s.text.contains("::test_retry_keeps_the_key"), "{}", s.text);
+        assert_eq!(
+            s.facts.identifiers.first().map(String::as_str),
+            Some("tests/test_retry.py::test_retry_keeps_the_key"),
+            "{:?}",
+            s.facts.identifiers
+        );
+        // `tests/test_retry.py` is inside the id already chosen.
+        assert!(!s
+            .facts
+            .identifiers
+            .iter()
+            .any(|i| i == "tests/test_retry.py"));
+        assert!(s.facts.identifiers.len() <= IDENTIFIERS_MAX);
+    }
+
+    #[test]
+    fn past_the_scan_bound_the_head_and_tail_are_examined_and_the_rest_is_recorded() {
+        let line = "Background line with nothing to extract in it at all.\n";
+        let half = line.repeat(SCAN_LIMIT / line.len());
+        let raw = format!(
+            "Never delete the audit log.\n{half}Do not rename the package in the middle.\n\
+             {half}Do not modify the tests."
+        );
+        assert!(raw.len() > SCAN_LIMIT);
+        let s = for_storage(&raw, 4096);
+        let texts: Vec<&str> = s
+            .facts
+            .constraints
+            .iter()
+            .map(|c| c.text.as_str())
+            .collect();
+        assert_eq!(
+            texts,
+            vec!["Never delete the audit log.", "Do not modify the tests."]
+        );
+        assert_eq!(s.facts.authored_bytes, raw.len());
+        assert!(s.facts.scanned_bytes <= SCAN_LIMIT);
+        assert!(s.facts.scanned_bytes < s.facts.authored_bytes);
+        assert!(s.facts.elided_bytes >= s.facts.authored_bytes - s.facts.scanned_bytes);
+        assert!(s.text.len() <= 4096);
+        assert!(s.text.contains(" bytes not stored]"));
+    }
+
+    #[test]
+    fn redaction_that_would_turn_the_users_text_into_an_element_is_fenced_off() {
+        // In the delivered prompt the reminder is unbalanced -- two openings,
+        // one close -- so it is the user's text. The secret's value swallows
+        // the nested opening, and what is left would parse as one element.
+        let raw = "<system-reminder>a token=abcdefgh<system-reminder>b c</system-reminder> d";
+        assert_eq!(split(raw).authored, raw);
+        let redacted = crate::redact::redact(raw);
+        assert!(!split(&redacted).injected.is_empty(), "{redacted}");
+        let s = for_storage(raw, 4096);
+        assert!(!s.text.contains("abcdefgh"), "{}", s.text);
+        let got = split(&s.text);
+        assert!(got.injected.is_empty(), "{}", s.text);
+        assert!(got.authored.contains("c</system-reminder> d"), "{}", s.text);
     }
 
     #[test]

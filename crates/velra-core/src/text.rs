@@ -96,6 +96,41 @@ pub fn names_identifier(text: &str) -> bool {
     text.split_whitespace().any(word_is_identifier)
 }
 
+/// The identifiers `text` names, in order, each trimmed of the punctuation
+/// around it: every word [`names_identifier`] would accept on its own
+/// (paths, `file.ext`, `tests/x.py::test_y`, `snake_case`, `camelCase`,
+/// `call()`).
+pub fn identifiers(text: &str) -> impl Iterator<Item = &str> {
+    text.split_whitespace()
+        .filter(|w| word_is_identifier(w))
+        .map(|w| {
+            w.trim_matches(|c: char| {
+                matches!(
+                    c,
+                    '"' | '\''
+                        | ','
+                        | ';'
+                        | '!'
+                        | '?'
+                        | '('
+                        | '['
+                        | '{'
+                        | '<'
+                        | '>'
+                        | ']'
+                        | '}'
+                        | '`'
+                )
+            })
+            .trim_end_matches(['.', ':'])
+        })
+        .map(|w| match w.strip_suffix(')') {
+            Some(inner) if !w.ends_with("()") => inner,
+            _ => w,
+        })
+        .filter(|w| !w.is_empty())
+}
+
 fn word_is_identifier(raw: &str) -> bool {
     let w = raw.trim_matches(|c: char| {
         matches!(

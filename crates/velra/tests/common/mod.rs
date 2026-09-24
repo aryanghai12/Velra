@@ -432,6 +432,10 @@ impl Log {
         self.seq += 1;
         let tool_use_id = format!("toolu_late_{:04}", self.seq);
         let session = self.env.session.clone();
+        // Marked as `spool::write` marks it: that is how the reducer knows the
+        // row id does not say when it happened.
+        let mut payload = payload;
+        payload.spooled = Some(true);
         let ev = NewEvent {
             dedupe_key: dedupe_key(hook_event, &session, Some(&tool_use_id), None, ts_ms, None),
             session_id: session,
@@ -687,12 +691,20 @@ impl Log {
         };
     }
 
+    /// A Stop event carrying the turn-end scan the hook takes: the session's
+    /// edited files, hashed as they are on disk now.
     pub fn stop(&mut self) {
+        let session = self.env.session.clone();
+        let paths =
+            velra_core::reducer::scan_paths(&self.db.conn, &session, 64).expect("scan paths");
+        let rels: Vec<&str> = paths.iter().map(String::as_str).collect();
+        let scan = self.observe(&rels);
         self.append(
             "Stop",
             None,
             Payload {
                 stop_hook_active: Some(false),
+                turn_scan: Some(scan),
                 ..Default::default()
             },
         );

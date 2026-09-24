@@ -28,6 +28,19 @@ const REDUCE_DEADLINE_MS: u64 = 900;
 const PRECOMPACT_REDUCE_MS: u64 = 6;
 /// Hard cap on stdin (§8.1 rule 4).
 const MAX_STDIN: usize = 64 * 1024 * 1024;
+/// Stdin a `UserPromptSubmit` is parsed from. Larger input is not parsed:
+/// the event records only that a prompt of that size arrived
+/// ([`user_prompt_oversize`]).
+///
+/// Set from measurement on the release build (DECISIONS D81): parsing a
+/// prompt's JSON costs up to ~4 ms per MB when the text is escape-heavy
+/// (`\n` everywhere), so a prompt near the 64 MiB cap spent the whole 250 ms
+/// watchdog in reading and parsing, before any record of it could be armed,
+/// and was lost outright. At this bound the worst shape measured, read,
+/// parsed, examined and written, finishes in about two thirds of the
+/// deadline. A prompt of 16 MiB is some four million tokens: no model's
+/// context holds it, so no turn anyone can take is cut off.
+const PROMPT_MAX_STDIN: usize = 16 * 1024 * 1024;
 /// Files rehashed around a git restore-family command (§8.3).
 const GIT_HASH_MAX_FILES: usize = 64;
 
@@ -89,16 +102,19 @@ fn silence_panics(home: Option<PathBuf>, label: String) {
     }));
 }
 
-fn read_stdin_capped() -> Vec<u8> {
+/// Stdin up to `cap` bytes, and how many bytes arrived in all.
+fn read_stdin_capped(cap: usize) -> (Vec<u8>, usize) {
     let mut buf: Vec<u8> = Vec::with_capacity(8 * 1024);
     let mut chunk = [0u8; 64 * 1024];
     let mut stdin = std::io::stdin().lock();
+    let mut total = 0usize;
     loop {
         match stdin.read(&mut chunk) {
             Ok(0) => break,
             Ok(n) => {
-                if buf.len() < MAX_STDIN {
-                    let take = n.min(MAX_STDIN - buf.len());
+                total += n;
+                if buf.len() < cap {
+                    let take = n.min(cap - buf.len());
                     buf.extend_from_slice(&chunk[..take]);
                 }
                 // Beyond the cap we keep draining so the writer never blocks.
@@ -107,7 +123,7 @@ fn read_stdin_capped() -> Vec<u8> {
             Err(_) => break,
         }
     }
-    buf
+    (buf, total)
 }
 
 #[cfg(feature = "fault-injection")]
@@ -219,10 +235,18 @@ fn phases() -> String {
 fn dispatch(sub: &str, ts_ms: i64, home: Option<&Path>, started: &Instant) -> Result<(), String> {
     fault_injection(sub);
     let Some(home) = home else { return Ok(()) };
-    let raw = read_stdin_capped();
+    let cap = if sub == "user-prompt-submit" {
+        PROMPT_MAX_STDIN
+    } else {
+        MAX_STDIN
+    };
+    let (raw, total) = read_stdin_capped(cap);
     mark("stdin", started);
     if sub == "reduce" {
         return run_reduce(home, ts_ms);
+    }
+    if sub == "user-prompt-submit" && total > cap {
+        return user_prompt_oversize(home, ts_ms, &raw, total);
     }
     let parsed = normalize::parse(&raw);
     mark("parse", started);
@@ -679,30 +703,29 @@ fn hash_session_files(
     session_id: &str,
     root: &Path,
 ) -> Vec<FileObservation> {
-    const SQL: &str = "SELECT path FROM ( \
-         SELECT path AS path, MAX(id) AS ord FROM edits \
-           WHERE session_id = ?1 AND epoch = COALESCE((SELECT epoch FROM sessions WHERE session_id = ?1), 1) GROUP BY path \
-         UNION ALL \
-         SELECT json_extract(payload, '$.path') AS path, MAX(id) AS ord FROM events \
-           WHERE session_id = ?1 AND hook_event = 'PostToolUse' \
-             AND tool_name IN ('Write', 'Edit', 'MultiEdit', 'NotebookEdit') \
-             AND id > COALESCE((SELECT last_event_id FROM reducer_cursor WHERE id = 1), 0) GROUP BY path) \
-         WHERE path IS NOT NULL GROUP BY path ORDER BY MAX(ord) DESC LIMIT ?2";
-    let Ok(mut stmt) = conn.prepare_cached(SQL) else {
+    hash_session_files_until(conn, session_id, root, None)
+}
+
+/// [`hash_session_files`], stopping at `deadline`: the files not reached are
+/// not observed, and absent from the result rather than guessed at.
+fn hash_session_files_until(
+    conn: &rusqlite::Connection,
+    session_id: &str,
+    root: &Path,
+    deadline: Option<Instant>,
+) -> Vec<FileObservation> {
+    let Ok(paths_) = velra_core::reducer::scan_paths(conn, session_id, GIT_HASH_MAX_FILES) else {
         return Vec::new();
     };
-    let Ok(rows) = stmt.query_map(
-        rusqlite::params![session_id, GIT_HASH_MAX_FILES as i64],
-        |r| r.get::<_, String>(0),
-    ) else {
-        return Vec::new();
-    };
-    rows.flatten()
-        .map(|path| {
-            let (hash, size) = hash::hash_file(&paths::resolve(&path, root));
-            FileObservation { path, hash, size }
-        })
-        .collect()
+    let mut out = Vec::with_capacity(paths_.len());
+    for path in paths_ {
+        if deadline.is_some_and(|d| Instant::now() >= d) {
+            break;
+        }
+        let (hash, size) = hash::hash_file(&paths::resolve(&path, root));
+        out.push(FileObservation { path, hash, size });
+    }
+    out
 }
 
 fn session_start(ctx: &Ctx<'_>) -> Result<(), String> {
@@ -749,12 +772,58 @@ fn session_start(ctx: &Ctx<'_>) -> Result<(), String> {
 }
 
 fn user_prompt_submit(ctx: &Ctx<'_>) -> Result<(), String> {
+    // Split, redact, extract, then bound: a cut or a redaction applied to the
+    // whole prompt can remove an injected block's closing tag and turn the
+    // block into the user's words, and state extracted from a cut copy loses
+    // everything past the cut (`velra_core::prompt::for_storage`). The facts
+    // read from the whole prompt are stored beside the bounded text.
+    //
+    // Processing is bounded (`prompt::SCAN_LIMIT`, `prompt::MAX_EDGE_BLOCKS`)
+    // and measured well inside the watchdog, but the watchdog, not the
+    // measurement, is the guarantee: until the real event is armed, an event
+    // that records only that a prompt of this size arrived is. A deadline that
+    // fires mid-processing then spools that record instead of nothing.
+    if let Some(p) = ctx.input.prompt.as_deref().filter(|p| !p.is_empty()) {
+        let placeholder = Payload {
+            prompt_truncated: Some(true),
+            prompt_facts: Some(velra_core::prompt::unprocessed_record(p.len())),
+            prompt_id: ctx.input.prompt_id.clone(),
+            ..Default::default()
+        };
+        arm_pending(home::spool_dir(ctx.home), &ctx.new_event(placeholder));
+    }
+    // A deadline that fires while the prompt is being processed, on demand.
+    #[cfg(feature = "fault-injection")]
+    if let Some(ms) = std::env::var("VELRA_TEST_STALL_PROMPT_MS")
+        .ok()
+        .and_then(|v| v.parse::<u64>().ok())
+    {
+        std::thread::sleep(Duration::from_millis(ms));
+    }
+    let stored = ctx
+        .input
+        .prompt
+        .as_deref()
+        .map(|p| velra_core::prompt::for_storage(p, limits::PROMPT));
+    // `Stored::omitted` lists at most `prompt::OMITTED_LISTED` blocks; the
+    // facts count them all, so a prompt of thousands of tiny blocks cannot
+    // turn the record of what was left out into the bulk of the payload.
+    let omitted = stored.as_ref().map(|s| {
+        s.omitted
+            .iter()
+            .map(|(tag, bytes)| velra_core::event::OmittedBlock {
+                tag: tag.clone(),
+                bytes: *bytes as u64,
+            })
+            .collect::<Vec<_>>()
+    });
     let payload = Payload {
-        prompt: ctx
-            .input
-            .prompt
-            .as_deref()
-            .map(|p| normalize::redact_capped(p, limits::PROMPT)),
+        prompt_truncated: stored
+            .as_ref()
+            .and_then(|s| s.authored_truncated.then_some(true)),
+        prompt_facts: stored.as_ref().map(velra_core::prompt::facts_record),
+        prompt: stored.map(|s| s.text),
+        prompt_omitted: omitted.filter(|o| !o.is_empty()),
         prompt_id: ctx.input.prompt_id.clone(),
         ..Default::default()
     };
@@ -764,6 +833,38 @@ fn user_prompt_submit(ctx: &Ctx<'_>) -> Result<(), String> {
     };
     ctx.reconcile(&mut db);
     ctx.deliver(&mut db, Channel::UserPrompt);
+    Ok(())
+}
+
+/// A `UserPromptSubmit` whose input exceeds [`PROMPT_MAX_STDIN`]: recorded
+/// without parsing, as a prompt of `total` bytes that was not processed.
+///
+/// Nothing of the prompt is stored -- none of it has been redacted or
+/// classified -- and nothing is delivered. What the event keeps is that a
+/// prompt arrived, how large it was, and whose session and workspace it
+/// belongs to, read from the raw input (`normalize::salvage_json_string`).
+/// Without a session id there is nothing to attach it to, as for any hook.
+fn user_prompt_oversize(home: &Path, ts_ms: i64, raw: &[u8], total: usize) -> Result<(), String> {
+    let Some(session_id) = normalize::salvage_session_id(raw).filter(|s| !s.is_empty()) else {
+        return Ok(());
+    };
+    if home::ensure_home(home).is_err() {
+        return Ok(());
+    }
+    let input = HookInput {
+        cwd: normalize::salvage_json_string(raw, "cwd"),
+        prompt_id: normalize::salvage_json_string(raw, "prompt_id"),
+        agent_id: normalize::salvage_json_string(raw, "agent_id"),
+        ..Default::default()
+    };
+    let ctx = Ctx::new(home, "user-prompt-submit", ts_ms, input, session_id, false);
+    let payload = Payload {
+        prompt_truncated: Some(true),
+        prompt_facts: Some(velra_core::prompt::unprocessed_record(total)),
+        prompt_id: ctx.input.prompt_id.clone(),
+        ..Default::default()
+    };
+    ctx.store(ctx.new_event(payload), Role::HookAppend);
     Ok(())
 }
 
@@ -934,14 +1035,34 @@ fn post_tool_use(ctx: &Ctx<'_>, failure: bool) -> Result<(), String> {
     Ok(())
 }
 
+/// Time the Stop hook spends hashing files for its turn-end scan.
+const STOP_SCAN_BUDGET_MS: u64 = 80;
+
 fn stop(ctx: &Ctx<'_>) -> Result<(), String> {
-    let payload = Payload {
+    let mut payload = Payload {
         stop_hook_active: ctx.input.stop_hook_active,
         ..Default::default()
     };
-    let Some(mut db) = ctx.store(ctx.new_event(payload), Role::HookAppend) else {
+    // The turn-end scan is taken here, when the turn ends, and carried in the
+    // event. The reducer used to hash the disk whenever it ran -- possibly
+    // long after, and after the files had changed again -- and file what it
+    // found under this event's time, so present content posed as the state
+    // the turn ended in. Without a database there is no list of files to
+    // scan, and the event says no observation was made (`turn_scan: None`).
+    let Some(mut db) = ctx.open_db(Role::HookAppend) else {
+        ctx.spool(&ctx.new_event(payload));
         return Ok(());
     };
+    // Until the scan is done, a deadline spools the event without one.
+    arm_pending(home::spool_dir(ctx.home), &ctx.new_event(payload.clone()));
+    let deadline = Instant::now() + Duration::from_millis(STOP_SCAN_BUDGET_MS);
+    payload.turn_scan = Some(hash_session_files_until(
+        &db.conn,
+        &ctx.session_id,
+        &ctx.root,
+        Some(deadline),
+    ));
+    ctx.append_with(&mut db, &ctx.new_event(payload));
     ctx.reconcile(&mut db);
     Ok(())
 }

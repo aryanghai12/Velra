@@ -30,6 +30,8 @@ pub struct SnapshotMeta {
 const DEAD_ENDS_MAX: usize = 4;
 /// Constraint sentences carried into a snapshot before the ladder trims them.
 const CONSTRAINTS_MAX: usize = 3;
+/// Rejection statements carried into a snapshot, oldest first.
+const REJECTIONS_MAX: usize = 4;
 const ATTEMPTS_MAX: usize = 4;
 const WORKING_MAX: usize = 8;
 /// Tests carried into a snapshot before the ladder trims them.
@@ -488,13 +490,17 @@ pub fn build(
     // Constraints (schema v3). Oldest first: the order the user stated them in
     // is the only ordering the log supports, and a later sentence never
     // silently outranks an earlier one.
-    let constraints: Vec<ConstraintView> = conn
+    //
+    // Rejections (`constraint::is_rejection_cue`) are kept apart: they are the
+    // user ruling a route out, not a rule for the work, and they do not take
+    // one of the rules' slots.
+    let all_constraints: Vec<ConstraintView> = conn
         .prepare_cached(
             "SELECT id, text, kind, cue, prompt_ordinal, created_ms FROM constraints \
              WHERE session_id = ?1 AND epoch = ?2 AND superseded_ms IS NULL \
-             ORDER BY id LIMIT ?3",
+             ORDER BY id",
         )?
-        .query_map(params![sid, epoch, CONSTRAINTS_MAX as i64], |r| {
+        .query_map(params![sid, epoch], |r| {
             let kind: String = r.get(2)?;
             Ok(ConstraintView {
                 id: r.get(0)?,
@@ -506,6 +512,12 @@ pub fn build(
             })
         })?
         .collect::<rusqlite::Result<_>>()?;
+    let (mut rejections, mut constraints): (Vec<ConstraintView>, Vec<ConstraintView>) =
+        all_constraints
+            .into_iter()
+            .partition(|c| crate::constraint::is_rejection_cue(&c.cue));
+    constraints.truncate(CONSTRAINTS_MAX);
+    rejections.truncate(REJECTIONS_MAX);
 
     let git = root_path.as_deref().and_then(git::head_info);
     let edit_count: i64 = conn
@@ -773,6 +785,7 @@ pub fn build(
         epoch,
         root,
         constraints,
+        rejections,
         subtask,
         latest,
         earlier,

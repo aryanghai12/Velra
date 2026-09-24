@@ -127,7 +127,7 @@ pub fn parse(raw: &[u8]) -> Option<HookInput<'_>> {
 /// Last-resort scan for `"session_id": "..."` in unparseable input, so a
 /// malformed event can still be recorded (§18).
 pub fn salvage_session_id(raw: &[u8]) -> Option<String> {
-    let text = std::str::from_utf8(raw).ok()?;
+    let text = valid_prefix(raw)?;
     let at = text.find("\"session_id\"")?;
     let rest = &text[at + "\"session_id\"".len()..];
     let colon = rest.find(':')?;
@@ -142,6 +142,41 @@ pub fn salvage_session_id(raw: &[u8]) -> Option<String> {
             '"' => return (!out.is_empty()).then_some(out),
             '\\' => return (!out.is_empty()).then_some(out),
             _ => out.push(c),
+        }
+    }
+    None
+}
+
+/// The valid UTF-8 prefix of `raw`. Input cut at a byte cap can end inside a
+/// multi-byte character; requiring the whole buffer to be valid lost the
+/// session id -- and with it the event -- whenever the cut fell inside one.
+fn valid_prefix(raw: &[u8]) -> Option<&str> {
+    match std::str::from_utf8(raw) {
+        Ok(t) => Some(t),
+        Err(e) => std::str::from_utf8(&raw[..e.valid_up_to()]).ok(),
+    }
+}
+
+/// The first `"key": "value"` string in `raw`, decoded as JSON, read without
+/// parsing the rest: for input the hook declines to parse at all. Escapes are
+/// decoded (a Windows `cwd` is nothing but `\\`); a value that does not close
+/// is `None`.
+pub fn salvage_json_string(raw: &[u8], key: &str) -> Option<String> {
+    let text = valid_prefix(raw)?;
+    let quoted = format!("\"{key}\"");
+    let at = text.find(&quoted)?;
+    let rest = &text[at + quoted.len()..];
+    let after = rest.trim_start().strip_prefix(':')?.trim_start();
+    if !after.starts_with('"') {
+        return None;
+    }
+    let b = after.as_bytes();
+    let mut i = 1;
+    while i < b.len() {
+        match b[i] {
+            b'\\' => i += 2,
+            b'"' => return serde_json::from_str(&after[..=i]).ok(),
+            _ => i += 1,
         }
     }
     None
@@ -413,6 +448,24 @@ mod tests {
             Some("abc")
         );
         assert_eq!(salvage_session_id(b"{broken"), None);
+    }
+
+    #[test]
+    fn salvage_survives_input_cut_inside_a_character() {
+        // A byte cap that lands in the middle of `é` used to fail the UTF-8
+        // check for the whole buffer, and lose the session id with it.
+        let mut raw =
+            br#"{"session_id": "abc", "cwd": "C:\\Users\\dev\\repo", "prompt": "r"#.to_vec();
+        raw.extend_from_slice(&"\u{e9}".as_bytes()[..1]);
+        assert_eq!(salvage_session_id(&raw).as_deref(), Some("abc"));
+        // Escapes are decoded where the value is read whole: a Windows cwd.
+        assert_eq!(
+            salvage_json_string(&raw, "cwd").as_deref(),
+            Some("C:\\Users\\dev\\repo")
+        );
+        // A value that never closes is not guessed at.
+        assert_eq!(salvage_json_string(&raw, "prompt"), None);
+        assert_eq!(salvage_json_string(&raw, "prompt_id"), None);
     }
 
     #[test]

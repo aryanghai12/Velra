@@ -214,6 +214,11 @@ pub struct Snapshot {
     pub root: Option<IntentView>,
     /// Constraint sentences of the epoch, oldest first.
     pub constraints: Vec<ConstraintView>,
+    /// The user's own statements ruling a route out (`crate::constraint`'s
+    /// rejection labels), oldest first, each quoted with the approach it
+    /// rejects. Selected state that the renderer does not print: `--trace`
+    /// reports a marker found only here as "not rendered".
+    pub rejections: Vec<ConstraintView>,
     pub subtask: Option<IntentView>,
     pub latest: Option<IntentView>,
     /// The most recent superseded message that names code, carried only when
@@ -1520,6 +1525,7 @@ mod tests {
             epoch: 1,
             root: None,
             constraints: vec![],
+            rejections: vec![],
             subtask: None,
             latest: None,
             earlier: None,

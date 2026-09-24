@@ -93,6 +93,9 @@ pub fn snapshot_texts(s: &Snapshot) -> Vec<(String, String)> {
     for c in &s.constraints {
         push(format!("constraints (constraints:{})", c.id), &c.text);
     }
+    for c in &s.rejections {
+        push(format!("rejections (constraints:{})", c.id), &c.text);
+    }
     if let Some(v) = &s.subtask {
         push(format!("subtask (intents:{})", v.id), &v.text);
     }
@@ -482,13 +485,22 @@ pub fn trace_marker(
     layers.push(transcript_presence(conn, session_id, &needle));
 
     let like = format!("%{needle}%");
-    let events: Vec<i64> = conn
+    // (id, occurrence time, spooled): when each event happened is the hook's
+    // clock; when it reached the ledger is its row, and a spooled event
+    // reached it after rows that happened later (`crate::order`).
+    let matched: Vec<(i64, i64, bool)> = conn
         .prepare(
-            "SELECT id FROM events WHERE session_id = ?1 \
+            "SELECT id, ts_ms, COALESCE(json_extract(payload, '$.spooled'), 0) != 0 FROM events \
+             WHERE session_id = ?1 \
              AND lower(replace(replace(payload, '\\\\', '/'), '\\', '/')) LIKE ?2 ORDER BY id",
         )?
-        .query_map(params![session_id, like], |r| r.get(0))?
+        .query_map(params![session_id, like], |r| {
+            Ok((r.get(0)?, r.get(1)?, r.get(2)?))
+        })?
         .collect::<rusqlite::Result<_>>()?;
+    let events: Vec<i64> = matched.iter().map(|m| m.0).collect();
+    let cursor = crate::db::cursor(conn).unwrap_or(0);
+    let unreduced: Vec<i64> = events.iter().copied().filter(|&id| id > cursor).collect();
     layers.push(LayerResult {
         layer: "normalized_state",
         presence: if events.is_empty() {
@@ -504,10 +516,19 @@ pub fn trace_marker(
             } else {
                 format!(
                     ": {}",
-                    events
+                    matched
                         .iter()
                         .take(8)
-                        .map(|i| format!("events:{i}"))
+                        .map(|&(id, ts, spooled)| format!(
+                            "events:{id} (occurred {}{}{})",
+                            crate::time::rfc3339_utc(ts),
+                            if spooled {
+                                ", spooled: ingested late"
+                            } else {
+                                ""
+                            },
+                            if id > cursor { ", not yet reduced" } else { "" }
+                        ))
                         .collect::<Vec<_>>()
                         .join(",")
                 )
@@ -532,14 +553,21 @@ pub fn trace_marker(
         .filter(|(_, text)| contains(text, &needle))
         .map(|(label, _)| label)
         .collect();
+    let presence = if fields.is_empty() {
+        Presence::Absent
+    } else {
+        Presence::Present
+    };
+    let mut evidence = fields;
+    // When the selection was made, and from how much of the log.
+    evidence.push(format!(
+        "built {} from events reduced through events:{cursor}",
+        crate::time::rfc3339_utc(inputs.meta.created_ms)
+    ));
     layers.push(LayerResult {
         layer: "snapshot",
-        presence: if fields.is_empty() {
-            Presence::Absent
-        } else {
-            Presence::Present
-        },
-        evidence: fields,
+        presence,
+        evidence,
     });
 
     let ladder = render::render_ladder(&snap, inputs.cfg);
@@ -634,6 +662,17 @@ pub fn trace_marker(
         "normalized_state" => "not captured: no hook payload Velra stored contains it (assistant \
                                prose and reasoning are not hooked)"
             .to_string(),
+        // Not a loss: the ledger has not caught up with the event log.
+        "ledger" if !unreduced.is_empty() && unreduced.len() == events.len() => format!(
+            "not yet reduced: {} past the reducer cursor (events:{cursor}); the ledger has not \
+             caught up with the event log, and nothing was dropped",
+            unreduced
+                .iter()
+                .take(8)
+                .map(|i| format!("events:{i}"))
+                .collect::<Vec<_>>()
+                .join(",")
+        ),
         "ledger" => injected.clone().unwrap_or_else(|| {
             format!(
                 "not extracted: it occurs only in raw hook payloads ({} event(s)); no reducer \

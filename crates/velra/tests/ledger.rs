@@ -526,6 +526,7 @@ fn empty_snapshot() -> Snapshot {
         epoch: 1,
         root: None,
         constraints: vec![],
+        rejections: vec![],
         subtask: None,
         latest: None,
         earlier: None,
@@ -589,6 +590,7 @@ fn worst_case_snapshot() -> Snapshot {
                 ts_ms: common::BASE_MS,
             })
             .collect(),
+        rejections: vec![],
         subtask: Some(IntentView {
             id: 2,
             text: "s".repeat(600),

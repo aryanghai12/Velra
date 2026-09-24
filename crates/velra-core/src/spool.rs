@@ -52,12 +52,21 @@ fn create_new_private(path: &Path) -> std::io::Result<std::fs::File> {
     opts.open(path)
 }
 
-/// Writes `ev` to `dir/{ts_ms}-{pid}-{rand4}.jsonl`.
+/// Writes `ev` to `dir/{ts_ms}-{pid}-{rand4}.jsonl`, marked as spooled.
+///
+/// The mark (`Payload::spooled`) is how the reducer knows the event's row id
+/// will not say when it happened: it is ingested whenever a reducer drains
+/// the spool, after rows that happened later (`crate::order`). It is set
+/// here, the only way into the spool, rather than by each caller.
 pub fn write(dir: &Path, ev: &NewEvent) -> std::io::Result<PathBuf> {
     if !dir.is_dir() {
         create_dir_private(dir)?;
     }
-    let mut line = serde_json::to_string(ev).map_err(std::io::Error::other)?;
+    let mut ev = ev.clone();
+    let mut payload = crate::event::Payload::from_json(&ev.payload);
+    payload.spooled = Some(true);
+    ev.payload = payload.to_json();
+    let mut line = serde_json::to_string(&ev).map_err(std::io::Error::other)?;
     line.push('\n');
     for _ in 0..8 {
         let path = dir.join(format!(

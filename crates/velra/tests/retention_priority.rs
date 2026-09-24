@@ -78,12 +78,32 @@ fn prompt_text(with_ide: bool, text: &str) -> String {
 
 /// The failing VS Code session, through the product's own event path.
 fn payment_session(log: &mut Log, with_ide: bool) {
+    payment_session_with(log, &prompt_text(with_ide, TASK));
+}
+
+/// A longer statement of the same task: the rejection clause lies past the
+/// widest objective excerpt the renderer ever prints (240 characters), so a
+/// capsule that carries it cannot be doing so through the objective line.
+const LONG_TASK: &str =
+    "We have a failing payment retry test in tests/test_retry.py and the on-call \
+                         team has asked for a careful, minimal change. Work on the task, but \
+                         intentionally leave it unfinished for a later continuation, because the \
+                         reviewer wants to see the investigation before the final patch lands. \
+                         First inspect the failure and understand the code. Then try a temporary \
+                         workaround that stores the idempotency key in a module-level variable in \
+                         src/payments/retry.py. Run the tests. That workaround is considered a \
+                         rejected approach \
+                         for this task, so revert it with git restore src/payments/retry.py, \
+                         rerun the tests, and stop without implementing the final fix. Do not \
+                         modify the tests.";
+
+fn payment_session_with(log: &mut Log, prompt: &str) {
     log.env.write_file(RETRY, ORIGINAL);
     log.env.write_file(
         "tests/test_retry.py",
         "def test_retry_preserves_idempotency_key(): ...\n",
     );
-    log.prompt(&prompt_text(with_ide, TASK));
+    log.prompt(prompt);
     log.read(RETRY);
     log.read("tests/test_retry.py");
     log.command_fail("python -m pytest tests/test_retry.py -v", 1, PYTEST_FAIL);
@@ -267,7 +287,20 @@ fn constraints_are_extracted_from_authored_text_only() {
     ));
     let snap = log.snapshot();
     let texts: Vec<&str> = snap.constraints.iter().map(|c| c.text.as_str()).collect();
+    // The reminder's "must never" is not among them; the user's own rule is.
     assert_eq!(texts, ["Do not modify the tests."]);
+    // And so is the user's own rejection of the workaround, kept apart from
+    // the rules and quoted from the sentence that describes the workaround.
+    let rejections: Vec<&str> = snap.rejections.iter().map(|c| c.text.as_str()).collect();
+    assert_eq!(
+        rejections,
+        [
+            "Then try a temporary workaround that stores the idempotency key in a module-level \
+          variable in src/payments/retry.py. Run the tests. That workaround is considered a \
+          rejected approach for this task, so revert it with git restore \
+          src/payments/retry.py, rerun the tests, and stop without implementing the final fix."
+        ]
+    );
 }
 
 /// A ledger reduced before the fix stored the IDE block in the ROOT row. The
@@ -382,6 +415,94 @@ fn the_failing_vs_code_session_now_carries_its_task_state() {
     assert!(
         c.contains(&format!("+ {WORKAROUND} = None")),
         "the rejected route:\n{c}"
+    );
+    // The user's own statement that the workaround is rejected is state of its
+    // own, not only a phrase that happens to fit inside the objective excerpt.
+    let snap = log.snapshot();
+    assert!(
+        snap.rejections
+            .iter()
+            .any(|r| r.text.contains("rejected approach")
+                && r.text
+                    .contains("stores the idempotency key in a module-level variable")),
+        "{:?}",
+        snap.rejections
+    );
+}
+
+/// The same session with the rejection clause past character 240, the widest
+/// objective excerpt the renderer prints. The objective line is shortened and
+/// cannot show the clause; the rejection is kept as selected state of its own,
+/// quoted verbatim together with the approach it rejects, and the trace
+/// reports honestly how far it gets.
+///
+/// This pins the extraction and selection layers. Whether the capsule prints
+/// the rejection is the renderer's decision, and is asserted there.
+#[test]
+fn a_rejection_past_the_objective_excerpt_is_kept_as_selected_state() {
+    let clause_at = LONG_TASK.find("rejected approach").expect("clause");
+    assert!(clause_at > 240, "{clause_at}");
+    let mut log = Log::new();
+    payment_session_with(&mut log, &prompt_text(true, LONG_TASK));
+    let c = log.capsule();
+    assert!(estimate_tokens(&c) <= DEFAULT_BUDGET_TOKENS);
+    let body = first_message_body(&c);
+    assert!(
+        !body.contains("rejected approach"),
+        "the objective line must not be what carries the clause: {body}"
+    );
+
+    let snap = log.snapshot();
+    let rejection = snap
+        .rejections
+        .iter()
+        .find(|r| r.text.contains("rejected approach"))
+        .unwrap_or_else(|| panic!("the rejection is not selected state: {snap:?}"));
+    assert!(
+        rejection
+            .text
+            .contains("stores the idempotency key in a module-level variable"),
+        "the rejection must name what it rejects: {}",
+        rejection.text
+    );
+    assert!(
+        rejection
+            .text
+            .starts_with("Then try a temporary workaround"),
+        "quoted from the sentence that describes the workaround, not the one \
+         before the rejection: {}",
+        rejection.text
+    );
+    assert!(LONG_TASK.contains(rejection.text.as_str()), "verbatim");
+    // A rejection does not take a rule's slot.
+    assert_eq!(
+        snap.constraints
+            .iter()
+            .map(|k| k.text.as_str())
+            .collect::<Vec<_>>(),
+        ["Do not modify the tests."]
+    );
+    // The capsule's other critical state is unchanged by the long prompt.
+    assert!(c.contains("Do not modify the tests."), "{c}");
+    assert!(c.contains(&format!("FAIL {TEST_ID}")), "{c}");
+    assert!(
+        c.contains(&format!("- {RETRY} | 1 edit(s) | reverted via")),
+        "{c}"
+    );
+
+    // The trace finds it at every layer through the snapshot.
+    let t = trace(&mut log, &DEFAULT, "rejected approach for this task");
+    for layer in ["normalized_state", "ledger", "snapshot"] {
+        let l = t.layers.iter().find(|l| l.layer == layer).expect(layer);
+        assert_eq!(l.presence, Presence::Present, "{layer}: {}", t.report());
+    }
+    assert!(
+        !matches!(
+            t.first_loss,
+            Some("normalized_state" | "ledger" | "snapshot")
+        ),
+        "{}",
+        t.report()
     );
 }
 
