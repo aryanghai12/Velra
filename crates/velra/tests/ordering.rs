@@ -980,12 +980,17 @@ fn an_older_rule_arriving_late_keeps_its_precedence() {
     );
     let snap = log.snapshot();
     let rules: Vec<&str> = snap.constraints.iter().map(|c| c.text.as_str()).collect();
+    // Four rules for three slots: prohibitions are kept before requirements
+    // (`snapshot::pick_constraints`), so the third slot goes to "Never rename
+    // the package." rather than the requirement stated before it. The late
+    // rule still takes its logical place, first.
+    assert_eq!(snap.constraint_total, 4);
     assert_eq!(
         rules,
         vec![
             "Do not modify the tests.",
             "Always add a migration for schema changes.",
-            "Keep the CLI flags stable.",
+            "Never rename the package.",
         ]
     );
     let rejections: Vec<&str> = snap.rejections.iter().map(|c| c.text.as_str()).collect();
@@ -997,7 +1002,7 @@ fn an_older_rule_arriving_late_keeps_its_precedence() {
         ]
     );
     let ordinals: Vec<i64> = snap.constraints.iter().map(|c| c.prompt_ordinal).collect();
-    assert_eq!(ordinals, vec![1, 2, 3]);
+    assert_eq!(ordinals, vec![1, 2, 4]);
 }
 
 // -------------------------------------------- 9/10. turn scan and the disk

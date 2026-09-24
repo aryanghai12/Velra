@@ -151,6 +151,8 @@ pub struct DeadEndView {
     /// Excerpt lines (without the `- ` / `+ ` markers); `None` for sensitive paths.
     pub minus: Option<String>,
     pub plus: Option<String>,
+    /// The edit `minus`/`plus` were taken from (`snapshot::dead_end_evidence`).
+    pub excerpt_edit: Option<i64>,
     pub observed_after: Option<CommandRef>,
 }
 
@@ -212,13 +214,17 @@ pub struct Snapshot {
     pub project_id: String,
     pub epoch: i64,
     pub root: Option<IntentView>,
-    /// Constraint sentences of the epoch, oldest first.
+    /// Constraint sentences of the epoch, oldest first
+    /// (`snapshot::pick_constraints`).
     pub constraints: Vec<ConstraintView>,
+    /// Distinct live rules in the epoch (`constraints` holds at most 3).
+    pub constraint_total: u32,
     /// The user's own statements ruling a route out (`crate::constraint`'s
     /// rejection labels), oldest first, each quoted with the approach it
-    /// rejects. Selected state that the renderer does not print: `--trace`
-    /// reports a marker found only here as "not rendered".
+    /// rejects. Printed under `[REJECTED_APPROACHES]`.
     pub rejections: Vec<ConstraintView>,
+    /// Live rejections in the epoch (`rejections` holds at most 4).
+    pub rejection_total: u32,
     pub subtask: Option<IntentView>,
     pub latest: Option<IntentView>,
     /// The most recent superseded message that names code, carried only when
@@ -249,6 +255,10 @@ struct Limits {
     working_named_above: bool,
     constraints_max: usize,
     constraint_chars: usize,
+    rejections_max: usize,
+    rejection_chars: usize,
+    /// State in a section header how many stated rules it does not list.
+    omitted_notes: bool,
     attempts_max: usize,
     dead_ends_max: usize,
     /// Oldest dead ends whose replaced (`-`) line is no longer printed.
@@ -285,6 +295,9 @@ impl Limits {
         working_named_above: true,
         constraints_max: 3,
         constraint_chars: 200,
+        rejections_max: 4,
+        rejection_chars: 200,
+        omitted_notes: true,
         attempts_max: 4,
         dead_ends_max: 4,
         dead_original_removed: 0,
@@ -353,6 +366,8 @@ enum Keep {
     Latest,
     /// The rejected routes: not recoverable from disk once reverted.
     RevertedEdits,
+    /// The user's own statement that a route is rejected.
+    Rejections,
     TestStatus,
     Constraints,
     /// Never dropped by line: the frame, the objective and `[WORKSPACE_STATE]`.
@@ -369,6 +384,7 @@ const DROP_ORDER: &[Keep] = &[
     Keep::Earlier,
     Keep::Latest,
     Keep::RevertedEdits,
+    Keep::Rejections,
     Keep::TestStatus,
     Keep::Constraints,
 ];
@@ -479,7 +495,12 @@ fn mechanism_text(d: &DeadEndView, cmd_chars: usize) -> String {
         },
         Mechanism::InverseEdit => "reverted by a later edit".to_string(),
         Mechanism::Rewrite => "file rewritten".to_string(),
-        Mechanism::External => "changed outside the agent".to_string(),
+        // What was observed is that the file's content went back to an
+        // earlier state, seen by a turn-end scan or across a command that
+        // could not have done it. Who or what did it is not known: a
+        // formatter, another subcommand, the user's editor, the agent's own
+        // shell.
+        Mechanism::External => "reverted by an unidentified change".to_string(),
     }
 }
 
@@ -519,6 +540,166 @@ fn names_path(line: &str, path: &str) -> bool {
         !before.is_some_and(part)
             && !after.is_some_and(|c| c.is_alphanumeric() || matches!(c, '_' | '-' | '/'))
     })
+}
+
+/// A marker for a path that is not one of the project's own files: outside
+/// the workspace (an auto-memory note, a sibling checkout) or in an installed,
+/// generated or cache directory (`snapshot::is_incidental`). Empty otherwise.
+fn where_is(path: &str) -> &'static str {
+    if crate::snapshot::is_outside_workspace(path) {
+        " (outside workspace)"
+    } else if crate::snapshot::is_incidental(path) {
+        " (dependency or build output)"
+    } else {
+        ""
+    }
+}
+
+/// A section header's note that `n` more items were stated than it lists --
+/// cut by the snapshot's cap or the ladder. The count only: what was left out
+/// is not paraphrased.
+fn not_listed(n: usize, shown: bool) -> String {
+    if n == 0 || !shown {
+        String::new()
+    } else {
+        format!(" | {n} more not listed")
+    }
+}
+
+/// The rules a section prints, in the order they were stated, and how many
+/// the objective line already quotes word for word (those are not repeated).
+///
+/// With `by_class`, a section cut below its length by the ladder keeps
+/// prohibitions and labelled rules before requirements, earliest first within
+/// a class -- the snapshot's rule (`snapshot::pick_constraints`, D94), so the
+/// ladder cannot quietly bring back "the oldest N". Without it, the earliest.
+fn pick_rules<'a>(
+    rules: &'a [ConstraintView],
+    max: usize,
+    quoted: &dyn Fn(&str) -> bool,
+    by_class: bool,
+) -> (Vec<&'a ConstraintView>, usize) {
+    let open: Vec<(usize, &ConstraintView)> = rules
+        .iter()
+        .enumerate()
+        .filter(|(_, c)| !quoted(&c.text))
+        .collect();
+    let quoted_count = rules.len() - open.len();
+    let class = |c: &ConstraintView| match c.kind {
+        ConstraintKind::Prohibition | ConstraintKind::Labelled => 0,
+        ConstraintKind::Requirement => u8::from(by_class),
+    };
+    let mut order: Vec<(usize, &ConstraintView)> = open;
+    order.sort_by_key(|(i, c)| (class(c), *i));
+    order.truncate(max);
+    order.sort_by_key(|(i, _)| *i);
+    (order.into_iter().map(|(_, c)| c).collect(), quoted_count)
+}
+
+/// A rejection quoted within `n` characters (D78's quote runs from the
+/// sentence naming the approach through the one ruling it out).
+///
+/// Too long whole, it keeps the two parts that carry its meaning: the first
+/// sentence, which names the approach, and the clause holding the rejection
+/// label `cue` (`rejected approach`, `dead end`, ...), with `...` for what is
+/// left out -- "Run the tests." between them, what the rejection goes on to
+/// ask for after it. Only then, if that is still too long, is it cut at both
+/// ends ([`truncate_middle`]). Nothing is added: every word shown is the
+/// user's, in their order.
+fn quote_rejection<'a>(text: &'a str, cue: &str, n: usize) -> std::borrow::Cow<'a, str> {
+    if text.chars().count() <= n {
+        return std::borrow::Cow::Borrowed(text);
+    }
+    let Some(at) = find_ascii_ci(text, cue) else {
+        return truncate_middle(text, n);
+    };
+    let cue_end = at + cue.len();
+    let is_end = |b: &[u8], i: usize| {
+        matches!(b[i], b'.' | b'?' | b'!') && b.get(i + 1).is_none_or(|c| c.is_ascii_whitespace())
+    };
+    let b = text.as_bytes();
+    // Start of the sentence holding the cue, end of the first sentence.
+    let start = (0..at).rev().find(|&i| is_end(b, i)).map_or(0, |i| i + 1);
+    let first_end = (0..b.len())
+        .find(|&i| is_end(b, i))
+        .map_or(b.len(), |i| i + 1);
+    let clause_end = (cue_end..b.len())
+        .find(|&i| matches!(b[i], b',' | b';') || is_end(b, i))
+        .map_or(b.len(), |i| if is_end(b, i) { i + 1 } else { i });
+    let clause = text[start..clause_end].trim();
+    let more = if clause_end < b.len() { " ..." } else { "" };
+    if start < first_end {
+        // The label is in the first sentence: the approach and its rejection
+        // are one sentence, kept from its start.
+        let whole = format!("{}{more}", text[..clause_end].trim());
+        return if whole.chars().count() <= n {
+            std::borrow::Cow::Owned(whole)
+        } else {
+            std::borrow::Cow::Owned(truncate_chars(&whole, n).into_owned())
+        };
+    }
+    let approach = text[..first_end].trim();
+    let candidate = format!("{approach} ... {clause}{more}");
+    if candidate.chars().count() <= n {
+        return std::borrow::Cow::Owned(candidate);
+    }
+    // Still too long: the rejection clause is kept whole and the approach
+    // sentence is cut from its end -- it names the approach first ("try a
+    // workaround that stores the key in ...").
+    let fixed = " ... ".len() + clause.chars().count() + more.len();
+    if n >= fixed + 24 {
+        let head = truncate_chars(approach, n - fixed);
+        return std::borrow::Cow::Owned(format!("{head} {clause}{more}"));
+    }
+    std::borrow::Cow::Owned(truncate_middle(&candidate, n).into_owned())
+}
+
+/// Byte offset of the first ASCII-case-insensitive match of `needle`.
+fn find_ascii_ci(hay: &str, needle: &str) -> Option<usize> {
+    if needle.is_empty() || !needle.is_ascii() {
+        return None;
+    }
+    let (h, n) = (hay.as_bytes(), needle.as_bytes());
+    (0..=h.len().checked_sub(n.len())?)
+        .find(|&i| hay.is_char_boundary(i) && h[i..i + n.len()].eq_ignore_ascii_case(n))
+}
+
+/// `text` within `n` characters with both of its ends: the opening and the
+/// close, joined by ` ... `. The close gets the larger share and starts at a
+/// word. For text whose point is at the end -- the latest message's request
+/// after a long preamble, a rejection that names the approach first and rules
+/// it out last -- where a head-only cut keeps the part that matters least.
+fn truncate_middle(text: &str, n: usize) -> std::borrow::Cow<'_, str> {
+    const SEP: &str = " ... ";
+    let total = text.chars().count();
+    if total <= n {
+        return std::borrow::Cow::Borrowed(text);
+    }
+    if n < 24 {
+        return truncate_chars(text, n);
+    }
+    let keep = n - SEP.len();
+    let tail_n = keep * 3 / 5;
+    let head_n = keep - tail_n;
+    let head: String = text.chars().take(head_n).collect();
+    let mut tail: String = text.chars().skip(total - tail_n).collect();
+    // A cut inside a word moves to the next word when one begins soon after.
+    let mid_word = text
+        .chars()
+        .nth(total - tail_n - 1)
+        .is_some_and(|c| !c.is_whitespace())
+        && tail.chars().next().is_some_and(|c| !c.is_whitespace());
+    if mid_word {
+        if let Some((at, _)) = tail
+            .char_indices()
+            .take(20)
+            .find(|(_, c)| c.is_whitespace())
+        {
+            tail = tail[at..].to_string();
+        }
+    }
+    let tail = tail.trim_start();
+    std::borrow::Cow::Owned(format!("{}{SEP}{tail}", head.trim_end()))
 }
 
 fn render_with(s: &Snapshot, lim: &Limits, trace: bool) -> String {
@@ -583,24 +764,27 @@ fn render_lines(s: &Snapshot, lim: &Limits, trace: bool) -> Vec<Line> {
         .root
         .as_ref()
         .map(|r| truncate_chars(&r.text, lim.root_chars));
-    let constraints: Vec<&ConstraintView> = s
-        .constraints
-        .iter()
-        .filter(|c| {
-            !shown_root
-                .as_deref()
-                .is_some_and(|r| r.contains(c.text.as_str()))
-        })
-        .take(lim.constraints_max)
-        .collect();
-    if !constraints.is_empty() {
+    let quoted_by_root = |text: &str| shown_root.as_deref().is_some_and(|r| r.contains(text));
+    let (constraints, constraints_quoted) =
+        pick_rules(&s.constraints, lim.constraints_max, &quoted_by_root, true);
+    // Rules the snapshot selected or counted that neither this section nor the
+    // objective line prints: the snapshot's own cap (D94) and this ladder's.
+    // The count is stated so that a missing rule reads as "not shown here",
+    // never as "there was none"; its text is not invented.
+    let constraints_omitted = (s.constraint_total as usize)
+        .max(s.constraints.len())
+        .saturating_sub(constraints.len() + constraints_quoted);
+    if !constraints.is_empty() || constraints_omitted > 0 {
         let all: Vec<i64> = constraints.iter().map(|c| c.id).collect();
         o.header(
             Keep::Constraints,
-            "[STATED_CONSTRAINTS] (OBSERVED | user prompt | quoted verbatim)",
+            format!(
+                "[STATED_CONSTRAINTS] (OBSERVED | user prompt | quoted verbatim{})",
+                not_listed(constraints_omitted, lim.omitted_notes)
+            ),
             &ids("constraints", &all),
         );
-        for c in constraints {
+        for c in &constraints {
             o.push(
                 format!(
                     "- turn {} {} | \"{}\"",
@@ -610,6 +794,44 @@ fn render_lines(s: &Snapshot, lim: &Limits, trace: bool) -> Vec<Line> {
                 ),
                 &format!("constraints:{}", c.id),
             );
+        }
+        if constraints.is_empty() {
+            o.push("- (none listed here)", "constraints:omitted");
+        }
+    }
+
+    // The user's own statement that a route is ruled out, quoted with the
+    // approach it rejects (D78). It is printed on its own rather than left to
+    // the objective line, which carries it only while the clause happens to
+    // fall inside the objective's excerpt. The quote keeps both its ends --
+    // the approach is named at the start, the rejection at the close.
+    let (rejections, rejections_quoted) =
+        pick_rules(&s.rejections, lim.rejections_max, &quoted_by_root, false);
+    let rejections_omitted = (s.rejection_total as usize)
+        .max(s.rejections.len())
+        .saturating_sub(rejections.len() + rejections_quoted);
+    if !rejections.is_empty() || rejections_omitted > 0 {
+        let all: Vec<i64> = rejections.iter().map(|c| c.id).collect();
+        o.header(
+            Keep::Rejections,
+            format!(
+                "[REJECTED_APPROACHES] (OBSERVED | user prompt{})",
+                not_listed(rejections_omitted, lim.omitted_notes)
+            ),
+            &ids("constraints", &all),
+        );
+        for c in &rejections {
+            o.push(
+                format!(
+                    "- turn {} | \"{}\"",
+                    c.prompt_ordinal,
+                    quote_rejection(&c.text, &c.cue, lim.rejection_chars)
+                ),
+                &format!("constraints:{}", c.id),
+            );
+        }
+        if rejections.is_empty() {
+            o.push("- (none listed here)", "constraints:omitted");
         }
     }
 
@@ -657,7 +879,10 @@ fn render_lines(s: &Snapshot, lim: &Limits, trace: bool) -> Vec<Line> {
             ),
             &src,
         );
-        o.push(truncate_chars(&l.text, lim.latest_chars), &src);
+        // Both ends: a long latest message usually closes with the request
+        // (after a pasted log, a quoted spec, a long preamble), and a head-only
+        // cut spent the whole allowance on the preamble.
+        o.push(truncate_middle(&l.text, lim.latest_chars), &src);
     }
 
     let status_src = format!(
@@ -795,7 +1020,25 @@ fn render_lines(s: &Snapshot, lim: &Limits, trace: bool) -> Vec<Line> {
             None => groups.push(vec![(i, d)]),
         }
     }
-    groups.truncate(lim.dead_ends_max);
+    // Cut to fewer routes, the ones kept are those on a file the task's own
+    // words name -- the objective, a stated rule or rejection -- and then the
+    // most recent. "The most recent" alone kept an unrelated later revert and
+    // dropped the route the task was about.
+    let named = |p: &str| {
+        s.root
+            .iter()
+            .map(|r| r.text.as_str())
+            .chain(s.rejections.iter().map(|c| c.text.as_str()))
+            .chain(s.constraints.iter().map(|c| c.text.as_str()))
+            .any(|t| names_path(t, p))
+    };
+    if groups.len() > lim.dead_ends_max {
+        let mut order: Vec<usize> = (0..groups.len()).collect();
+        order.sort_by_key(|&i| (!named(&groups[i][0].1.path), i));
+        order.truncate(lim.dead_ends_max);
+        order.sort_unstable();
+        groups = order.into_iter().map(|i| groups[i].clone()).collect();
+    }
     if !groups.is_empty() {
         let all: Vec<i64> = groups.iter().flatten().map(|(_, d)| d.id).collect();
         o.header(
@@ -804,6 +1047,15 @@ fn render_lines(s: &Snapshot, lim: &Limits, trace: bool) -> Vec<Line> {
             &ids("dead_ends", &all),
         );
         let n = s.dead_ends.len();
+        // The order excerpt lines are given up in, last first: routes on a
+        // file the task names are kept longest, then the most recent. `rank[i]`
+        // is dead end `i`'s place in that order.
+        let mut preference: Vec<usize> = (0..n).collect();
+        preference.sort_by_key(|&i| (!named(&s.dead_ends[i].path), i));
+        let mut rank = vec![0usize; n];
+        for (r, &i) in preference.iter().enumerate() {
+            rank[i] = r;
+        }
         for group in &groups {
             let (_, last) = group[0];
             let member_ids: Vec<i64> = group.iter().map(|(_, d)| d.id).collect();
@@ -823,16 +1075,18 @@ fn render_lines(s: &Snapshot, lim: &Limits, trace: bool) -> Vec<Line> {
             };
             let header = if group.len() == 1 {
                 format!(
-                    "- {}{subagent} | {} edit(s) | {} at {}",
+                    "- {}{}{subagent} | {} edit(s) | {} at {}",
                     path(&last.path),
+                    where_is(&last.path),
                     edit_ids.len(),
                     mechanism_text(last, lim.command_chars),
                     hh_mm(last.resolved_ms, tz)
                 )
             } else {
                 format!(
-                    "- {}{subagent} | {} reverts, {} edit(s) | last {} at {}",
+                    "- {}{}{subagent} | {} reverts, {} edit(s) | last {} at {}",
                     path(&last.path),
+                    where_is(&last.path),
                     group.len(),
                     edit_ids.len(),
                     mechanism_text(last, lim.command_chars),
@@ -855,13 +1109,33 @@ fn render_lines(s: &Snapshot, lim: &Limits, trace: bool) -> Vec<Line> {
                     (Some(m), None) => (None, Some(('-', m))),
                     (None, None) => (None, None),
                 };
-                let age = n - i;
+                let age = n - rank[*i];
+                // Which of the dead end's edits the excerpt is from, when it
+                // grouped several: the snapshot picks the change that was
+                // finally rejected, not the first step towards it (D93), and
+                // the line says so. No position is claimed without the edit.
+                let from = match (d.excerpt_edit, d.edit_ids.len()) {
+                    (Some(e), n) if n > 1 => d
+                        .edit_ids
+                        .iter()
+                        .position(|&x| x == e)
+                        .map(|p| format!("  (edit {} of {n})", p + 1)),
+                    _ => None,
+                };
+                let member_src = match d.excerpt_edit {
+                    Some(e) => format!("{member_src},excerpt=edits:{e}"),
+                    None => member_src,
+                };
                 if let Some(m) = original.filter(|_| age > lim.dead_original_removed) {
                     o.push(format!("    - {m}"), &member_src);
                 }
                 if let Some((sign, a)) = attempted.filter(|_| age > lim.dead_attempt_removed) {
                     o.push(
-                        format!("    {sign} {}", truncate_chars(a, lim.dead_attempt_chars)),
+                        format!(
+                            "    {sign} {}{}",
+                            truncate_chars(a, lim.dead_attempt_chars),
+                            from.as_deref().unwrap_or("")
+                        ),
                         &member_src,
                     );
                 }
@@ -903,8 +1177,9 @@ fn render_lines(s: &Snapshot, lim: &Limits, trace: bool) -> Vec<Line> {
             };
             o.push(
                 format!(
-                    "- {}{} | +{}/-{} lines | {} | afterward: {after}",
+                    "- {}{}{} | +{}/-{} lines | {} | afterward: {after}",
                     path(&a.path),
+                    where_is(&a.path),
                     if a.subagent { " (subagent)" } else { "" },
                     num(a.added),
                     num(a.removed),
@@ -937,8 +1212,9 @@ fn render_lines(s: &Snapshot, lim: &Limits, trace: bool) -> Vec<Line> {
         for w in working {
             o.push(
                 format!(
-                    "- {} | edited {}x, read {}x{}",
+                    "- {}{} | edited {}x, read {}x{}",
                     path(&w.path),
+                    where_is(&w.path),
                     w.edits,
                     w.reads,
                     if w.in_failure {
@@ -953,12 +1229,23 @@ fn render_lines(s: &Snapshot, lim: &Limits, trace: bool) -> Vec<Line> {
     }
 
     if let (true, Some(t)) = (lim.next_target, &s.next_target) {
+        // Only a location taken from the failing output is a failure location;
+        // the most recent live edit is a place to pick up, and is not called
+        // one.
+        let section = if t.rule == "failure-location" {
+            "FAILURE_LOCATION"
+        } else {
+            "NEXT_TARGET"
+        };
         o.header(
             Keep::FailureLocation,
-            format!("[FAILURE_LOCATION] (INFERRED | {})", t.rule),
+            format!("[{section}] (INFERRED | {})", t.rule),
             &t.source,
         );
-        o.push(path(&t.target), &t.source);
+        o.push(
+            format!("{}{}", path(&t.target), where_is(&t.target)),
+            &t.source,
+        );
     }
 
     o.plain("[RECORD_DETAIL]");
@@ -1147,6 +1434,12 @@ const CEILING_STEPS: &[Rung] = &[
     },
     // Shorten a message before dropping it: a whole message is 50-90 tokens,
     // and the ladder is rarely more than a few dozen over by this point.
+    // The count of rules a section does not list is bookkeeping: it goes
+    // before any of the user's own words do.
+    Rung {
+        name: "omitted-rule counts off",
+        apply: |l, _| std::mem::replace(&mut l.omitted_notes, false),
+    },
     Rung {
         name: "latest_message 120->80 chars",
         apply: |l, _| std::mem::replace(&mut l.latest_chars, 80) != 80,
@@ -1160,6 +1453,18 @@ const CEILING_STEPS: &[Rung] = &[
     Rung {
         name: "latest_message off (an earlier message names code)",
         apply: |l, s| s.earlier.is_some() && std::mem::replace(&mut l.latest, false),
+    },
+    // A rejection keeps both ends as it shortens -- the approach it names and
+    // the clause that rules it out -- and is shortened before the line a
+    // reverted attempt added is dropped: that line is a single identifier the
+    // rejection's prose does not spell, at a fraction of the cost.
+    Rung {
+        name: "rejections 200->140 chars",
+        apply: |l, _| std::mem::replace(&mut l.rejection_chars, 140) != 140,
+    },
+    Rung {
+        name: "rejections 140->100 chars",
+        apply: |l, _| std::mem::replace(&mut l.rejection_chars, 100) != 100,
     },
     // A rejected route keeps its header -- the file, that it was reverted, and
     // how -- which is the claim the section exists to make. The literal line
@@ -1205,12 +1510,20 @@ const CEILING_STEPS: &[Rung] = &[
         apply: |l, _| std::mem::replace(&mut l.dead_ends_max, 2) != 2,
     },
     Rung {
+        name: "rejections 4->2",
+        apply: |l, _| std::mem::replace(&mut l.rejections_max, 2) != 2,
+    },
+    Rung {
         name: "first_message 160->100 chars",
         apply: |l, _| std::mem::replace(&mut l.root_chars, 100) != 100,
     },
     Rung {
         name: "constraints 2->1",
         apply: |l, _| std::mem::replace(&mut l.constraints_max, 1) != 1,
+    },
+    Rung {
+        name: "rejections 2->1",
+        apply: |l, _| std::mem::replace(&mut l.rejections_max, 1) != 1,
     },
     Rung {
         name: "subtask off",
@@ -1537,6 +1850,8 @@ mod tests {
             tests: vec![],
             dead_ends: vec![],
             dead_end_total: 0,
+            constraint_total: 0,
+            rejection_total: 0,
             attempts: vec![],
             working_files: vec![],
             next_target: None,
@@ -1625,6 +1940,7 @@ mod tests {
                 resolved_ms: 0,
                 minus: Some("m".repeat(160)),
                 plus: Some("p".repeat(160)),
+                excerpt_edit: None,
                 observed_after: Some(CommandRef {
                     id: 9,
                     command: long.clone(),
@@ -1761,6 +2077,7 @@ mod tests {
             resolved_ms: 0,
             minus: None,
             plus: None,
+            excerpt_edit: None,
             observed_after: None,
         }];
         let full = render(
@@ -1855,5 +2172,97 @@ mod tests {
             summary(&s),
             "objective, 1 failing test, 2 dead ends, 1 file"
         );
+    }
+
+    #[test]
+    fn a_middle_cut_keeps_both_ends_within_the_limit() {
+        let text = format!("{} Now rename x to y.", "background ".repeat(40));
+        for n in [24usize, 40, 80, 200] {
+            let cut = truncate_middle(&text, n);
+            assert!(cut.chars().count() <= n, "{n}: {cut}");
+            assert!(cut.starts_with("backg"), "{n}: {cut}");
+            assert!(cut.contains(" ... "), "{n}: {cut}");
+        }
+        assert!(truncate_middle(&text, 80).ends_with("Now rename x to y."));
+        // Short text is untouched; a tiny limit falls back to a head cut.
+        assert_eq!(truncate_middle("short", 80), "short");
+        assert!(truncate_middle(&text, 10).chars().count() <= 10);
+        // Multi-byte text is cut on character boundaries.
+        let wide = "é".repeat(300);
+        assert!(truncate_middle(&wide, 50).chars().count() <= 50);
+    }
+
+    #[test]
+    fn a_rejection_is_quoted_by_its_approach_and_its_label() {
+        let text = "Then try a temporary workaround that stores the idempotency key in a \
+                    module-level variable in src/payments/retry.py. Run the tests. That \
+                    workaround is considered a rejected approach for this task, so revert it \
+                    with git restore src/payments/retry.py, rerun the tests, and stop.";
+        let full = quote_rejection(text, "rejected approach", 1_000);
+        assert_eq!(full, text);
+        let q = quote_rejection(text, "rejected approach", 200);
+        assert_eq!(
+            q,
+            "Then try a temporary workaround that stores the idempotency key in a \
+             module-level variable in src/payments/retry.py. ... That workaround is \
+             considered a rejected approach for this task ..."
+        );
+        // Tighter: the label's clause whole, the approach from its start.
+        let q = quote_rejection(text, "rejected approach", 140);
+        assert!(q.chars().count() <= 140, "{q}");
+        assert!(q.starts_with("Then try a temporary workaround that"), "{q}");
+        assert!(
+            q.contains("considered a rejected approach for this task"),
+            "{q}"
+        );
+        // Every limit is honoured, down to a head cut.
+        for n in [20usize, 60, 100, 120, 180] {
+            assert!(
+                quote_rejection(text, "rejected approach", n)
+                    .chars()
+                    .count()
+                    <= n
+            );
+        }
+        // A label in the first sentence keeps that sentence from its start.
+        let one = "Caching the key in the request object is a dead end here, and the \
+                   reason is that the object is rebuilt on every retry attempt.";
+        assert_eq!(
+            quote_rejection(one, "dead end", 80),
+            "Caching the key in the request object is a dead end here ..."
+        );
+        // A label that is not found is a two-ended cut.
+        assert!(quote_rejection(text, "nothing like it", 80).contains(" ... "));
+    }
+
+    #[test]
+    fn a_shortened_rule_list_keeps_prohibitions_in_stated_order() {
+        let rule = |id: i64, text: &str, kind: ConstraintKind| ConstraintView {
+            id,
+            text: text.into(),
+            kind,
+            cue: String::new(),
+            prompt_ordinal: id,
+            ts_ms: id,
+        };
+        let rules = vec![
+            rule(1, "You must keep the API.", ConstraintKind::Requirement),
+            rule(2, "You must use the logger.", ConstraintKind::Requirement),
+            rule(3, "Do not modify the tests.", ConstraintKind::Prohibition),
+        ];
+        let none = |_: &str| false;
+        let (kept, quoted) = pick_rules(&rules, 2, &none, true);
+        assert_eq!(kept.iter().map(|c| c.id).collect::<Vec<_>>(), [1, 3]);
+        assert_eq!(quoted, 0);
+        let (kept, _) = pick_rules(&rules, 1, &none, true);
+        assert_eq!(kept.iter().map(|c| c.id).collect::<Vec<_>>(), [3]);
+        // Without classes, the earliest.
+        let (kept, _) = pick_rules(&rules, 1, &none, false);
+        assert_eq!(kept.iter().map(|c| c.id).collect::<Vec<_>>(), [1]);
+        // A rule the objective already quotes is counted, not listed.
+        let api = |t: &str| t.contains("API");
+        let (kept, quoted) = pick_rules(&rules, 3, &api, true);
+        assert_eq!(kept.iter().map(|c| c.id).collect::<Vec<_>>(), [2, 3]);
+        assert_eq!(quoted, 1);
     }
 }

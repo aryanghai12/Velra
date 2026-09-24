@@ -15,7 +15,7 @@ no git | 2 edits this task | last test run: none
     + v1
 [FILE_ACTIVITY] (OBSERVED)
 - src/parser.rs | edited 2x, read 0x
-[FAILURE_LOCATION] (INFERRED | last-active-edit)
+[NEXT_TARGET] (INFERRED | last-active-edit)
 src/parser.rs
 [RECORD_DETAIL]
 Full detail for any section: `velra inspect --section <name>`

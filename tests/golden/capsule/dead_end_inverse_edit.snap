@@ -15,7 +15,7 @@ no git | 2 edits this task | last test run: none
     + max_age = 0
 [FILE_ACTIVITY] (OBSERVED)
 - src/auth/session.py | edited 2x, read 0x
-[FAILURE_LOCATION] (INFERRED | last-active-edit)
+[NEXT_TARGET] (INFERRED | last-active-edit)
 src/auth/session.py
 [RECORD_DETAIL]
 Full detail for any section: `velra inspect --section <name>`

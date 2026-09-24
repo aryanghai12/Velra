@@ -85,6 +85,8 @@ pub struct FileStat {
     /// Stored as an absolute path, i.e. outside the workspace root: an agent's
     /// own notes, a global config file, a sibling checkout.
     pub outside: bool,
+    /// In an installed, generated or cache directory ([`is_incidental`]).
+    pub incidental: bool,
 }
 
 /// Whether a stored path lies outside the workspace. The reducer stores
@@ -128,6 +130,11 @@ pub fn working_score(s: &FileStat) -> u32 {
 /// `[RECENT_EDITS]` slots from the source files the task was about. They are
 /// still listed, below every workspace file.
 ///
+/// Within the workspace, files in an installed, generated or cache directory
+/// ([`is_incidental`]: `node_modules`, a virtualenv, `target/debug`) rank
+/// below every project file: ten dependency files read three times each
+/// otherwise outscored the test and the module the task was about.
+///
 /// Recency decides nothing but the very last tie, and deliberately in the
 /// *older* direction. Ranking ties by "most recently touched" hands the whole
 /// list to whatever the agent did last: in the v0.1 benchmark an audit sweep
@@ -142,6 +149,7 @@ pub fn rank(stats: &mut [FileStat]) {
     stats.sort_by(|a, b| {
         a.outside
             .cmp(&b.outside)
+            .then(a.incidental.cmp(&b.incidental))
             .then(working_score(b).cmp(&working_score(a)))
             .then(b.edits.cmp(&a.edits))
             .then(b.reads.cmp(&a.reads))
@@ -359,6 +367,143 @@ pub fn pick_dead_ends(paths: &[&str], max: usize) -> Vec<usize> {
     chosen
 }
 
+/// A failing test, build or lint run not followed by a pass of its own
+/// signature.
+struct OpenFailureRow {
+    id: i64,
+    kind: String,
+    command: String,
+    exit_code: Option<i64>,
+    excerpt: Option<String>,
+    ts_ms: i64,
+    mentions: Option<String>,
+    signature: String,
+}
+
+/// Whether a later passing test run, of any signature, ran every test the
+/// failure names (`testids::run_covers`) -- the full suite passing after a
+/// focused run failed. A failure that names no test, or a run whose runner is
+/// not recognised, is only ever closed by a pass of its own signature.
+fn closed_by_covering_pass(f: &OpenFailureRow, passes: &[(i64, String, i64)]) -> bool {
+    if f.kind != CommandKind::Test.as_str() {
+        return false;
+    }
+    let Some(run) = testids::test_run(&f.command) else {
+        return false;
+    };
+    let lines: Vec<&str> = f.excerpt.as_deref().unwrap_or("").lines().collect();
+    let ids: Vec<String> = testids::failing_tests(&lines)
+        .into_iter()
+        .map(|t| t.id)
+        .collect();
+    if ids.is_empty() {
+        return false;
+    }
+    passes
+        .iter()
+        .filter(|(id, _, ts)| (*ts, *id) > (f.ts_ms, f.id))
+        .filter_map(|(_, command, _)| testids::test_run(command))
+        .any(|pass| {
+            ids.iter()
+                .all(|t| testids::run_covers(&pass, &run.runner, t))
+        })
+}
+
+/// The excerpt a dead end is shown with, from its edits' `(id, excerpt)` in
+/// order: `(edit id, minus, plus)`.
+///
+/// An edit whose added line a later edit of the same dead end took out again
+/// was a step on the way, not the change that was rejected: in "tweak the
+/// line, then rewrite it" the first edit's `+` line is gone before the revert.
+/// The evidence is the first edit whose added line survived to the revert, and
+/// its `-` side is traced back through the steps it replaced to the line the
+/// attempt started from -- so the pair reads original -> rejected. Independent
+/// edits (the approach, then a touch-up elsewhere) replace nothing, and the
+/// first -- the approach -- is kept, as before.
+///
+/// Pure; `None` when no edit has an excerpt.
+pub fn dead_end_evidence(
+    edits: &[(i64, Option<String>)],
+) -> Option<(i64, Option<String>, Option<String>)> {
+    let parts: Vec<(i64, Option<String>, Option<String>)> = edits
+        .iter()
+        .filter_map(|(id, e)| {
+            let (m, p) = split_excerpt(e.as_deref()?);
+            (m.is_some() || p.is_some()).then_some((*id, m, p))
+        })
+        .collect();
+    let replaced =
+        |i: usize| parts[i].2.is_some() && parts[i + 1..].iter().any(|later| later.1 == parts[i].2);
+    let k = (0..parts.len()).find(|&i| !replaced(i))?;
+    let (id, mut minus, plus) = parts[k].clone();
+    // Walk back through the steps this edit replaced.
+    let mut at = k;
+    while let Some(j) = (0..at)
+        .rev()
+        .find(|&j| parts[j].2.is_some() && parts[j].2 == minus)
+    {
+        minus = parts[j].1.clone();
+        at = j;
+    }
+    Some((id, minus, plus))
+}
+
+/// Normalised form of a rule for recognising a restatement: letters and
+/// digits only, lower-cased, words separated by one space. "Do not modify the
+/// tests." and "do NOT modify the tests!" are one rule.
+fn rule_key(text: &str) -> String {
+    text.split(|c: char| !c.is_alphanumeric())
+        .filter(|w| !w.is_empty())
+        .map(str::to_lowercase)
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+/// The rules a snapshot carries from the epoch's live rules (oldest first),
+/// and how many distinct rules there are.
+///
+/// A rule restated differs from the first statement only in case, spacing or
+/// punctuation ([`rule_key`]) is one rule, carried as first stated. When there
+/// are more than `max`, prohibitions and explicitly labelled rules are kept
+/// before requirements -- "do not modify the tests" is the rule a
+/// continuation can break without noticing -- and within a class the earliest
+/// stated wins. What is carried stays in the order it was stated.
+pub fn pick_constraints(all: Vec<ConstraintView>, max: usize) -> (Vec<ConstraintView>, u32) {
+    let mut distinct: Vec<ConstraintView> = Vec::new();
+    for c in all {
+        let key = rule_key(&c.text);
+        if !distinct.iter().any(|d| rule_key(&d.text) == key) {
+            distinct.push(c);
+        }
+    }
+    let total = distinct.len() as u32;
+    let class = |c: &ConstraintView| match c.kind {
+        ConstraintKind::Prohibition | ConstraintKind::Labelled => 0,
+        ConstraintKind::Requirement => 1,
+    };
+    let mut order: Vec<usize> = (0..distinct.len()).collect();
+    order.sort_by_key(|&i| (class(&distinct[i]), i));
+    let mut keep: Vec<usize> = order.into_iter().take(max).collect();
+    keep.sort_unstable();
+    let kept = keep.into_iter().map(|i| distinct[i].clone()).collect();
+    (kept, total)
+}
+
+/// Files in an installed, generated or cache directory: a dependency's
+/// source, a virtualenv, a build tree. Reading them is how an agent looks
+/// something up, not what the task is about, and they rank below every
+/// project file (`rank`).
+pub fn is_incidental(path: &str) -> bool {
+    if crate::commands::is_third_party(path) {
+        return true;
+    }
+    let comps: Vec<&str> = path.split(['/', '\\']).collect();
+    comps.contains(&".venv")
+        || comps
+            .windows(2)
+            .any(|w| w[0] == "target" && matches!(w[1], "debug" | "release" | "doc" | "tmp"))
+}
+
 /// One `intents` row as the snapshot reads it.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct IntentRow {
@@ -512,11 +657,11 @@ pub fn build(
             })
         })?
         .collect::<rusqlite::Result<_>>()?;
-    let (mut rejections, mut constraints): (Vec<ConstraintView>, Vec<ConstraintView>) =
-        all_constraints
-            .into_iter()
-            .partition(|c| crate::constraint::is_rejection_cue(&c.cue));
-    constraints.truncate(CONSTRAINTS_MAX);
+    let (mut rejections, constraints): (Vec<ConstraintView>, Vec<ConstraintView>) = all_constraints
+        .into_iter()
+        .partition(|c| crate::constraint::is_rejection_cue(&c.cue));
+    let (constraints, constraint_total) = pick_constraints(constraints, CONSTRAINTS_MAX);
+    let rejection_total = rejections.len() as u32;
     rejections.truncate(REJECTIONS_MAX);
 
     let git = root_path.as_deref().and_then(git::head_info);
@@ -541,28 +686,57 @@ pub fn build(
          AND NOT EXISTS (SELECT 1 FROM commands d WHERE d.session_id = c.session_id AND d.epoch = c.epoch \
            AND d.signature = c.signature AND d.outcome = 'PASS' \
            AND (d.ts_ms > c.ts_ms OR (d.ts_ms = c.ts_ms AND d.id > c.id)))";
-    let failure_row = conn
+    let open_rows: Vec<OpenFailureRow> = conn
         .prepare_cached(&format!(
-            "SELECT c.id, c.kind, c.command_text, c.exit_code, c.excerpt, c.ts_ms, c.mentioned_paths {OPEN_FAILURE} \
-             ORDER BY c.ts_ms DESC, c.id DESC LIMIT 1"
+            "SELECT c.id, c.kind, c.command_text, c.exit_code, c.excerpt, c.ts_ms, c.mentioned_paths, c.signature \
+             {OPEN_FAILURE} ORDER BY c.ts_ms DESC, c.id DESC"
         ))?
-        .query_row(params![sid, epoch], |r| {
-            Ok((
-                r.get::<_, i64>(0)?,
-                r.get::<_, String>(1)?,
-                r.get::<_, String>(2)?,
-                r.get::<_, Option<i64>>(3)?,
-                r.get::<_, Option<String>>(4)?,
-                r.get::<_, i64>(5)?,
-                r.get::<_, Option<String>>(6)?,
-            ))
-        })
-        .optional()?;
-    let failing_count: i64 = conn
-        .prepare_cached(&format!(
-            "SELECT COUNT(DISTINCT c.signature) {OPEN_FAILURE}"
-        ))?
-        .query_row(params![sid, epoch], |r| r.get(0))?;
+        .query_map(params![sid, epoch], |r| {
+            Ok(OpenFailureRow {
+                id: r.get(0)?,
+                kind: r.get(1)?,
+                command: r.get(2)?,
+                exit_code: r.get(3)?,
+                excerpt: r.get(4)?,
+                ts_ms: r.get(5)?,
+                mentions: r.get(6)?,
+                signature: r.get(7)?,
+            })
+        })?
+        .collect::<rusqlite::Result<_>>()?;
+    // A run of another signature can still have run the failing tests: the
+    // full suite after a focused run. The test statuses already count such a
+    // run as covering them (`testids::run_covers`); the failure agrees.
+    let passes: Vec<(i64, String, i64)> = conn
+        .prepare_cached(
+            "SELECT id, command_text, ts_ms FROM commands WHERE session_id = ?1 AND epoch = ?2 \
+             AND kind = 'test' AND outcome = 'PASS' ORDER BY ts_ms, id",
+        )?
+        .query_map(params![sid, epoch], |r| {
+            Ok((r.get(0)?, r.get(1)?, r.get(2)?))
+        })?
+        .collect::<rusqlite::Result<_>>()?;
+    let open_rows: Vec<OpenFailureRow> = open_rows
+        .into_iter()
+        .filter(|f| !closed_by_covering_pass(f, &passes))
+        .collect();
+    let failing_count = {
+        let mut sigs: Vec<&str> = open_rows.iter().map(|f| f.signature.as_str()).collect();
+        sigs.sort_unstable();
+        sigs.dedup();
+        sigs.len() as i64
+    };
+    let failure_row = open_rows.into_iter().next().map(|f| {
+        (
+            f.id,
+            f.kind,
+            f.command,
+            f.exit_code,
+            f.excerpt,
+            f.ts_ms,
+            f.mentions,
+        )
+    });
     let mut failure_mentions: Vec<serde_json::Value> = Vec::new();
     let failure = failure_row.map(|(id, kind, command, exit_code, excerpt, ts_ms, mentions)| {
         failure_mentions = mentions
@@ -611,9 +785,9 @@ pub fn build(
     for (id, path, edit_ids, mechanism, command, resolved_ms, observed) in dead_rows {
         let edit_ids: Vec<i64> = serde_json::from_str(&edit_ids).unwrap_or_default();
         let mut subagent = false;
-        let mut first_excerpt: Option<String> = None;
+        let mut excerpts: Vec<(i64, Option<String>)> = Vec::with_capacity(edit_ids.len());
         let mut stmt = conn.prepare_cached("SELECT agent_id, excerpt FROM edits WHERE id = ?1")?;
-        for (i, eid) in edit_ids.iter().enumerate() {
+        for eid in &edit_ids {
             if let Some((agent, excerpt)) = stmt
                 .query_row([eid], |r| {
                     Ok((
@@ -624,18 +798,16 @@ pub fn build(
                 .optional()?
             {
                 subagent |= agent.is_some();
-                if i == 0 {
-                    first_excerpt = excerpt;
-                }
+                excerpts.push((*eid, excerpt));
             }
         }
-        let (minus, plus) = if paths::is_sensitive(&path) {
-            (None, None)
+        let (excerpt_edit, minus, plus) = if paths::is_sensitive(&path) {
+            (None, None, None)
         } else {
-            first_excerpt
-                .as_deref()
-                .map(split_excerpt)
-                .unwrap_or((None, None))
+            match dead_end_evidence(&excerpts) {
+                Some((e, m, p)) => (Some(e), m, p),
+                None => (None, None, None),
+            }
         };
         let observed_after = match observed {
             Some(cid) => command_ref(conn, cid)?,
@@ -651,6 +823,7 @@ pub fn build(
             resolved_ms,
             minus,
             plus,
+            excerpt_edit,
             observed_after,
         });
     }
@@ -672,7 +845,7 @@ pub fn build(
         .into_iter()
         .filter(|row| !dead_ends.iter().any(|d| d.path == row.1))
         .collect();
-    attempt_rows.sort_by_key(|row| is_outside_workspace(&row.1));
+    attempt_rows.sort_by_key(|row| (is_outside_workspace(&row.1), is_incidental(&row.1)));
     let mut attempts = Vec::new();
     for (edit_id, path, added, removed, ts_ms, agent) in attempt_rows {
         if attempts.len() >= ATTEMPTS_MAX {
@@ -723,6 +896,7 @@ pub fn build(
                 first_touch_ms: r.get(5)?,
                 pinned: false,
                 outside: false,
+                incidental: false,
             })
         })?
         .collect::<rusqlite::Result<_>>()?;
@@ -732,6 +906,7 @@ pub fn build(
     for s in &mut stats {
         s.pinned = pinned.contains(s.path.as_str());
         s.outside = is_outside_workspace(&s.path);
+        s.incidental = is_incidental(&s.path);
     }
     rank(&mut stats);
     let working_files: Vec<WorkingFileView> = stats
@@ -764,14 +939,25 @@ pub fn build(
         }
     }
     if next_target.is_none() {
-        next_target = conn
+        // The most recent live edit to a project file; an edit outside the
+        // workspace (an auto-memory note) or in a dependency or build tree only
+        // when there is no such edit. The agent's last write is often a note
+        // about the work, not the work.
+        let live: Vec<(i64, String)> = conn
             .prepare_cached(
                 "SELECT id, path FROM edits WHERE session_id = ?1 AND epoch = ?2 AND status = 'ACTIVE' \
-                 ORDER BY ts_ms DESC, id DESC LIMIT 1",
+                 ORDER BY ts_ms DESC, id DESC",
             )?
-            .query_row(params![sid, epoch], |r| Ok((r.get::<_, i64>(0)?, r.get::<_, String>(1)?)))
-            .optional()?
-            .map(|(id, path)| NextTarget { rule: "last-active-edit", target: path, source: format!("edits:{id}") });
+            .query_map(params![sid, epoch], |r| Ok((r.get::<_, i64>(0)?, r.get::<_, String>(1)?)))?
+            .collect::<rusqlite::Result<_>>()?;
+        next_target = live
+            .iter()
+            .min_by_key(|(_, path)| (is_outside_workspace(path), is_incidental(path)))
+            .map(|(id, path)| NextTarget {
+                rule: "last-active-edit",
+                target: path.clone(),
+                source: format!("edits:{id}"),
+            });
     }
 
     Ok(Snapshot {
@@ -785,7 +971,9 @@ pub fn build(
         epoch,
         root,
         constraints,
+        constraint_total,
         rejections,
+        rejection_total,
         subtask,
         latest,
         earlier,
@@ -820,6 +1008,139 @@ pub fn has_state(conn: &Connection, session_id: &str) -> rusqlite::Result<bool> 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn ex(id: i64, minus: &str, plus: &str) -> (i64, Option<String>) {
+        (id, Some(format!("- {minus}\n+ {plus}")))
+    }
+
+    #[test]
+    fn dead_end_evidence_is_the_surviving_change_from_where_it_started() {
+        // One edit.
+        assert_eq!(
+            dead_end_evidence(&[ex(1, "a", "b")]),
+            Some((1, Some("a".into()), Some("b".into())))
+        );
+        // A chain: each edit rewrites the line the previous one added.
+        assert_eq!(
+            dead_end_evidence(&[ex(1, "a", "b"), ex(2, "b", "c"), ex(3, "c", "d")]),
+            Some((3, Some("a".into()), Some("d".into())))
+        );
+        // Independent edits: the first is the approach.
+        assert_eq!(
+            dead_end_evidence(&[ex(1, "a", "b"), ex(2, "x", "y")]),
+            Some((1, Some("a".into()), Some("b".into())))
+        );
+        // A step replaced after an unrelated edit in between.
+        assert_eq!(
+            dead_end_evidence(&[ex(1, "a", "b"), ex(2, "x", "y"), ex(3, "b", "c")]),
+            Some((2, Some("x".into()), Some("y".into())))
+        );
+        // A pure deletion (no `+` line) is evidence too.
+        assert_eq!(
+            dead_end_evidence(&[(1, Some("- gone".into()))]),
+            Some((1, Some("gone".into()), None))
+        );
+        // Edits without excerpts are skipped; none at all is none.
+        assert_eq!(
+            dead_end_evidence(&[(1, None), ex(2, "a", "b")]),
+            Some((2, Some("a".into()), Some("b".into())))
+        );
+        assert_eq!(
+            dead_end_evidence(&[(1, None), (2, Some(String::new()))]),
+            None
+        );
+        assert_eq!(dead_end_evidence(&[]), None);
+    }
+
+    fn rule(id: i64, text: &str, kind: ConstraintKind) -> ConstraintView {
+        ConstraintView {
+            id,
+            text: text.into(),
+            kind,
+            cue: String::new(),
+            prompt_ordinal: id,
+            ts_ms: id,
+        }
+    }
+
+    #[test]
+    fn constraints_are_deduplicated_prioritised_and_kept_in_order() {
+        use ConstraintKind::*;
+        let all = vec![
+            rule(1, "You must keep the API.", Requirement),
+            rule(2, "Do not modify the tests.", Prohibition),
+            rule(3, "You must use the logger.", Requirement),
+            rule(4, "do NOT modify the tests!", Prohibition),
+            rule(5, "You must add type hints.", Requirement),
+            rule(6, "Constraint: stay on Python 3.9.", Labelled),
+        ];
+        let (kept, total) = pick_constraints(all.clone(), 3);
+        assert_eq!(total, 5);
+        let ids: Vec<i64> = kept.iter().map(|c| c.id).collect();
+        assert_eq!(ids, [1, 2, 6]);
+        // Room for everything: every distinct rule, in order.
+        let (kept, _) = pick_constraints(all, 10);
+        let ids: Vec<i64> = kept.iter().map(|c| c.id).collect();
+        assert_eq!(ids, [1, 2, 3, 5, 6]);
+        // Nothing to pick.
+        let (kept, total) = pick_constraints(Vec::new(), 3);
+        assert!(kept.is_empty() && total == 0);
+    }
+
+    #[test]
+    fn incidental_paths() {
+        for p in [
+            "node_modules/x/index.js",
+            ".venv/lib/python3.12/site-packages/a.py",
+            ".venv/bin/python",
+            "target/debug/build/out.rs",
+            "crates/x/target/release/deps/a.d",
+            "src/__pycache__/a.pyc",
+        ] {
+            assert!(is_incidental(p), "{p}");
+        }
+        for p in [
+            "src/target.py",
+            "target/README.md",
+            "src/venv_utils.py",
+            "tests/test_a.py",
+        ] {
+            assert!(!is_incidental(p), "{p}");
+        }
+    }
+
+    #[test]
+    fn incidental_files_rank_below_every_project_file_but_above_outside_ones() {
+        let mut stats = vec![
+            FileStat {
+                path: "/home/u/.claude/memory/n.md".into(),
+                edits: 3,
+                outside: true,
+                ..Default::default()
+            },
+            FileStat {
+                path: "node_modules/a.js".into(),
+                reads: 3,
+                incidental: true,
+                ..Default::default()
+            },
+            FileStat {
+                path: "src/a.py".into(),
+                reads: 1,
+                ..Default::default()
+            },
+        ];
+        rank(&mut stats);
+        let order: Vec<&str> = stats.iter().map(|s| s.path.as_str()).collect();
+        assert_eq!(
+            order,
+            [
+                "src/a.py",
+                "node_modules/a.js",
+                "/home/u/.claude/memory/n.md"
+            ]
+        );
+    }
 
     #[test]
     fn every_file_gets_a_dead_end_slot_before_any_file_gets_a_second() {

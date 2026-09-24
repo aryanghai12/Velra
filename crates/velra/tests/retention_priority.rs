@@ -400,11 +400,27 @@ fn the_failing_vs_code_session_now_carries_its_task_state() {
     payment_session(&mut log, true);
     let c = log.capsule();
     assert!(estimate_tokens(&c) <= DEFAULT_BUDGET_TOKENS);
-    // The objective is carried to the full first-message width, not cut to 160.
+    // The objective leads with the task and still says it is to be left
+    // unfinished. Until Phase 5 it was carried to 240 characters so that it
+    // could also carry "stores the idempotency key" -- the only place the
+    // rejected approach appeared in words. That now has a section of its own,
+    // which the budget pays for by cutting the objective to 160.
     let body = first_message_body(&c);
     assert!(body.starts_with(TASK_HEAD), "{c}");
-    assert!(body.contains("stores the idempotency key"), "{c}");
+    assert!(body.contains("intentionally leave it unfinished"), "{c}");
+    let rejected = c
+        .lines()
+        .skip_while(|l| !l.starts_with("[REJECTED_APPROACHES]"))
+        .nth(1)
+        .unwrap_or_else(|| panic!("no rejected approach:\n{c}"));
+    assert!(rejected.contains("Then try a temporary work"), "{c}");
+    assert!(rejected.contains("rejected approach"), "{c}");
     assert!(c.contains(&format!("FAIL {TEST_ID}")), "{c}");
+    // The tests were rerun after the restore: the failing run's command.
+    assert!(
+        c.contains("Command: git restore src/payments/retry.py && python -m pytest"),
+        "{c}"
+    );
     assert!(c.contains("Do not modify the tests."), "{c}");
     assert!(
         c.contains(
@@ -515,7 +531,10 @@ fn a_rejection_past_the_objective_excerpt_is_kept_as_selected_state() {
 fn b_c_d_e_critical_state_survives_budget_pressure() {
     let mut log = Log::new();
     crowded_payment_session(&mut log, true);
-    for budget in (630..=DEFAULT_BUDGET_TOKENS).rev().step_by(10) {
+    // The whole set, down to 720. (Until Phase 5, 630: the capsule now also
+    // carries `[REJECTED_APPROACHES]`, the user's own words ruling the route
+    // out, which the objective carried only by accident of length.)
+    for budget in (600..=DEFAULT_BUDGET_TOKENS).rev().step_by(10) {
         let c = log.capsule_at(budget);
         assert!(estimate_tokens(&c) <= budget);
         let why = format!("budget {budget}:\n{c}");
@@ -524,15 +543,23 @@ fn b_c_d_e_critical_state_survives_budget_pressure() {
         assert!(c.contains(RETRY), "E {why}");
         assert!(c.contains("Do not modify the tests."), "constraint {why}");
         assert!(
+            c.contains("[REJECTED_APPROACHES]") && c.contains("rejected approach"),
+            "the user's rejection {why}"
+        );
+        // The task's own route is the one kept when routes must go: the
+        // objective and the rejection name its file.
+        assert!(
             c.contains(&format!("- {RETRY} | 1 edit(s) | reverted via")),
             "C: the rejected route's header {why}"
         );
-        assert!(
-            c.contains("- src/payments/gateway.py | 1 edit(s) | reverted via"),
-            "C: the other rejected route {why}"
-        );
+        if budget >= 720 {
+            assert!(
+                c.contains("- src/payments/gateway.py | 1 edit(s) | reverted via"),
+                "C: the other rejected route {why}"
+            );
+        }
     }
-    for budget in (300..630).rev().step_by(10) {
+    for budget in (300..600).rev().step_by(10) {
         let c = log.capsule_at(budget);
         let why = format!("budget {budget}:\n{c}");
         assert!(estimate_tokens(&c) <= budget, "{why}");
@@ -548,6 +575,16 @@ fn b_c_d_e_critical_state_survives_budget_pressure() {
         }
         if has("[REVERTED_EDITS]") {
             assert!(has("[TEST_STATUS]"), "a route outlived the test id: {why}");
+            assert!(
+                has("[REJECTED_APPROACHES]"),
+                "an observed route outlived the user's rejection of it: {why}"
+            );
+        }
+        if has("[REJECTED_APPROACHES]") {
+            assert!(
+                has("[TEST_STATUS]"),
+                "a rejection outlived the test id: {why}"
+            );
         }
         if has("[TEST_STATUS]") {
             assert!(
@@ -556,8 +593,21 @@ fn b_c_d_e_critical_state_survives_budget_pressure() {
             );
         }
     }
-    // At the default budget, the route's own line too.
-    assert!(log.capsule().contains(WORKAROUND), "{}", log.capsule());
+    // The route's own added line is detail on top of the route and the user's
+    // rejection of it (CEILING_STEPS): crowded like this, it is kept a little
+    // above the default budget and gives way at it, after the rejection has
+    // been shortened. Uncrowded, it survives the default budget
+    // (`the_failing_vs_code_session_now_carries_its_task_state`).
+    assert!(
+        log.capsule_at(760).contains(WORKAROUND),
+        "{}",
+        log.capsule_at(760)
+    );
+    let c = log.capsule();
+    assert!(
+        c.contains(WORKAROUND) || c.contains("rejected approach"),
+        "neither the route's line nor the user's rejection of it:\n{c}"
+    );
 }
 
 /// C: a group of reverts of one file keeps its header, and at full width the

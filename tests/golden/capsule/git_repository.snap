@@ -13,7 +13,7 @@ feat/auth-refactor @ 4f2a1c9 | 1 edits this task | last test run: none
 - src/a.rs | +1/-1 lines | 10:04 | afterward: no test run yet
 [FILE_ACTIVITY] (OBSERVED)
 - src/a.rs | edited 1x, read 0x
-[FAILURE_LOCATION] (INFERRED | last-active-edit)
+[NEXT_TARGET] (INFERRED | last-active-edit)
 src/a.rs
 [RECORD_DETAIL]
 Full detail for any section: `velra inspect --section <name>`
