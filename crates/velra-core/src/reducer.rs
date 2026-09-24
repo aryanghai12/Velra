@@ -17,12 +17,14 @@
 //! rebuilt rows then follow logical order too, which is what the ordered
 //! queries downstream read.
 //!
-//! Applying an event reads nothing but the ledger. The one exception left --
-//! whether a path named in a failing command's output exists -- is kept from
-//! the first reduction across a rebuild ([`Replay::mentions`]). The turn-end
-//! file scan used to hash the disk here, whenever the reducer happened to
-//! run, and file the result under the `Stop` event's time; it is now taken by
-//! the Stop hook and carried in the event (`Payload::turn_scan`).
+//! Applying an event reads nothing but the ledger. Two observations used to
+//! be made here, against the disk as it was whenever the reducer happened to
+//! run, and filed under the event's time: the turn-end file scan, and which
+//! paths a failing command's output names that exist. Both are now made by
+//! the hook when the event happens and carried in it (`Payload::turn_scan`,
+//! `Payload::mentioned`). A rebuild keeps the mentions of each command's
+//! first reduction ([`Replay::mentions`]), which for rows reduced by an
+//! earlier build are the only record of them.
 
 use crate::commands::{self, OutcomeInput};
 use crate::constraint;
@@ -33,8 +35,8 @@ use crate::model::{
     hook_event as he, tools, CommandKind, EditStatus, IntentLevel, Mechanism, Outcome,
     VersionSource,
 };
-use crate::paths;
 use crate::revert::{self, ActiveEdit, OpenDeadEnd, Version};
+use crate::shell;
 use rusqlite::{params, Connection, OptionalExtension, TransactionBehavior};
 use std::path::{Path, PathBuf};
 use std::time::Instant;
@@ -43,8 +45,6 @@ use std::time::Instant;
 pub const BATCH: usize = 200;
 /// Version history considered for revert detection.
 const HISTORY_LIMIT: i64 = 256;
-/// Mentioned paths stored per failing command.
-const MENTION_LIMIT: usize = 16;
 
 #[derive(Debug, Clone)]
 pub struct ReduceOptions {
@@ -223,9 +223,9 @@ struct Replay {
     /// The event's position among the session's user turns, counted by the
     /// rebuild as it goes; `None` counts the rows already applied.
     ordinal: Option<i64>,
-    /// `commands.mentioned_paths` from the first reduction, by event id.
-    /// Which paths a failing command's output names is checked against the
-    /// disk, and a rebuild must not re-check it against the disk as it is now.
+    /// `commands.mentioned_paths` from the first reduction, by event id. An
+    /// earlier build checked them against the disk as it was when it reduced;
+    /// a rebuild keeps that rather than dropping what it cannot re-derive.
     mentions: std::collections::HashMap<i64, Option<String>>,
     /// Incremental turn counts, by session: `(counted through this id, turns)`.
     /// Each prompt event is parsed once per reduction, not once per later
@@ -890,6 +890,21 @@ fn record_version(
     size: u64,
     source: VersionSource,
 ) -> Result<()> {
+    record_version_by(ctx, path, hash, size, source, None)
+}
+
+/// [`record_version`] for a `git_post` observation, with the restore-family
+/// subcommand that could have changed the file, if one could
+/// (`shell::reaches`). Only then is a revert it shows credited to git, and
+/// quoted with that subcommand rather than the whole line.
+fn record_version_by(
+    ctx: &Ctx<'_>,
+    path: &str,
+    hash: &str,
+    size: u64,
+    source: VersionSource,
+    git_reach: Option<&str>,
+) -> Result<()> {
     let history = versions(ctx, path)?;
     ctx.tx
         .prepare_cached(
@@ -939,10 +954,11 @@ fn record_version(
     let active = active_edits(ctx, path)?;
     let reverted = revert::detect_revert(&history, hash, &active);
     if !reverted.is_empty() {
-        let mechanism = revert::mechanism_for(source, ctx.ev.tool_name.as_deref());
+        let mechanism =
+            revert::mechanism_for(source, ctx.ev.tool_name.as_deref(), git_reach.is_some());
         resolve_edits(ctx, &reverted, EditStatus::Reverted, Some(mechanism))?;
         let command = if mechanism == Mechanism::GitCommand {
-            ctx.ev.payload.command.as_deref()
+            git_reach
         } else {
             None
         };
@@ -993,42 +1009,48 @@ fn apply_edit(ctx: &Ctx<'_>) -> Result<()> {
     )
 }
 
-fn resolve_mentions(ctx: &Ctx<'_>, output: &str) -> Result<Vec<serde_json::Value>> {
-    let Some(root) = project_root(ctx.tx, &ctx.ev.project_id)? else {
-        return Ok(Vec::new());
-    };
-    let root_str = root.to_string_lossy().into_owned();
-    let cwd = ctx.ev.payload.cwd.as_deref().map(Path::new);
-    let mut out: Vec<serde_json::Value> = Vec::new();
-    for tok in commands::path_tokens(output, 40) {
-        if out.len() >= MENTION_LIMIT {
-            break;
+/// The paths a failing command's output names, as the hook found them when
+/// the command returned (`Payload::mentioned`), at most
+/// [`commands::MENTION_LIMIT`] and never in an installed or generated
+/// directory.
+///
+/// An event without the record -- from a build before it existed -- names
+/// none. Checking its paths against the disk here would file whatever exists
+/// when the reducer happens to run as what existed when the command ran: a
+/// file created afterwards as named by the failure, one deleted afterwards as
+/// not.
+fn recorded_mentions(ctx: &Ctx<'_>) -> Vec<serde_json::Value> {
+    ctx.ev
+        .payload
+        .mentioned
+        .as_deref()
+        .unwrap_or(&[])
+        .iter()
+        .filter(|m| !m.path.is_empty() && !commands::is_third_party(&m.path))
+        .take(commands::MENTION_LIMIT)
+        .map(|m| serde_json::json!({ "path": m.path, "line": m.line, "raw": m.raw }))
+        .collect()
+}
+
+/// The working directory a shell event's command started in: the one its
+/// `PreToolUse` reported, when that event is in the ledger, else its own.
+/// A `cd` inside the command may have moved the directory the post event
+/// reports; pathspecs are relative to where the command began.
+fn command_cwd(ctx: &Ctx<'_>) -> Result<Option<String>> {
+    if let Some(id) = ctx.ev.tool_use_id.as_deref() {
+        let pre: Option<String> = ctx
+            .tx
+            .prepare_cached(
+                "SELECT payload FROM events WHERE session_id = ?1 AND tool_use_id = ?2 \
+                 AND hook_event = 'PreToolUse' ORDER BY id LIMIT 1",
+            )?
+            .query_row(params![ctx.ev.session_id, id], |r| r.get(0))
+            .optional()?;
+        if let Some(cwd) = pre.and_then(|p| Payload::from_json(&p).cwd) {
+            return Ok(Some(cwd));
         }
-        let candidates: Vec<PathBuf> = if paths::is_absolute_str(&tok.path) {
-            vec![PathBuf::from(&tok.path)]
-        } else {
-            cwd.map(|c| c.join(&tok.path))
-                .into_iter()
-                .chain(std::iter::once(root.join(&tok.path)))
-                .collect()
-        };
-        let Some(found) = candidates.into_iter().find(|c| c.is_file()) else {
-            continue;
-        };
-        let rel = paths::relative_to_root_resolved(&found.to_string_lossy(), &root_str);
-        if paths::is_absolute_str(&rel) {
-            continue; // outside the project root
-        }
-        let rel = rel.replace("/./", "/");
-        if out
-            .iter()
-            .any(|m| m["path"] == rel && m["line"] == serde_json::json!(tok.line))
-        {
-            continue;
-        }
-        out.push(serde_json::json!({ "path": rel, "line": tok.line, "raw": tok.raw }));
     }
-    Ok(out)
+    Ok(ctx.ev.payload.cwd.clone())
 }
 
 fn apply_shell(ctx: &Ctx<'_>, failure: bool) -> Result<()> {
@@ -1037,20 +1059,7 @@ fn apply_shell(ctx: &Ctx<'_>, failure: bool) -> Result<()> {
         return Ok(());
     };
     let classified = commands::classify(command);
-    let (exit_code, output) = if failure {
-        let err = p.error.as_deref().unwrap_or("");
-        let (code, rest) = commands::parse_exit_code_prefix(err);
-        (p.exit_code.or(code), rest.to_string())
-    } else {
-        let mut out = p.stdout_tail.clone().unwrap_or_default();
-        if let Some(e) = p.stderr_tail.as_deref().filter(|e| !e.is_empty()) {
-            if !out.is_empty() {
-                out.push('\n');
-            }
-            out.push_str(e);
-        }
-        (p.exit_code, out)
-    };
+    let (exit_code, output) = commands::stored_output(p, failure);
     let interrupted = p.interrupted == Some(true) || p.is_interrupt == Some(true);
     let outcome = commands::outcome(OutcomeInput {
         kind: classified.kind,
@@ -1072,7 +1081,7 @@ fn apply_shell(ctx: &Ctx<'_>, failure: bool) -> Result<()> {
                 .as_deref()
                 .and_then(|j| serde_json::from_str::<Vec<serde_json::Value>>(j).ok())
                 .unwrap_or_default(),
-            None if runner => resolve_mentions(ctx, &output)?,
+            None if runner => recorded_mentions(ctx),
             None => Vec::new(),
         };
         (Some(ex), m)
@@ -1112,8 +1121,38 @@ fn apply_shell(ctx: &Ctx<'_>, failure: bool) -> Result<()> {
     // the agent". Every rule below compares hashes that were measured after
     // the call returned, so they hold whether or not the call succeeded (D57).
     let Some(git) = &p.git else { return Ok(()) };
+    // Which files the line's restore-family calls could have changed. The
+    // hook observes every file the session edited around the command, so a
+    // file that changed across it may have been changed by another
+    // subcommand; a change is credited to git only where a restore's own
+    // pathspec reaches the file. Where the line does not say (`-p`, a path
+    // built by a substitution, a `cd` into a variable), nothing is credited.
+    let targets = if git.restore.is_some() {
+        shell::restore_targets(
+            command,
+            shell::Dialect::for_tool(ctx.ev.tool_name.as_deref().unwrap_or("")),
+        )
+    } else {
+        Vec::new()
+    };
+    let root = if targets.is_empty() {
+        None
+    } else {
+        project_root(ctx.tx, &ctx.ev.project_id)?.map(|r| r.to_string_lossy().into_owned())
+    };
+    let cwd = if targets.is_empty() {
+        None
+    } else {
+        command_cwd(ctx)?
+    };
     for f in &git.files {
-        if let Some(restore) = &git.restore {
+        let reached_by: Option<&str> = root.as_deref().and_then(|root| {
+            targets
+                .iter()
+                .find(|t| shell::reaches(t, &f.path, cwd.as_deref(), root) == Some(true))
+                .map(|t| t.command.as_str())
+        });
+        if let Some(restore) = reached_by {
             let history = versions(ctx, &f.path)?;
             let git_pre = history
                 .last()
@@ -1159,7 +1198,14 @@ fn apply_shell(ctx: &Ctx<'_>, failure: bool) -> Result<()> {
                 resolve_edits(ctx, &ids, EditStatus::Committed, None)?;
             }
         }
-        record_version(ctx, &f.path, &f.hash, f.size, VersionSource::GitPost)?;
+        record_version_by(
+            ctx,
+            &f.path,
+            &f.hash,
+            f.size,
+            VersionSource::GitPost,
+            reached_by,
+        )?;
     }
     Ok(())
 }

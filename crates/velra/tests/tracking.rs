@@ -292,8 +292,12 @@ fn f2b_a_restore_chained_with_a_failing_command_is_still_attributed() {
     log.env.write_file("src/money.py", "ROUND_HALF_UP\n");
     log.prompt("that made things worse, discard it and run the suite again");
     log.edit("src/money.py", "ROUND_HALF_EVEN\n");
+    // The agent's usual prefix: `cd` into the project, by absolute path. (A
+    // restore run from some other directory cannot reach this file, and is not
+    // credited with its change: `tests/revert_provenance.rs`.)
+    let project = log.env.project.to_string_lossy().into_owned();
     log.git_restore_failed(
-        "cd \"/tmp/proj\" && git restore src/money.py && python -m pytest -q",
+        &format!("cd \"{project}\" && git restore src/money.py && python -m pytest -q"),
         1,
         "FAILED tests/test_engine.py::test_exact_payment\n1 failed, 5 passed",
         &[("src/money.py", "ROUND_HALF_UP\n")],
@@ -320,7 +324,7 @@ fn f2b_a_restore_chained_with_a_failing_command_is_still_attributed() {
     let capsule = log.capsule();
     assert!(capsule.contains("[REVERTED_EDITS]"), "{capsule}");
     assert!(
-        !capsule.contains("cd \"/tmp/proj\""),
+        !capsule.contains(&format!("cd \"{project}\"")),
         "the working-directory prefix is not worth capsule budget:\n{capsule}"
     );
 }

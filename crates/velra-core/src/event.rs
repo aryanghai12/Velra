@@ -126,8 +126,28 @@ fn lenient_facts<'de, D: serde::Deserializer<'de>>(d: D) -> Result<Option<Prompt
     Ok(v.and_then(|v| serde_json::from_value(v).ok()))
 }
 
+fn lenient_mentions<'de, D: serde::Deserializer<'de>>(
+    d: D,
+) -> Result<Option<Vec<PathMention>>, D::Error> {
+    let v = Option::<serde_json::Value>::deserialize(d)?;
+    Ok(v.and_then(|v| serde_json::from_value(v).ok()))
+}
+
 fn is_zero(n: &u64) -> bool {
     *n == 0
+}
+
+/// A workspace file named in a command's output that existed when the
+/// command ran (see [`Payload::mentioned`]). The same shape as an entry of
+/// `commands.mentioned_paths`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PathMention {
+    /// Project-relative, `/`-separated.
+    pub path: String,
+    #[serde(default)]
+    pub line: Option<u32>,
+    /// The token as it appeared in the output.
+    pub raw: String,
 }
 
 /// Git-aware observation attached to shell tool events.
@@ -246,6 +266,18 @@ pub struct Payload {
     pub stderr_tail: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub git: Option<GitObservation>,
+    /// Workspace files the command's stored output names, checked against
+    /// the disk by the hook when the command returned
+    /// (`crate::commands::mentioned_files`). `None` when no check was made (a
+    /// command that is not a test, build or lint run; an event from an earlier
+    /// build): the reducer then records no mentions rather than checking the
+    /// disk as it is when it runs. Read leniently, like `prompt_facts`.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "lenient_mentions"
+    )]
+    pub mentioned: Option<Vec<PathMention>>,
 
     // PostToolUseFailure
     #[serde(default, skip_serializing_if = "Option::is_none")]

@@ -893,7 +893,9 @@ fn pre_tool_use(ctx: &Ctx<'_>) -> Result<(), String> {
     let Some(command) = ti.command.as_deref() else {
         return Ok(());
     };
-    let effects = shell::git_effects(command, &|p| ctx.resolve(p).is_file());
+    let effects = shell::git_effects_in(command, shell::Dialect::for_tool(&tool), &|p| {
+        ctx.resolve(p).is_file()
+    });
     if !effects.any() {
         // Not a restore-family or commit command: nothing to observe.
         return Ok(());
@@ -989,12 +991,22 @@ fn post_tool_use(ctx: &Ctx<'_>, failure: bool) -> Result<(), String> {
         // as a whole whenever the suite still fails, and that is the usual
         // shape of discarding an attempt. The file hashes below are taken
         // after the call returned either way (D57).
-        let effects = shell::git_effects(&command, &|p| ctx.resolve(p).is_file());
+        let effects = shell::git_effects_in(&command, shell::Dialect::for_tool(&tool), &|p| {
+            ctx.resolve(p).is_file()
+        });
         if effects.any() {
             git_effects = Some(effects);
         }
     }
     normalize::enforce_budget(&mut payload, limits::PAYLOAD);
+    if tools::is_shell(&tool) {
+        // Which workspace files a test, build or lint run's output names is a
+        // fact about the disk when the command returned, so it is checked
+        // now, on the output as stored, and carried in the event. The reducer
+        // runs later -- after files were created, deleted or moved -- and
+        // reads only this record.
+        record_mentions(ctx, &mut payload, failure);
+    }
     let role = if failure {
         Role::HookAppend
     } else {
@@ -1033,6 +1045,29 @@ fn post_tool_use(ctx: &Ctx<'_>, failure: bool) -> Result<(), String> {
         ),
     }
     Ok(())
+}
+
+/// `Payload::mentioned` for a shell event whose command is a test, build or
+/// lint run (the only runs whose failures pin files). Left `None` otherwise,
+/// which the reducer reads as "no check was made".
+fn record_mentions(ctx: &Ctx<'_>, payload: &mut Payload, failure: bool) {
+    let Some(command) = payload.command.as_deref() else {
+        return;
+    };
+    let kind = velra_core::commands::classify(command).kind;
+    if !matches!(
+        kind,
+        velra_core::model::CommandKind::Test
+            | velra_core::model::CommandKind::Build
+            | velra_core::model::CommandKind::Lint
+    ) {
+        return;
+    }
+    let (_, output) = velra_core::commands::stored_output(payload, failure);
+    let cwd = ctx.input.cwd.as_deref().map(Path::new);
+    payload.mentioned = Some(velra_core::commands::mentioned_files(
+        &output, cwd, &ctx.root,
+    ));
 }
 
 /// Time the Stop hook spends hashing files for its turn-end scan.
