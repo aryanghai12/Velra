@@ -82,12 +82,22 @@ fn flush_pending() {
     }
 }
 
+/// Held by a continuation delivery from just before its capsule is written
+/// until the delivery is committed or rolled back ([`Ctx::deliver`]). The
+/// watchdog takes it before leaving, so a deadline cannot end the process
+/// between the write and the commit: a capsule that reached stdout is one the
+/// ledger records as `ATTACHED`, and no later hook delivers it again as
+/// `PENDING` (DECISIONS D114). The wait it adds is one commit.
+static DELIVERING: Mutex<()> = Mutex::new(());
+
 fn start_watchdog(ms: u64) {
     let _ = std::thread::Builder::new()
         .name("velra-watchdog".into())
         .spawn(move || {
             std::thread::sleep(Duration::from_millis(ms));
-            // Wait for any in-flight write, then leave without further work.
+            // Wait for a delivery between its write and its commit, and for
+            // any in-flight write, then leave without further work.
+            let _delivering = DELIVERING.lock().unwrap_or_else(|e| e.into_inner());
             let _guard = EMITTED.lock().unwrap_or_else(|e| e.into_inner());
             flush_pending();
             let _ = std::io::stdout().flush();
@@ -530,7 +540,11 @@ impl<'a> Ctx<'a> {
             delivery_key: &key,
             ts_ms: self.ts_ms,
         };
+        // Taken inside `emit_capsule`, released once `deliver` has committed
+        // or rolled back: see `DELIVERING`.
+        let delivering = std::cell::RefCell::new(None);
         let emit_capsule = |d: &velra_core::continuation::Delivery| {
+            *delivering.borrow_mut() = Some(DELIVERING.lock().unwrap_or_else(|e| e.into_inner()));
             // The renderer caps the capsule far below this, but a stored
             // capsule from another build must never silently spill to a file.
             let chars = d.capsule.chars().count();
@@ -546,9 +560,23 @@ impl<'a> Ctx<'a> {
                     ),
                 );
             }
-            emit(&continuation::delivery_json(d))
+            let emitted = emit(&continuation::delivery_json(d));
+            // A deadline that fires after the capsule reached stdout and before
+            // the delivery is committed.
+            #[cfg(feature = "fault-injection")]
+            if emitted {
+                if let Some(ms) = std::env::var("VELRA_TEST_STALL_AFTER_CONTINUATION_EMIT_MS")
+                    .ok()
+                    .and_then(|v| v.parse::<u64>().ok())
+                {
+                    std::thread::sleep(Duration::from_millis(ms));
+                }
+            }
+            emitted
         };
-        match continuation::deliver(&mut db.conn, &req, emit_capsule) {
+        let delivered = continuation::deliver(&mut db.conn, &req, emit_capsule);
+        drop(delivering);
+        match delivered {
             Ok(_) => {}
             // Busy: leave the continuation deliverable and try again later.
             Err(DbError::Busy) => {}

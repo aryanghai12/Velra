@@ -119,8 +119,12 @@ set, Velra's hooks do not run, and `enable` and `doctor` warn about it.
 
 The in-session continuation is also delivered on the first
 `UserPromptSubmit` or `PostToolUse` after compaction, whichever fires first.
-Its `PENDING → ATTACHED → CONFIRMED` state machine makes delivery exactly
-once ([Architecture](ARCHITECTURE.md#two-delivery-paths)).
+Its `PENDING → ATTACHED → CONFIRMED` state machine writes it once: after
+the first write no other channel writes it, and only the prompt channel
+writes it again (at most three times in all) when the previous turn was
+aborted before any tool call or turn end
+([Architecture](ARCHITECTURE.md#two-delivery-paths)). A continuation older
+than 7 days is not written at all.
 
 Nothing about this is configurable. The eligible sources are data inside
 each staged record (`deliver_on`), not a setting.

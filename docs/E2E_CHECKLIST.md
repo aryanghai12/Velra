@@ -60,7 +60,7 @@ for what only a live session can show.
 | 8 | `velra inspect --checkpoint <id from step 6> --section dead-ends`. | Full, untruncated dead-end detail. | |
 | 9 | Repeat with **auto-compaction**: long session (or reduce the auto-compact window) and no user interaction. | Capsule delivered mid-turn on the first `PostToolUse` after compaction, or on `SessionStart(compact)`. | |
 | 10 | Remove the `SessionStart` handler temporarily, compact, then press Ctrl+C immediately after the first post-compaction prompt. | The next prompt receives the capsule again (T4 re-emission). Restore the handler afterwards. | |
-| 11 | `velra status`. | Enabled, session count ≥ 1, continuation CONFIRMED. Exit code 0. | |
+| 11 | `velra status`. | Enabled, session count ≥ 1, `Last continuation: … CONFIRMED` (the capsule was written and the session went on; not proof the model read it). For receipt by Claude Code, the session transcript should hold a `hook_additional_context` attachment containing `<VELRA_WORKSPACE_STATE`. Exit code 0. | |
 | 12 | `velra disable`. | Hooks gone; `git diff` of the settings file (if version-controlled) is empty, or the file is byte-identical to the pre-enable backup in `~/.velra/backups/`. | |
 | 13 | Continue using Claude Code for one more turn. | Unaffected: no hook errors, no messages from Velra. | |
 

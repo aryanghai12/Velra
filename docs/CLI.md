@@ -138,6 +138,7 @@ $ velra status
   Tracking:    3 session(s), 78 event(s)
   Last event:  1h ago
   Continuations: none live
+  Last continuation: 87901fc6 CONFIRMED on session_start — written to Claude Code, and the session went on afterwards (not proof that a model read it)
   Staged:      objective, 1 failing test, 2 dead ends, 8 files (680 tokens) from session 87901fc6
                delivered on SessionStart(startup) — start a new session to pick it up
 ```
@@ -145,7 +146,12 @@ $ velra status
 The `Staged:` lines appear only when a `velra restore` capsule is waiting for
 the **current directory's** workspace. It is the one place a staged capsule
 is visible without `inspect`. `Continuation:` lines list in-session capsules
-(after `/compact`) that are `PENDING` or `ATTACHED`.
+(after `/compact`) that are `PENDING` or `ATTACHED`. `Last continuation:`
+is the most recent one in any state, with what that state establishes:
+`ATTACHED` means the capsule was written to Claude Code; `CONFIRMED` means
+the session also went on afterwards (a tool call or a turn end). Neither is
+proof that a model read it; Claude Code does not acknowledge hook output
+(DECISIONS D113).
 
 `Claude Code:` shows the detected version and how it was found: the `claude`
 CLI, the VS Code extension, or `VELRA_CLAUDE_VERSION`. When none of those
@@ -153,7 +159,9 @@ works, Velra assumes the latest version it knows about.
 
 `--json` fields: `enabled`, `handlers`, `expected_handlers`, `binary`,
 `binary_exists`, `claude_code`, `db_path`, `db_bytes`, `sessions`, `events`,
-`last_event_age`, `live_continuations`, `healthy`.
+`last_event_age`, `live_continuations`, `latest_continuation` (`session`,
+`checkpoint`, `state`, `channel`, `attach_count`, `meaning`; `null` when there
+is none), `healthy`.
 
 **Exit:** 0 when healthy (hooks registered and the recorded binary exists),
 1 otherwise. This makes it usable in scripts.

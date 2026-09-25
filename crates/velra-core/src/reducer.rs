@@ -218,8 +218,6 @@ pub fn scan_paths(
 /// a session rebuild.
 #[derive(Default)]
 struct Replay {
-    /// Applying events again in logical order ([`rebuild_session`]).
-    rebuilding: bool,
     /// The event's position among the session's user turns, counted by the
     /// rebuild as it goes; `None` counts the rows already applied.
     ordinal: Option<i64>,
@@ -337,8 +335,9 @@ fn run_pending_rebuilds(conn: &mut Connection, opts: &ReduceOptions) -> Result<(
 ///
 /// Its projection rows are deleted and its `sessions` row is reset to what
 /// the fold recomputes; checkpoints, continuations and deliveries are not
-/// projection and are left alone, and a `checkpoint_request` is not acted on
-/// twice.
+/// projection and are left alone. A `checkpoint_request` is acted on here, at
+/// its logical position, when it never was before, and never twice
+/// ([`checkpoint_request_is_current`]).
 fn rebuild_session(
     tx: &Connection,
     session_id: &str,
@@ -346,13 +345,12 @@ fn rebuild_session(
     opts: &ReduceOptions,
 ) -> Result<()> {
     let mut replay = Replay {
-        rebuilding: true,
+        mentions: tx
+            .prepare_cached("SELECT event_id, mentioned_paths FROM commands WHERE session_id = ?1")?
+            .query_map([session_id], |r| Ok((r.get(0)?, r.get(1)?)))?
+            .collect::<rusqlite::Result<_>>()?,
         ..Default::default()
     };
-    replay.mentions = tx
-        .prepare_cached("SELECT event_id, mentioned_paths FROM commands WHERE session_id = ?1")?
-        .query_map([session_id], |r| Ok((r.get(0)?, r.get(1)?)))?
-        .collect::<rusqlite::Result<_>>()?;
     for table in SESSION_TABLES {
         tx.execute(
             &format!("DELETE FROM {table} WHERE session_id = ?1"),
@@ -519,9 +517,12 @@ fn apply(tx: &Connection, ev: &EventRow, opts: &ReduceOptions, replay: &Replay) 
                 }
             }
         }
-        // A rebuild re-folds projection; the checkpoint this request made the
-        // first time is not projection, and is not made again.
-        he::CHECKPOINT_REQUEST if replay.rebuilding => {}
+        // PreCompact's checkpoint, requested through the spool because the
+        // hook could not reach the database. Acted on at most once, wherever
+        // it is folded -- incrementally or inside a rebuild, which folds it
+        // at its logical position -- and only while it is still the session's
+        // newest compaction (DECISIONS D111).
+        he::CHECKPOINT_REQUEST if !checkpoint_request_is_current(tx, ev)? => {}
         he::CHECKPOINT_REQUEST => {
             let trigger = p
                 .trigger
@@ -543,6 +544,70 @@ fn apply(tx: &Connection, ev: &EventRow, opts: &ReduceOptions, replay: &Replay) 
         _ => {}
     }
     Ok(())
+}
+
+/// Whether a spooled `checkpoint_request` should still make its checkpoint
+/// (DECISIONS D111). It should not when:
+///
+/// * it already has: the checkpoint it made carries the request's event id as
+///   its watermark, so a rebuild that folds the request again finds it;
+/// * the session has a checkpoint frozen at or after the request's time: a
+///   later PreCompact reached the database, and its state is the newer one;
+/// * a later compaction, a `/clear` or a logout follows it in the session's
+///   logical order: a continuation made now would be delivered into a context
+///   that no longer holds what it continues.
+///
+/// Until this existed a rebuild skipped every request as "already acted on"
+/// -- including one it was folding for the first time, which is every
+/// request that arrives behind a later event -- and a request folded
+/// incrementally superseded whatever continuation was live, newer or not.
+fn checkpoint_request_is_current(tx: &Connection, ev: &EventRow) -> Result<bool> {
+    let settled: bool = tx
+        .prepare_cached(
+            "SELECT EXISTS(SELECT 1 FROM checkpoints WHERE session_id = ?1 \
+             AND (event_watermark = ?2 OR created_ms >= ?3))",
+        )?
+        .query_row(params![ev.session_id, ev.id, ev.ts_ms], |r| r.get(0))?;
+    if settled {
+        return Ok(false);
+    }
+    type Boundary = (crate::order::Key, String, Option<String>, Option<String>);
+    let rows: Vec<Boundary> = tx
+        .prepare_cached(
+            "SELECT id, ts_ms, COALESCE(json_extract(payload, '$.spooled'), 0), hook_event, \
+             json_extract(payload, '$.source'), json_extract(payload, '$.reason') \
+             FROM events WHERE session_id = ?1 ORDER BY id",
+        )?
+        .query_map([&ev.session_id], |r| {
+            Ok((
+                crate::order::Key {
+                    id: r.get(0)?,
+                    ts_ms: r.get(1)?,
+                    spooled: r.get::<_, i64>(2)? != 0,
+                },
+                r.get(3)?,
+                r.get(4)?,
+                r.get(5)?,
+            ))
+        })?
+        .collect::<rusqlite::Result<_>>()?;
+    let keys: Vec<crate::order::Key> = rows.iter().map(|r| r.0).collect();
+    let order = crate::order::logical_order(&keys);
+    let Some(at) = order.iter().position(|&i| keys[i].id == ev.id) else {
+        return Ok(true);
+    };
+    let superseded = order[at + 1..].iter().any(|&i| {
+        let (key, event, source, reason) = &rows[i];
+        match event.as_str() {
+            // The request's own PreCompact event shares its timestamp and may
+            // be ingested after it; only a later compaction counts.
+            he::PRE_COMPACT | he::CHECKPOINT_REQUEST => key.ts_ms > ev.ts_ms,
+            he::SESSION_START => source.as_deref() == Some("clear"),
+            he::SESSION_END => matches!(reason.as_deref(), Some("clear" | "logout")),
+            _ => false,
+        }
+    });
+    Ok(!superseded)
 }
 
 fn bump_epoch(ctx: &Ctx<'_>) -> Result<i64> {

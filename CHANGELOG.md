@@ -273,6 +273,17 @@ schema is unchanged (v2).
 
 ### Fixed
 
+- **In-session continuation (`/compact`).** A PreCompact checkpoint that had
+  to go through the spool was silently never made when the session had
+  moved on before the spool was read, and one read after a newer
+  compaction replaced that compaction's continuation (D111). The same hook
+  invocation run twice wrote the capsule twice, and could write a
+  superseded one (D110). A continuation more than 7 days old was still
+  delivered on the first tool call (D112). A hook ended by its watchdog
+  after writing the capsule and before recording it delivered it again on
+  the next hook (D114). `velra status` shows the last continuation and what
+  its state does and does not establish (D113).
+
 - **A benchmark pair was scored TIE with only one correct arm.** The
   requalification's first aggregate printed `A_cold_continuation#q2` as a TIE
   "because both arms were correct" beside a baseline recorded incorrect. The

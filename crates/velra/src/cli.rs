@@ -492,6 +492,7 @@ fn cmd_status(json: bool) -> i32 {
     let mut events = 0i64;
     let mut last_event_ms = 0i64;
     let mut live: Vec<(String, String)> = Vec::new();
+    let mut latest: Option<velra_core::continuation::Latest> = None;
     if let Some(db) = &db {
         sessions = db
             .conn
@@ -514,6 +515,7 @@ fn cmd_status(json: bool) -> i32 {
                 live = rows.flatten().collect();
             }
         }
+        latest = velra_core::continuation::latest(&db.conn).ok().flatten();
     }
     let db_size = std::fs::metadata(home::db_path(&home))
         .map(|m| m.len())
@@ -534,6 +536,14 @@ fn cmd_status(json: bool) -> i32 {
             "events": events,
             "last_event_age": (last_event_ms > 0).then(|| velra_core::time::human_age(velra_core::time::now_ms() - last_event_ms)),
             "live_continuations": live.iter().map(|(s, st)| serde_json::json!({"session": s, "state": st})).collect::<Vec<_>>(),
+            "latest_continuation": latest.as_ref().map(|l| serde_json::json!({
+                "session": l.session_id,
+                "checkpoint": l.checkpoint_id,
+                "state": l.state,
+                "channel": l.attached_channel,
+                "attach_count": l.attach_count,
+                "meaning": velra_core::continuation::meaning(&l.state),
+            })),
             "healthy": healthy,
         });
         println!(
@@ -581,6 +591,20 @@ fn cmd_status(json: bool) -> i32 {
         for (session, state) in &live {
             println!("  Continuation: {session} {state}");
         }
+    }
+    // The last one in any state: whether the previous `/compact` was written
+    // out, and what that does and does not establish (DECISIONS D113).
+    if let Some(l) = &latest {
+        println!(
+            "  Last continuation: {} {}{} \u{2014} {}",
+            l.session_id.chars().take(8).collect::<String>(),
+            l.state,
+            l.attached_channel
+                .as_deref()
+                .map(|c| format!(" on {c}"))
+                .unwrap_or_default(),
+            velra_core::continuation::meaning(&l.state)
+        );
     }
     // A staged capsule is invisible everywhere else — it is one file outside
     // the repository — so `status` is where a user finds out that their next

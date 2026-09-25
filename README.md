@@ -331,7 +331,7 @@ Reproduce: [`bench/README.md`](bench/README.md).
 
 Hooks → redacted append-only event log (SQLite, WAL) → reducer projections →
 snapshot → pure, budgeted renderer → delivery, either the in-session
-`/compact` continuation (exactly-once state machine) or an explicit
+`/compact` continuation (a state machine that writes it once per delivery point) or an explicit
 cross-session restore (staged file, one-shot claim, `startup` only). Two
 crates: `velra` (binary: hooks and CLI) and `velra-core` (the logic, with no
 Claude Code I/O). **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**.

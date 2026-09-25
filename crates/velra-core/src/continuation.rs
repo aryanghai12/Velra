@@ -3,6 +3,22 @@
 //! PENDING → ATTACHED → CONFIRMED, terminal SUPERSEDED / EXPIRED. A partial
 //! unique index guarantees at most one live (PENDING/ATTACHED) continuation
 //! per session; conditional updates guarantee exactly one emitter.
+//!
+//! # What each state claims
+//!
+//! * `PENDING`: a checkpoint was frozen at PreCompact and nothing has been
+//!   written out for it.
+//! * `ATTACHED`: a hook wrote the capsule to stdout and committed that it did
+//!   (`attach_count` times; more than once only by the prompt channel's T4
+//!   re-emission). Claude Code does not acknowledge hook output, so this is
+//!   *delivery attempted and written*, not *received*.
+//! * `CONFIRMED`: after the last attach, the same session recorded a tool call
+//!   or the end of a turn (`evidence_after`). The session went on past the
+//!   delivery; `confirm_event_id` names the event. It is not proof that
+//!   Claude Code kept the context or that a model read it -- the hook
+//!   protocol offers no such signal (DECISIONS D113).
+//! * `SUPERSEDED`: a later compaction froze a newer checkpoint first.
+//! * `EXPIRED`: `/clear` or logout, the re-emission cap, or [`PENDING_TTL_MS`].
 
 use crate::checkpoint::summary_from_json;
 use crate::db::{DbError, Result};
@@ -11,7 +27,9 @@ use rusqlite::{params, Connection, OptionalExtension, TransactionBehavior};
 
 /// Re-emission cap for aborted turns (T4).
 pub const MAX_ATTACH: i64 = 3;
-/// PENDING continuations older than this expire (T8).
+/// PENDING continuations older than this expire (T8), and no continuation
+/// older than this is written out on any channel, first time or again
+/// (DECISIONS D112). Measured from the checkpoint's creation.
 pub const PENDING_TTL_MS: i64 = 7 * 24 * 3600 * 1000;
 
 /// A capsule to emit.
@@ -22,8 +40,6 @@ pub struct Delivery {
     pub summary: String,
     pub tokens: u32,
     pub channel: Channel,
-    /// True when re-emitting for an already-recorded delivery key (§15.5).
-    pub replay: bool,
 }
 
 /// `blake3(hook_event|session_id|discriminator)[0..32]` where the
@@ -65,6 +81,50 @@ pub fn live(conn: &Connection, session_id: &str) -> rusqlite::Result<Option<Live
         })
     })
     .optional()
+}
+
+/// The most recently updated continuation of any session, in any state, for
+/// `velra status`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Latest {
+    pub session_id: String,
+    pub checkpoint_id: String,
+    pub state: String,
+    pub attach_count: i64,
+    pub attached_channel: Option<String>,
+}
+
+pub fn latest(conn: &Connection) -> rusqlite::Result<Option<Latest>> {
+    conn.prepare_cached(
+        "SELECT session_id, checkpoint_id, state, attach_count, attached_channel FROM continuations \
+         ORDER BY updated_ms DESC, rowid DESC LIMIT 1",
+    )?
+    .query_row([], |r| {
+        Ok(Latest {
+            session_id: r.get(0)?,
+            checkpoint_id: r.get(1)?,
+            state: r.get(2)?,
+            attach_count: r.get(3)?,
+            attached_channel: r.get(4)?,
+        })
+    })
+    .optional()
+}
+
+/// What a state establishes, in the words `velra status` prints (see the
+/// module docs): never more than the ledger can show.
+pub fn meaning(state: &str) -> &'static str {
+    match state {
+        "PENDING" => "frozen at PreCompact, not written out yet",
+        "ATTACHED" => "written to Claude Code; nothing from the session since",
+        "CONFIRMED" => {
+            "written to Claude Code, and the session went on afterwards \
+             (not proof that a model read it)"
+        }
+        "SUPERSEDED" => "replaced by a later compaction",
+        "EXPIRED" => "expired by /clear, logout, age or the re-emission cap",
+        _ => "unknown state",
+    }
 }
 
 /// First confirmation evidence (T3) after `after_ms`: a PostToolUse,
@@ -174,10 +234,15 @@ fn insert_injection(
     Ok(())
 }
 
-/// Attempts delivery (T2, T4, T5, §15.5). `emit` runs inside the write
-/// transaction *before* commit and returns whether the output was written;
-/// if it returns false the transaction rolls back and the continuation stays
-/// deliverable. Returns what was emitted.
+/// Attempts delivery (T2, T4, T5). `emit` runs inside the write transaction
+/// *before* commit and returns whether the output was written; if it returns
+/// false the transaction rolls back and the continuation stays deliverable.
+/// Returns what was emitted.
+///
+/// Emit-then-commit means a process that dies between the two has written a
+/// capsule it did not record. The hook closes that window against its own
+/// watchdog (`hook::DELIVERING`, DECISIONS D114); only a process killed from
+/// outside in it can deliver once more.
 pub fn deliver(
     conn: &mut Connection,
     req: &DeliveryRequest<'_>,
@@ -187,31 +252,30 @@ pub fn deliver(
         .transaction_with_behavior(TransactionBehavior::Immediate)
         .map_err(DbError::from)?;
 
-    // §15.5: a known delivery key re-emits the same capsule, no new injection.
-    let replay: Option<(String, String)> = tx
-        .prepare_cached(
-            "SELECT i.checkpoint_id, i.channel FROM injections i WHERE i.delivery_key = ?1",
-        )?
-        .query_row([req.delivery_key], |r| Ok((r.get(0)?, r.get(1)?)))
-        .optional()?;
-    if let Some((checkpoint_id, channel)) = replay {
-        let (capsule, summary, tokens) = load_capsule(&tx, &checkpoint_id)?;
-        let d = Delivery {
-            checkpoint_id,
-            capsule,
-            summary,
-            tokens,
-            channel: Channel::parse(&channel).unwrap_or(req.channel),
-            replay: true,
-        };
-        let emitted = emit(&d);
-        tx.commit()?;
-        return Ok(emitted.then_some(d));
+    // A known delivery key is this invocation run a second time: Velra's hook
+    // registered twice for one event, or two session starts in the same
+    // millisecond. The first one wrote the capsule; this one writes nothing
+    // (DECISIONS D110 -- §15.5 re-emitted it, stale or not).
+    let seen: bool = tx
+        .prepare_cached("SELECT EXISTS(SELECT 1 FROM injections WHERE delivery_key = ?1)")?
+        .query_row([req.delivery_key], |r| r.get(0))?;
+    if seen {
+        return Ok(None);
     }
 
     let Some(l) = live(&tx, req.session_id)? else {
         return Ok(None);
     };
+    // Nothing past its TTL is written out, on any channel, whichever hook
+    // meets it first: `reconcile` is not run before every channel (D112).
+    if req.ts_ms.saturating_sub(l.created_ms) > PENDING_TTL_MS {
+        tx.execute(
+            "UPDATE continuations SET state = 'EXPIRED', updated_ms = ?2 WHERE checkpoint_id = ?1 AND state IN ('PENDING', 'ATTACHED')",
+            params![l.checkpoint_id, req.ts_ms],
+        )?;
+        tx.commit()?;
+        return Ok(None);
+    }
     let n = match l.state {
         ContinuationState::Pending => {
             if req.channel == Channel::PostTool && req.ts_ms <= l.created_ms {
@@ -268,7 +332,6 @@ pub fn deliver(
         summary,
         tokens,
         channel: req.channel,
-        replay: false,
     };
     if !emit(&d) {
         return Ok(None); // rollback: stays deliverable

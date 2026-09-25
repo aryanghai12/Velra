@@ -75,7 +75,7 @@ reducer  → projections: intents, constraints, commands, edits,     (velra-core
 | `intent`, `constraint`, `commands`, `testids`, `revert`, `shell`, `git` | the derivations: objective and later directives, constraints stated in prompts, command outcomes, per-test status, revert detection by content hash |
 | `snapshot` | selects what a capsule may contain from the projections |
 | `render` | the pure renderer and the truncation ladder (`DEFAULT_BUDGET_TOKENS = 740`, `HARD_CEILING_TOKENS = 1000`, `ABSOLUTE_MAX_CHARS = 9500`) |
-| `checkpoint`, `continuation` | the `/compact` path: frozen capsules and the exactly-once delivery state machine |
+| `checkpoint`, `continuation` | the `/compact` path: frozen capsules and the delivery state machine (once per delivery point; D110-D115) |
 | `workspace` | the single definition of workspace identity |
 | `restore`, `staging` | explicit cross-session restore: build, stage, claim |
 | `transcript` | tolerant reading of Claude Code transcript headers, for picker labels |
