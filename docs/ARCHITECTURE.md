@@ -45,7 +45,7 @@ reducer  → projections: intents, constraints, commands, edits,     (velra-core
    └───────────── cross-session path (explicit) ─┐
                                                   ▼
                  velra restore  → snapshot::build → render (bounded) → redact
-                                → STAGED CAPSULE  ~/.velra/staged/<workspace_id>/staged_capsule
+                                → STAGED CAPSULE  ~/.velra/staged/<workspace_id>/capsule.<gen>.json
                                                   │
                                                   ▼
                  new Claude Code session → SessionStart(startup)
@@ -157,9 +157,9 @@ the recorded events.
 | Trigger | `/compact` (manual or auto) | you run `velra restore` |
 | Source | the same session | a session **you name** |
 | Built from | a checkpoint frozen at `PreCompact` | the source session's current epoch, rendered when you run the command |
-| Stored in | database (`checkpoints`, `continuations`) | `staged/<workspace_id>/staged_capsule` |
+| Stored in | database (`checkpoints`, `continuations`) | `staged/<workspace_id>/capsule.<gen>.json` |
 | Delivered on | `SessionStart(compact\|resume)`, else the first `UserPromptSubmit` or `PostToolUse` after compaction | `SessionStart(startup)` only |
-| Exactly once by | `PENDING → ATTACHED → CONFIRMED` with a partial unique index and conditional updates | exclusive creation of a claim marker; deleted only after successful output |
+| Once by | `PENDING → ATTACHED → CONFIRMED` with a partial unique index and conditional updates | exclusive creation of a per-record claim that is never taken over; the record deleted only after successful output (at most once: a delivery interrupted after its output is not repeated) |
 | Expires | 7 days `PENDING` | 7 days after staging |
 | Crosses sessions | **never** | only this way |
 

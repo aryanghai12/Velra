@@ -23,7 +23,7 @@ across `/compact`.
   no model is called. `--list`, `--dry-run`, `--clear` and `--json` make it
   scriptable. [docs/RESTORE.md](docs/RESTORE.md).
 - **SessionStart delivery.** The next brand-new session in that workspace
-  (`SessionStart` source `startup`) receives the capsule exactly once. `/clear`,
+  (`SessionStart` source `startup`) receives the capsule at most once. `/clear`,
   `resume`, `compact` and `fork` leave it staged, and it expires after 7 days.
   Delivery fails open and never blocks a session.
 - **Workspace/session model.** The workspace (git root or
@@ -134,14 +134,17 @@ schema is unchanged (v2).
   development machine run to 4 MB and the picker needs a label, not a
   conversation. A session whose transcript yields no usable label is still
   selectable, shown by id and last activity.
-- `velra-core::staging` — the staged capsule, at
-  `$VELRA_HOME/staged/<workspace_id>/staged_capsule`. Written atomically
-  (temp file, fsync, rename), so an interrupted stage leaves the previous
-  capsule intact rather than a half-written replacement. Claimed by the
-  exclusive creation of a marker file (`create_new`), not a read-then-delete
-  and not a rename: exactly one of several racing claimants wins, on Windows
-  as well as POSIX (a rename-based claim was tried first and produced four
-  winners out of eight threads on Windows). A capsule past seven days, or one
+- `velra-core::staging` — the staged capsule, one record per stage at
+  `$VELRA_HOME/staged/<workspace_id>/capsule.<gen>.json`. Written atomically (temp file,
+  fsync, rename to a name never used before), so an interrupted stage leaves
+  the previous capsule intact rather than a half-written replacement; older
+  records are then removed by name. Claimed by the exclusive creation of a
+  per-record claim file (`create_new`), not a read-then-delete and not a
+  rename: exactly one of several racing claimants wins, on Windows as well as
+  POSIX (a rename-based claim was tried first and produced four winners out of
+  eight threads on Windows). No claim is ever taken over, so delivery is at
+  most once: a session start that dies after writing the capsule leaves it
+  claimed, not delivered twice, and `velra status` reports it. A capsule past seven days, or one
   that is unreadable, is discarded; one failing its content hash or carrying
   another workspace's id is refused and left on disk as evidence.
   `SessionStart` consumes it (see "Staged capsules are delivered at

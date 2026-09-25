@@ -76,7 +76,7 @@ Claude Code session A ──hooks──▶ velra ──▶ local ledger (~/.velr
                                               ▼
                      velra restore ──▶ bounded capsule, staged for this workspace
                                               │
-Claude Code session B ── SessionStart(startup) ◀┘  delivered exactly once
+Claude Code session B ── SessionStart(startup) ◀┘  delivered once, never twice
         └─▶ starts with the capsule in context and continues the work
 ```
 
@@ -150,7 +150,7 @@ velra restore
 #       8790…e43d · Last activity: 2026-09-23T12:32:23Z · state: yes · ~544 KB
 #    Select [1-1] (q to cancel): 1
 #    ✓ Staged objective, 1 failing test, 2 dead ends, 8 files from session 87901fc6-….
-#      680 estimated tokens · ~/.velra/staged/9c1256b5690e9531/staged_capsule
+#      680 estimated tokens · ~/.velra/staged/9c1256b5690e9531/capsule.<gen>.json
 
 # 4. Start a brand-new session in the same project.
 claude
@@ -179,8 +179,8 @@ Every flag, output and exit code: **[docs/CLI.md](docs/CLI.md)**.
 `velra restore` resolves the workspace from your current directory and lists
 that workspace's sessions (newest first; `state: yes` marks restorable ones).
 It builds a bounded capsule from the session you pick and stages it atomically
-at `~/.velra/staged/<workspace_id>/staged_capsule`. The next **new** session
-there (`SessionStart` with source `startup`) receives it exactly once. `/clear`,
+at `~/.velra/staged/<workspace_id>/capsule.<gen>.json`. The next **new** session
+there (`SessionStart` with source `startup`) receives it, once at most. `/clear`,
 `--resume` and `/compact` leave it staged, and it expires after 7 days.
 
 To restore across `/clear`, stage **before** clearing: a restore renders the

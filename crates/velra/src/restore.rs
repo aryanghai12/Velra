@@ -206,11 +206,6 @@ pub fn prompt_choice(
     Ok(None)
 }
 
-/// `$VELRA_HOME/staged/<workspace_id>/staged_capsule` for this workspace.
-pub fn staged_path(velra_home: &Path, workspace_id: &str) -> PathBuf {
-    velra_core::staging::staged_path(velra_home, workspace_id)
-}
-
 /// The user's home, for locating `~/.claude/projects`.
 pub fn user_home() -> Option<PathBuf> {
     home::user_home()

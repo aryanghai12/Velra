@@ -585,36 +585,57 @@ fn cmd_status(json: bool) -> i32 {
     // A staged capsule is invisible everywhere else — it is one file outside
     // the repository — so `status` is where a user finds out that their next
     // session in this workspace is going to start with restored state.
-    if let Some((workspace_id, _)) = workspace_for_cwd() {
-        if let Some(c) = velra_core::staging::peek(&restore_ui::staged_path(&home, &workspace_id)) {
+    let (workspace_id, workspace_root) = workspace_for_cwd(db.as_ref().map(|d| &d.conn));
+    let staged_dir = velra_core::staging::staged_dir(&home, &workspace_id);
+    let summary = |c: &velra_core::staging::StagedCapsule| {
+        format!(
+            "{} ({} tokens) from session {}",
+            if c.summary.is_empty() {
+                "task state"
+            } else {
+                &c.summary
+            },
+            c.tokens,
+            c.source_session_id.chars().take(8).collect::<String>()
+        )
+    };
+    match velra_core::staging::slot(&staged_dir, velra_core::time::now_ms()) {
+        velra_core::staging::Slot::Empty => {}
+        velra_core::staging::Slot::Staged(c) => {
+            println!("  Staged:      {}", summary(&c));
             println!(
-                "  Staged:      {} ({} tokens) from session {}",
-                if c.summary.is_empty() {
-                    "task state"
-                } else {
-                    &c.summary
-                },
-                c.tokens,
-                c.source_session_id.chars().take(8).collect::<String>()
-            );
-            println!(
-                "               delivered on SessionStart({}) \u{2014} start a new session to pick it up",
+                "               delivered on SessionStart({}) \u{2014} start a new session in {workspace_root} to pick it up",
                 c.deliver_on.join("|")
             );
         }
+        velra_core::staging::Slot::Claimed {
+            capsule,
+            interrupted: true,
+        } => {
+            println!(
+                "{} Staged:      {} was claimed by a session start that did not finish.",
+                warn_mark(),
+                capsule.as_ref().map_or("a capsule".to_string(), summary)
+            );
+            println!(
+                "               It may already have been delivered, so it will not be delivered again; run `velra restore` to stage it again."
+            );
+        }
+        velra_core::staging::Slot::Claimed { .. } => {
+            println!("  Staged:      being delivered to a session that is starting now");
+        }
+        velra_core::staging::Slot::Unreadable => println!(
+            "{} Staged:      unreadable; it will not be delivered (`velra restore --clear` removes it)",
+            warn_mark()
+        ),
+    }
+    if velra_core::staging::has_legacy(&staged_dir) {
+        println!(
+            "{} Staged:      a capsule in an earlier development format is ignored; run `velra restore` again.",
+            warn_mark()
+        );
     }
     i32::from(!healthy)
-}
-
-fn project_id_for_cwd() -> Option<String> {
-    let cwd = std::env::current_dir().ok()?;
-    let root = velra_core::git::find_repo_root(&cwd).unwrap_or(cwd);
-    let canonical = velra_core::paths::canonical(&root).unwrap_or(root);
-    let normalized = velra_core::paths::normalize_abs(&canonical.to_string_lossy());
-    Some(velra_core::hash::hex_prefix(
-        velra_core::paths::identity(&normalized).as_bytes(),
-        16,
-    ))
 }
 
 fn cmd_inspect(
@@ -690,11 +711,10 @@ fn cmd_inspect(
         Some(s) => Some(s),
         None if last => inspect::latest_session(&db.conn).ok().flatten(),
         None => {
-            let by_project = project_id_for_cwd().and_then(|pid| {
-                inspect::latest_session_for_project(&db.conn, &pid)
-                    .ok()
-                    .flatten()
-            });
+            let (pid, _) = workspace_for_cwd(Some(&db.conn));
+            let by_project = inspect::latest_session_for_project(&db.conn, &pid)
+                .ok()
+                .flatten();
             match by_project {
                 Some(s) => Some(s),
                 None => inspect::latest_session(&db.conn).ok().flatten(),
@@ -797,33 +817,32 @@ fn on_network_fs(path: &Path) -> bool {
 
 /// The workspace the current directory belongs to: `(project_id, root)`.
 ///
-/// Derived exactly as the hook derives it ([`crate::hook`]), because the two
-/// must agree on what "this workspace" means or restore would look for state
-/// under an id nothing was ever recorded against.
-fn workspace_for_cwd() -> Option<(String, String)> {
-    Some(velra_core::workspace::resolve(None))
+/// The hook's mapping (`velra_core::workspace::resolve`), except that inside a
+/// repository the nearest directory the ledger recorded a session in wins
+/// (`resolve_recorded`): Claude Code started in a subdirectory records it
+/// as the workspace, and a terminal there has no `CLAUDE_PROJECT_DIR` to say
+/// so. Without a ledger it is the plain mapping.
+fn workspace_for_cwd(conn: Option<&rusqlite::Connection>) -> (String, String) {
+    velra_core::workspace::resolve_recorded(None, |id| {
+        conn.is_some_and(|c| velra_core::restore::is_recorded_workspace(c, id))
+    })
 }
 
 fn cmd_restore(session: Option<String>, list: bool, dry_run: bool, clear: bool, json: bool) -> i32 {
     let Some(home) = require_home() else { return 1 };
-    let Some((workspace_id, workspace_root)) = workspace_for_cwd() else {
-        println!("{} Could not determine the current workspace.", fail_mark());
-        return 1;
-    };
     let now = velra_core::time::now_ms();
 
     if clear {
-        let path = restore_ui::staged_path(&home, &workspace_id);
-        let existed = path.exists();
-        let _ = std::fs::remove_file(&path);
-        velra_core::staging::sweep(&home, &workspace_id, now);
+        let (workspace_id, workspace_root) =
+            workspace_for_cwd(open_db_ro(&home).as_ref().map(|d| &d.conn));
+        let removed = velra_core::staging::clear(&home, &workspace_id);
         println!(
             "{} {}",
             ok_mark(),
-            if existed {
-                "Discarded the staged capsule."
+            if removed > 0 {
+                format!("Discarded the staged capsule for {workspace_root}.")
             } else {
-                "Nothing was staged."
+                format!("Nothing was staged for {workspace_root}.")
             }
         );
         return 0;
@@ -844,6 +863,7 @@ fn cmd_restore(session: Option<String>, list: bool, dry_run: bool, clear: bool, 
     if let Err(e) = reducer::reduce_all(&mut db.conn, Some(&home::spool_dir(&home))) {
         println!("{} Could not catch up the reducer: {e}", warn_mark());
     }
+    let (workspace_id, workspace_root) = workspace_for_cwd(Some(&db.conn));
     // Clear out anything abandoned by an earlier run before writing.
     velra_core::staging::sweep(&home, &workspace_id, now);
 
@@ -879,7 +899,7 @@ fn cmd_restore(session: Option<String>, list: bool, dry_run: bool, clear: bool, 
             );
         } else if candidates.is_empty() {
             println!(
-                "{} No previous sessions found for this workspace.",
+                "{} No previous sessions found for this workspace ({workspace_root}).",
                 warn_mark()
             );
         } else {
@@ -896,12 +916,13 @@ fn cmd_restore(session: Option<String>, list: bool, dry_run: bool, clear: bool, 
         None => {
             if candidates.is_empty() {
                 println!(
-                    "{} No previous sessions found for this workspace.",
+                    "{} No previous sessions found for this workspace ({workspace_root}).",
                     warn_mark()
                 );
                 println!(
                     "  Velra records a session once Claude Code runs here with its hooks enabled."
                 );
+                println!("  Run `velra restore` from the directory Claude Code was started in.");
                 return 1;
             }
             let restorable = candidates.iter().filter(|c| c.restorable()).count();
@@ -970,15 +991,20 @@ fn cmd_restore(session: Option<String>, list: bool, dry_run: bool, clear: bool, 
         return 0;
     }
 
-    let path = restore_ui::staged_path(&home, &workspace_id);
     if let Err(e) = home::ensure_home(&home) {
         println!("{} Could not create {}: {e}", fail_mark(), home.display());
         return 1;
     }
-    if let Err(e) = velra_core::staging::stage(&path, &staged) {
-        println!("{} Could not stage the capsule: {e}", fail_mark());
-        return 1;
-    }
+    let path = match velra_core::staging::stage(
+        &velra_core::staging::staged_dir(&home, &workspace_id),
+        &staged,
+    ) {
+        Ok(p) => p,
+        Err(e) => {
+            println!("{} Could not stage the capsule: {e}", fail_mark());
+            return 1;
+        }
+    };
 
     if json {
         println!(
@@ -992,6 +1018,7 @@ fn cmd_restore(session: Option<String>, list: bool, dry_run: bool, clear: bool, 
                 "summary": staged.summary,
                 "staged": true,
                 "staged_path": path.to_string_lossy(),
+                "workspace_root": staged.workspace_root,
             }))
             .unwrap_or_default()
         );
@@ -1010,7 +1037,10 @@ fn cmd_restore(session: Option<String>, list: bool, dry_run: bool, clear: bool, 
     );
     println!("  {} estimated tokens · {}", staged.tokens, path.display());
     println!();
-    println!("  Start a new Claude Code session in this workspace to pick it up.");
+    println!(
+        "  Start a new Claude Code session in {} to pick it up.",
+        staged.workspace_root
+    );
     0
 }
 

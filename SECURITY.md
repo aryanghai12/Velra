@@ -13,7 +13,7 @@ on Windows), created with mode `0700` on POSIX; files are `0600`:
 |---|---|
 | `velra.db` (+ `-wal`, `-shm`) | The event log and derived task state (SQLite, WAL) |
 | `spool/` | Events written while the database was locked, pending ingestion |
-| `staged/<workspace_id>/staged_capsule` | A capsule staged by `velra restore`, waiting for the next new session in that workspace (deleted on delivery, discarded after 7 days) |
+| `staged/<workspace_id>/capsule.<gen>.json` | A capsule staged by `velra restore`, waiting for the next new session in that workspace (deleted on delivery, discarded after 7 days) |
 | `logs/errors.log` | One line per internal error (rotated at 1 MiB, 3 files) |
 | `logs/debug.log` | Per-invocation timing, only when `VELRA_LOG=debug` |
 | `backups/` | Timestamped copies of your Claude Code settings, taken before each edit |

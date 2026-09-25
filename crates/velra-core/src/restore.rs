@@ -70,6 +70,17 @@ pub fn sessions_for_workspace(
     .collect()
 }
 
+/// Whether the ledger holds a session recorded under `project_id`: the test
+/// `velra_core::workspace::resolve_recorded` asks of each candidate directory.
+pub fn is_recorded_workspace(conn: &Connection, project_id: &str) -> bool {
+    conn.query_row(
+        "SELECT EXISTS(SELECT 1 FROM sessions WHERE project_id = ?1)",
+        [project_id],
+        |r| r.get::<_, bool>(0),
+    )
+    .unwrap_or(false)
+}
+
 /// One session of a workspace, or `None` when that session is not part of
 /// this workspace.
 ///

@@ -24,7 +24,7 @@ Velra's state lives in **`$VELRA_HOME`**: by default `~/.velra`, or
 |---|---|---|
 | `velra.db` (+ `-wal`, `-shm`) | SQLite event log and derived task state, schema v2, WAL mode | only with `velra disable --purge`; all history is lost |
 | `spool/` | events written while the database was busy; ingested by the next reducer pass | no: it is recorded state waiting to land |
-| `staged/<workspace_id>/staged_capsule` | a capsule staged by `velra restore` | use `velra restore --clear` |
+| `staged/<workspace_id>/capsule.<gen>.json` (and `.claimed`) | a capsule staged by `velra restore`, and its claim while a session start delivers it | use `velra restore --clear` |
 | `logs/errors.log` | one line per internal error or refusal; rotated at 1 MiB, 3 files kept | yes |
 | `logs/debug.log` | per-invocation timing and delivery events, only with `VELRA_LOG=debug` | yes |
 | `backups/settings.json.<timestamp>.bak` | your Claude Code settings before each `enable`/`disable` | kept even by `--purge` |

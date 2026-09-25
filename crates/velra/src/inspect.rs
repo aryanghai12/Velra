@@ -89,7 +89,7 @@ pub fn trace(
         )
         .optional()?;
     let staged = project
-        .and_then(|p| velra_core::staging::peek(&velra_core::staging::staged_path(home, &p)))
+        .and_then(|p| velra_core::staging::peek(&velra_core::staging::staged_dir(home, &p)))
         .filter(|s| s.source_session_id == session_id)
         .map(|s| s.capsule);
     let inputs = velra_core::provenance::TraceInputs {

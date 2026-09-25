@@ -270,7 +270,7 @@ fn full_offline_pipeline_carries_every_exact_identifier() {
     )
     .expect("restore");
     let dir = tempfile::tempdir().expect("tmp");
-    let path = dir.path().join("staged_capsule");
+    let path = dir.path().join("staged");
     velra_core::staging::stage(&path, &staged).expect("stage");
     let on_disk = velra_core::staging::peek(&path).expect("staged record");
     assert_eq!(on_disk.capsule, staged.capsule);

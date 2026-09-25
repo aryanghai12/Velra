@@ -250,9 +250,9 @@ Velra — Restore previous session
 
 Select [1-3] (q to cancel): 2
 ✓ Staged objective, 1 failing test, 2 dead ends, 8 files from session 87901fc6-65ee-4265-8c7c-513b5d8ae43d.
-  680 estimated tokens · /home/you/.velra/staged/9c1256b5690e9531/staged_capsule
+  680 estimated tokens · /home/you/.velra/staged/9c1256b5690e9531/capsule.01790166800000000000-4f1c9a0b2d7e6a5c3b18.json
 
-  Start a new Claude Code session in this workspace to pick it up.
+  Start a new Claude Code session in /home/you/src/payments to pick it up.
 ```
 
 Each row's label is the session's first prompt, taken from Claude Code's
@@ -286,12 +286,13 @@ $ velra restore --session 87901fc6-65ee-4265-8c7c-513b5d8ae43d --json
   "content_hash": "dfe66398088e6689f085bef1ef88b38f",
   "summary": "objective, 1 failing test, 2 dead ends, 8 files",
   "staged": true,
-  "staged_path": "/home/you/.velra/staged/9c1256b5690e9531/staged_capsule"
+  "staged_path": "/home/you/.velra/staged/9c1256b5690e9531/capsule.01790166800000000000-4f1c9a0b2d7e6a5c3b18.json",
+  "workspace_root": "/home/you/src/payments"
 }
 ```
 
 With `--dry-run --json` the same object has `"staged": false` and no
-`staged_path`.
+`staged_path` or `workspace_root`.
 
 ### Failure behaviour
 

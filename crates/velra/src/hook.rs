@@ -605,7 +605,19 @@ impl<'a> Ctx<'a> {
             }
             // The only write to stdout in this path, and the only one the
             // process permits at all: `emit` holds a once-guard.
-            emit(&staged_delivery_json(c))
+            let emitted = emit(&staged_delivery_json(c));
+            // A process that dies after the capsule reached stdout and before
+            // the claim is settled: the watchdog fires during this stall.
+            #[cfg(feature = "fault-injection")]
+            if emitted {
+                if let Some(ms) = std::env::var("VELRA_TEST_STALL_AFTER_STAGED_EMIT_MS")
+                    .ok()
+                    .and_then(|v| v.parse::<u64>().ok())
+                {
+                    std::thread::sleep(Duration::from_millis(ms));
+                }
+            }
+            emitted
         };
 
         match velra_core::staging::claim_with(self.home, &self.project_id, source, now, emit_staged)
@@ -624,8 +636,9 @@ impl<'a> Ctx<'a> {
             // is every `/clear`, compaction and resume in between. Logging
             // either would turn the log into noise and hide the rest.
             Err(ClaimError::Empty) | Err(ClaimError::NotForThisSource { .. }) => {}
-            // Someone else is mid-claim, or we declined to emit. Both leave the
-            // capsule staged and recoverable on the next session start.
+            // Another session start holds the claim and may still be
+            // delivering it; ours must not. An old claim is `Interrupted`,
+            // which is logged below.
             Err(ClaimError::Busy) => {}
             Err(ClaimError::NotEmitted) if oversized.get() => {}
             Err(ClaimError::NotEmitted) => log::debug(

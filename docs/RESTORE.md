@@ -41,9 +41,9 @@ restore what it watched.
 cd ~/src/payments
 velra restore                 # pick session A from the list
 # ✓ Staged objective, 1 failing test, 2 dead ends, 8 files from session 87901fc6-….
-#   680 estimated tokens · ~/.velra/staged/9c1256b5690e9531/staged_capsule
+#   680 estimated tokens · ~/.velra/staged/9c1256b5690e9531/capsule.01790166800000000000-4f1c9a0b2d7e6a5c3b18.json
 #
-#   Start a new Claude Code session in this workspace to pick it up.
+#   Start a new Claude Code session in /home/you/src/payments to pick it up.
 
 claude                        # Session B — a brand-new session, same workspace
 # ⚡ Velra restored: objective, 1 failing test, 2 dead ends, 8 files — from session 87901fc6 (680 tokens)
@@ -81,9 +81,8 @@ a rendered record, not access to the source's history.
 ### 1. Workspace resolution
 
 `velra restore` resolves the workspace from the current directory with the
-same function the hooks use (`velra_core::workspace::resolve`), so the
-directory where you stage and the session that consumes it always agree on
-the key:
+same mapping the hooks use (`velra_core::workspace::resolve`), so the
+directory where you stage and the session that consumes it agree on the key:
 
 ```
 root  := $CLAUDE_PROJECT_DIR, else first ancestor of cwd holding .git, else cwd
@@ -91,7 +90,13 @@ id    := blake3(canonical, normalised root)[0..16 hex]
 ```
 
 Run it from anywhere inside the repository. A subdirectory resolves to the
-same workspace.
+same workspace, with one refinement: Claude Code started in a subdirectory
+(a package of a monorepo) records that subdirectory as the workspace, so
+inside a repository `velra restore` uses the nearest directory, from the
+current one up to the repository root, that Velra has recorded a session in
+(`resolve_recorded`). Outside a repository only the current directory is
+tried. The command prints the workspace root it staged for; start the new
+session there.
 
 ### 2. Source-session selection
 
@@ -131,8 +136,10 @@ rows and the clock.
 
 ### 5. Staging
 
-The record is written atomically (temporary file, fsync, rename) to
-`~/.velra/staged/<workspace_id>/staged_capsule`. It holds:
+The record is written atomically (temporary file, fsync, rename) to a new
+file, `~/.velra/staged/<workspace_id>/capsule.<gen>.json`, and any older record of the workspace
+is then removed. A record is never rewritten, and only the newest one is ever
+delivered. It holds:
 
 | Field | Meaning |
 |---|---|
@@ -178,13 +185,21 @@ agent still reads files and runs tests normally.
 
 ### 8. One-shot delivery
 
-Delivery is exactly once, including when two sessions start at the same
-moment. The claim is the exclusive creation of a marker file, which is atomic
-on every supported platform. One process wins; the others see "busy" and
-leave the capsule alone. The capsule is deleted only **after** the hook has
-successfully written its output. If output fails, the capsule stays staged
-for the next session start rather than being lost. A claim left by a crashed
-process expires after 60 seconds.
+Delivery is at most once, including when two sessions start at the same
+moment. The claim is the exclusive creation of a claim file next to the record
+(`capsule.<gen>.claimed`), which is atomic on every supported platform. One
+process wins; the others see "busy" and leave the capsule alone. The record is
+deleted only **after** the hook has successfully written its output. If output
+fails, the claim is released and the capsule stays staged for the next session
+start. A restage while a session is starting is never removed by that
+session's cleanup: the cleanup removes only the record it claimed.
+
+A session start that dies after writing the capsule and before deleting it
+(its watchdog fires) leaves the record and its claim behind. Velra cannot tell
+whether that capsule reached Claude Code, so it is **not** delivered again.
+Nothing takes a claim over. After a minute `velra status` reports it as
+claimed by a session start that did not finish; run `velra restore` to stage
+it again.
 
 ### 9. Stale state handling
 
@@ -194,6 +209,8 @@ process expires after 60 seconds.
 | content hash does not match | refused and **kept** as evidence; logged to `errors.log` |
 | capsule's `workspace_id` is not this workspace | refused and kept; logged |
 | file unreadable, or an unknown format version | refused and deleted |
+| claimed by a session start that did not finish | not delivered again; `velra status` says so; a restage replaces it |
+| any of the above on the newest record | an older record is **never** delivered in its place |
 | capsule over 9,500 characters (a tampered file or foreign build) | not delivered, kept; logged |
 
 The capsule is a snapshot of the moment you ran `velra restore`. If you keep
@@ -289,7 +306,7 @@ restore`. That is expected: you asked Claude Code to drop that state.
 | What would be staged, without staging it? | `velra restore --dry-run [--session <id>]` |
 | Is something staged for this workspace, how big, from which session? | `velra status` (the `Staged:` line) |
 | Which sessions does this workspace have, and which are restorable? | `velra restore --list` or `--list --json` |
-| The exact staged record, including `deliver_on` and `created_ms` | read `~/.velra/staged/<workspace_id>/staged_capsule` (JSON). The id is printed by `velra restore --list --json` |
+| The exact staged record, including `deliver_on` and `created_ms` | read `~/.velra/staged/<workspace_id>/capsule.<gen>.json` (JSON). The id is printed by `velra restore --list --json`, the path by `velra restore --json` |
 | Throw the staged capsule away | `velra restore --clear` |
 | Why a specific fact is missing from the capsule | `velra inspect --session <id> --trace "<fact>"` ([how](TROUBLESHOOTING.md#tracing-a-lost-fact-velra-inspect---trace)) |
 | Full detail behind a section | `velra inspect --session <id> --section dead-ends\|failure\|files\|attempts` |
