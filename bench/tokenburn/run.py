@@ -2,11 +2,14 @@
 """The Token-Burn runner. Four modes, three of which cannot spend anything.
 
     python bench/tokenburn/run.py --selftest   # the pipeline, on mock trials
-    python bench/tokenburn/run.py --dry-run    # readiness: fixtures, leaks,
+    python bench/tokenburn/run.py --preflight  # memory isolation + handoff
+    python bench/tokenburn/run.py --dry-run --results-root <PATH>
+                                               # readiness: fixtures, leaks,
                                                # ladder, telemetry, plan
     python bench/tokenburn/run.py --smoke      # restore -> SessionStart, real
                                                # binary, still offline
-    python bench/tokenburn/run.py --live       # refuses without authorization
+    python bench/tokenburn/run.py --live --results-root <PATH>
+                                               # refuses without authorization
 
 ``--selftest``, ``--dry-run`` and ``--smoke`` start no Claude process, make no
 network call and spend nothing. That is not a convention: they pass through
@@ -23,11 +26,20 @@ three before the first subprocess, and refuses by raising.
 Readiness
 ---------
 
-``--dry-run`` writes ``bench/results/v0.1.2/readiness.json`` and ends in
-exactly one of two states::
+``--dry-run`` writes ``<results-root>/readiness.json`` and ends in exactly one
+of two states::
 
     READY FOR LIVE EVALUATION
     NOT READY FOR LIVE EVALUATION   <- with every blocker named
+
+Results root
+------------
+
+Everything a run writes goes under ``--results-root`` (see :mod:`runroot`),
+and aggregation reads only ``<root>/trials``. The original layout,
+``bench/results/v0.1.2/``, is the frozen qualification evidence: no mode may
+write inside it, into a root inside it, or into a root containing it, and the
+runner exits 3 naming the path instead.
 
 Resumption
 ----------
@@ -59,24 +71,29 @@ if __package__ in (None, ""):
     import aggregate  # type: ignore[no-redef]
     import capsule_probe  # type: ignore[no-redef]
     import context_fixture  # type: ignore[no-redef]
+    import isolation  # type: ignore[no-redef]
     import leakscan  # type: ignore[no-redef]
     import prereg  # type: ignore[no-redef]
+    import runroot  # type: ignore[no-redef]
     import safety  # type: ignore[no-redef]
     import scenarios  # type: ignore[no-redef]
     import selftest as selftest_mod  # type: ignore[no-redef]
     import smoke as smoke_mod  # type: ignore[no-redef]
     import telemetry  # type: ignore[no-redef]
 else:
-    from . import (aggregate, capsule_probe, context_fixture, leakscan,
-                   prereg, safety, scenarios, telemetry)
+    from . import (aggregate, capsule_probe, context_fixture, isolation,
+                   leakscan, prereg, runroot, safety, scenarios, telemetry)
     from . import selftest as selftest_mod
     from . import smoke as smoke_mod
 
 RESULTS = BENCH / "results" / "v0.1.2"
-TOKENBURN = RESULTS / "tokenburn"
-TRIALS = TOKENBURN / "trials"
-QUARANTINE = TOKENBURN / "quarantine"
-READINESS = RESULTS / "readiness.json"
+
+#: The run root in force for this process: every mutable artifact of the run
+#: (trials, readiness.json, run_state.json, the aggregate, settings backup,
+#: quarantine) lives under it. `main` sets it from --results-root; without one
+#: it is the original layout, which is frozen evidence and refuses writes.
+#: See runroot.py.
+RUN: runroot.RunRoot = runroot.default()
 
 #: Result trees that are historical record. The runner reads them to confirm
 #: they are still there and writes to none of them.
@@ -225,13 +242,37 @@ SELF_WRITTEN = (
 )
 
 
-def is_self_written(porcelain_line: str) -> bool:
-    """Whether a `git status --porcelain` line names a path this runner wrote."""
+def self_written_patterns() -> tuple[str, ...]:
+    """This run's own output, as repo-relative prefixes.
+
+    The original layout for the default root; the selected root otherwise
+    (nothing, when the root is outside the repository).
+    """
+    if not RUN.explicit:
+        return SELF_WRITTEN
+    rel = RUN.repo_relative()
+    return (rel,) if rel else ()
+
+
+def is_self_written(porcelain_line: str,
+                    patterns: tuple[str, ...] | None = None) -> bool:
+    """Whether a `git status --porcelain` line names a path this runner wrote.
+
+    A change to a *tracked* file inside protected evidence is never this
+    runner's output, whatever the patterns say: the frozen tree is committed,
+    so a modification there is a real change and keeps the tree dirty.
+    """
+    patterns = self_written_patterns() if patterns is None else patterns
+    code = porcelain_line[:2]
     path = porcelain_line[3:].strip().strip('"')
-    if " -> " in path:                      # a rename: judge the destination
+    renamed = " -> " in path
+    if renamed:                             # a rename: judge the destination
         path = path.split(" -> ", 1)[1].strip().strip('"')
     path = path.replace("\\", "/")
-    return any(path == p or path.startswith(p) for p in SELF_WRITTEN)
+    if (code != "??" and not renamed
+            and runroot.protected_hit(REPO_ROOT / path) is not None):
+        return False
+    return any(path == p or path.startswith(p) for p in patterns)
 
 
 def git_provenance() -> dict:
@@ -249,7 +290,7 @@ def git_provenance() -> dict:
         "working_tree_changes": dirty,
         "working_tree_clean": not dirty,
         "self_written_paths_excluded": self_written,
-        "self_written_patterns": list(SELF_WRITTEN),
+        "self_written_patterns": list(self_written_patterns()),
         "changes_including_self_written": len(all_changes),
         "note": ("`working_tree_clean` ignores the benchmark's own output "
                  "paths and nothing else. Every other uncommitted path is "
@@ -565,6 +606,20 @@ def phase_capsule_provenance(rep: Report, names) -> dict:
     return info
 
 
+def phase_isolation(rep: Report, args) -> dict:
+    """Memory isolation and handoff validation, proven offline."""
+    step("Trial validity preflight: memory isolation and source handoff")
+    result = isolation.preflight()
+    for c in result["checks"]:
+        print(f"  [{'PASS' if c['ok'] else 'FAIL'}] {c['check']}", flush=True)
+    failed = [c["check"] for c in result["checks"] if not c["ok"]]
+    rep.add("isolation", "auto-memory isolated and handoff enforced, both arms",
+            result["ok"], "; ".join(failed) or
+            f"{len(result['checks'])} checks")
+    return {"ok": result["ok"], "checks": result["checks"],
+            "failed": failed}
+
+
 def phase_smoke(rep: Report, args) -> dict:
     step("Offline restore -> SessionStart smoke test")
     with tempfile.TemporaryDirectory() as tmp:
@@ -591,7 +646,9 @@ def phase_smoke(rep: Report, args) -> dict:
 
 
 def plan_pairs(names, pairs_per: int, stage: str,
-               only_pairs=None) -> list[dict]:
+               only_pairs=None, trials_dir: pathlib.Path | None = None
+               ) -> list[dict]:
+    trials_dir = pathlib.Path(trials_dir) if trials_dir else RUN.trials
     plan = []
     for name in names:
         for index in range(1, pairs_per + 1):
@@ -603,7 +660,7 @@ def plan_pairs(names, pairs_per: int, stage: str,
                 "replicate": index,
                 "context_ladder_rung": None,
                 "arms": {arm: {"trial": f"{name}-{stage}{index}-{arm}",
-                               "dir": str(TRIALS / f"{name}-{stage}{index}-{arm}")}
+                               "dir": str(trials_dir / f"{name}-{stage}{index}-{arm}")}
                          for arm in ("baseline", "velra")},
             })
     return plan
@@ -660,7 +717,7 @@ def phase_plan(rep: Report, args, names) -> dict:
 
 
 def load_state() -> dict:
-    path = TOKENBURN / "run_state.json"
+    path = RUN.run_state
     if path.exists():
         try:
             return json.loads(path.read_text(encoding="utf-8"))
@@ -670,8 +727,8 @@ def load_state() -> dict:
 
 
 def save_state(state: dict) -> None:
-    TOKENBURN.mkdir(parents=True, exist_ok=True)
-    (TOKENBURN / "run_state.json").write_text(
+    RUN.prepare()
+    RUN.run_state.write_text(
         json.dumps(state, indent=2, default=str), encoding="utf-8",
         newline="")
 
@@ -696,7 +753,8 @@ def snapshot_settings() -> tuple[pathlib.Path, bytes | None]:
     path = settings_path()
     data = path.read_bytes() if path.exists() else None
     if data is not None:
-        keep = TOKENBURN / "settings-backup" / f"settings.{now_stamp()}.json"
+        RUN.assert_writable()
+        keep = RUN.settings_backup / f"settings.{now_stamp()}.json"
         keep.parent.mkdir(parents=True, exist_ok=True)
         keep.write_bytes(data)
         print(f"  settings snapshot -> {keep}", flush=True)
@@ -733,10 +791,11 @@ def quarantine(trial_dir: pathlib.Path, why: str) -> None:
     """Move a completed trial aside. Never delete one."""
     if not trial_dir.exists():
         return
-    dest = QUARANTINE / now_stamp() / trial_dir.name
+    runroot.assert_writable(trial_dir, "a quarantined trial's source")
+    dest = RUN.quarantine / now_stamp() / trial_dir.name
     dest.parent.mkdir(parents=True, exist_ok=True)
     shutil.move(str(trial_dir), str(dest))
-    with open(QUARANTINE / "log.jsonl", "a", encoding="utf-8",
+    with open(RUN.quarantine / "log.jsonl", "a", encoding="utf-8",
               newline="") as fh:
         fh.write(json.dumps({"at": now_stamp(), "trial": trial_dir.name,
                              "moved_to": str(dest), "why": why}) + "\n")
@@ -767,7 +826,8 @@ def phase_live(args, plan: list[dict]) -> int:
         args.fixture_root or (pathlib.Path(tempfile.gettempdir())
                               / "velra-tokenburn-fixtures"))
     fixture_root.mkdir(parents=True, exist_ok=True)
-    TRIALS.mkdir(parents=True, exist_ok=True)
+    RUN.prepare()
+    RUN.trials.mkdir(parents=True, exist_ok=True)
 
     settings_file, saved_settings = snapshot_settings()
     try:
@@ -809,11 +869,14 @@ def _run_trials(args, plan, live_trial, claude, fixture_root,
                 model=args.model, claude=claude,
                 velra=VELRA_BINARY, max_budget_usd=args.max_budget_usd,
                 seed=args.seed, arm_order_index=order_index,
-                arm_order=list(order))
+                arm_order=list(order),
+                provenance_exclude=self_written_patterns())
             state["trials"][key].update(state="complete", finished=now_stamp())
             save_state(state)
 
-    result = aggregate.run(TRIALS, TOKENBURN)
+    # Only this run root's trials: nothing outside it is discovered.
+    result = aggregate.run(RUN.trials, RUN.aggregate_dir,
+                           scored_by=runroot.scoring_provenance())
     state["last_aggregate"] = now_stamp()
     state["verdicts"] = {v["pair_id"]: v["verdict"] for v in result["pairs"]}
     save_state(state)
@@ -836,6 +899,10 @@ def main() -> int:
     mode.add_argument("--smoke", action="store_true",
                       help="restore -> SessionStart against the real binary. "
                            "Offline, always, in this phase.")
+    mode.add_argument("--preflight", action="store_true",
+                      help="trial-validity controls only: memory isolation, "
+                           "leak scan, handoff validation. Offline; writes "
+                           "nothing under bench/results.")
     mode.add_argument("--live", action="store_true",
                       help="the expensive evaluation. Needs "
                            f"{safety.LIVE_ENV}=1 as well.")
@@ -859,6 +926,14 @@ def main() -> int:
     ap.add_argument("--with-cargo-test", action="store_true")
     ap.add_argument("--quick-ladder", action="store_true",
                     help="only the first two rungs, for a fast check")
+    ap.add_argument("--results-root", default=None, metavar="PATH",
+                    help="where this run writes everything it owns: trials/, "
+                         "readiness.json, run_state.json, the aggregate and "
+                         "report, settings-backup/, quarantine/. Relative "
+                         "paths resolve against the current directory. "
+                         "Required for --dry-run and --live: the default "
+                         "layout is the frozen v0.1.2 evidence and is never "
+                         "written.")
     args = ap.parse_args()
 
     if args.selftest:
@@ -867,6 +942,16 @@ def main() -> int:
     if args.smoke:
         safety.assert_offline(safety.MODE_SMOKE)
         return subprocess.run([sys.executable, str(HERE / "smoke.py")]).returncode
+    if args.preflight:
+        safety.assert_offline(safety.MODE_SMOKE)
+        return subprocess.run([sys.executable, str(HERE / "isolation.py"),
+                               "--preflight"]).returncode
+
+    # The run root, checked before any phase so a protected location fails
+    # before anything is built, spent or written.
+    global RUN
+    RUN = runroot.select(args.results_root)
+    RUN.prepare()
 
     names = list(args.only or scenarios.DEFAULT_ORDER)
     started = time.time()
@@ -879,7 +964,8 @@ def main() -> int:
         # is a question a reader should never have to answer from mtimes.
         "artifact": {
             "id": "velra-tokenburn-readiness",
-            "path": str(READINESS.relative_to(REPO_ROOT)),
+            "path": (RUN.repo_relative() + "readiness.json"
+                     if RUN.repo_relative() else str(RUN.readiness)),
             "authoritative": True,
             "is_current": True,
             "benchmark": "v0.1.2 Token-Burn",
@@ -892,7 +978,8 @@ def main() -> int:
         "at": now_stamp(),
         "mode": "live" if args.live else "dry-run",
         "benchmarks": names,
-        "results_dir": str(TOKENBURN),
+        "results_dir": str(RUN.root),
+        "results_root": RUN.to_json(),
         **prereg.stamp(),
     }
 
@@ -913,6 +1000,7 @@ def main() -> int:
     readiness["mock_adapter"] = phase_mock(rep, args)
     readiness["capsule_provenance"] = phase_capsule_provenance(rep, names)
     readiness["smoke_test"] = phase_smoke(rep, args)
+    readiness["trial_validity_preflight"] = phase_isolation(rep, args)
     readiness["trial_plan"] = phase_plan(rep, args, names)
 
     step("Live safety gate")
@@ -945,8 +1033,9 @@ def main() -> int:
     readiness["blockers"] = rep.blocking
     readiness["elapsed_seconds"] = round(time.time() - started, 1)
 
-    READINESS.parent.mkdir(parents=True, exist_ok=True)
-    READINESS.write_text(json.dumps(readiness, indent=2, default=str),
+    RUN.assert_writable()
+    RUN.readiness.parent.mkdir(parents=True, exist_ok=True)
+    RUN.readiness.write_text(json.dumps(readiness, indent=2, default=str),
                          encoding="utf-8", newline="")
 
     step("Readiness")
@@ -955,7 +1044,7 @@ def main() -> int:
     for row in rep.warnings:
         print(f"  warning  {row['phase']}/{row['check']}: {row['detail']}")
     print(f"\n  {readiness['state']}")
-    print(f"  readiness report: {READINESS}")
+    print(f"  readiness report: {RUN.readiness}")
     print(f"  planned: {readiness['trial_plan']['total_pairs']} pairs, "
           f"{readiness['trial_plan']['total_sessions']} trials "
           f"(each drives a source and a destination session)")
@@ -980,3 +1069,6 @@ if __name__ == "__main__":
     except safety.LiveExecutionRefused as exc:
         print(f"\n{exc}", file=sys.stderr)
         raise SystemExit(2) from exc
+    except runroot.ProtectedEvidenceError as exc:
+        print(f"\nREFUSED: {exc}", file=sys.stderr)
+        raise SystemExit(3) from exc

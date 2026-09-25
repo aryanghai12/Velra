@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 # H1: enforces the §4 performance budgets with hyperfine.
 #
-#   cargo build --release -p velra && bash bench/run.sh
+#   cargo build --release -p velra && bash bench/legacy/run.sh
 #
 # Measures full process wall time (spawn → exit) against a database
 # pre-populated with 100,000 events, and fails when a p50/p99 budget is missed.
 
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 BIN="$ROOT/target/release/velra"
 [ -f "$BIN" ] || BIN="$ROOT/target/release/velra.exe"
 [ -f "$BIN" ] || { echo "build the release binary first: cargo build --release -p velra"; exit 1; }

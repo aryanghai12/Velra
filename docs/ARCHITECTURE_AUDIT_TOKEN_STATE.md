@@ -1,5 +1,12 @@
 # Architecture audit — token burden and cross-session state
 
+> **Historical design-time audit, written before any live trial.** For the
+> current architecture see [ARCHITECTURE.md](ARCHITECTURE.md); for results see
+> [BENCHMARK.md](BENCHMARK.md). **Correction:** this audit describes Baseline A
+> as "a legitimate native continuation" of the source session. The harness
+> has always started the baseline destination as a brand-new session
+> ([DECISIONS D68](../DECISIONS.md)).
+
 Written from the code as it stands after Phase 3. Every claim names the file it
 came out of, and nothing here is a measurement of Claude: **no live trial has
 been run.** Where this document talks about tokens, it talks about the

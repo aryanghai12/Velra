@@ -7,11 +7,11 @@
 //! long Claude Code session -> the developer decides to leave it
 //!   -> velra restore -> pick a previous session
 //!   -> start a brand-new Claude Code session
-//!   -> (Phase 2) Velra injects the staged state
+//!   -> SessionStart(startup) delivers the staged state, once
 //! ```
 //!
-//! Everything before the last line is Phase 1. Nothing here consumes the
-//! staged capsule; `SessionStart` is untouched.
+//! This module stops at staging. Nothing here consumes the capsule; the
+//! `SessionStart` hook does (`hook.rs`, `deliver_staged`).
 //!
 //! # The picker
 //!
@@ -204,11 +204,6 @@ pub fn prompt_choice(
         }
     }
     Ok(None)
-}
-
-/// `$VELRA_HOME/staged/<workspace_id>/staged_capsule` for this workspace.
-pub fn staged_path(velra_home: &Path, workspace_id: &str) -> PathBuf {
-    velra_core::staging::staged_path(velra_home, workspace_id)
 }
 
 /// The user's home, for locating `~/.claude/projects`.

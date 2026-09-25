@@ -9,8 +9,8 @@ use velra_core::git::GitInfo;
 use velra_core::model::{CommandKind, Mechanism, Outcome, Trigger};
 use velra_core::render::{
     self, AttemptView, CommandRef, ConstraintView, DeadEndView, FailureView, IntentView,
-    NextTarget, RenderConfig, Snapshot, WorkingFileView, ABSOLUTE_MAX_CHARS, DEFAULT_BUDGET_TOKENS,
-    HARD_CEILING_TOKENS,
+    NextTarget, RenderConfig, Snapshot, TestStatusView, WorkingFileView, ABSOLUTE_MAX_CHARS,
+    DEFAULT_BUDGET_TOKENS, HARD_CEILING_TOKENS,
 };
 
 const CAUSAL_WORDS: [&str; 4] = ["caused", "because", "due to", "led to"];
@@ -371,6 +371,8 @@ prop_compose! {
         files in 0usize..12,
         constraints in prop::collection::vec(arb_text(400), 0..6),
         partial in any::<bool>(),
+        earlier in prop::option::of(arb_text(400)),
+        tests in prop::collection::vec((arb_text(250), any::<bool>()), 0..9),
     ) -> Snapshot {
         let intent = |text: Option<String>, id: i64| text.map(|t| IntentView { id, text: t, ts_ms: common::BASE_MS });
         Snapshot {
@@ -391,8 +393,10 @@ prop_compose! {
                 prompt_ordinal: i as i64,
                 ts_ms: common::BASE_MS,
             }).collect(),
+            rejections: vec![],
             subtask: intent(subtask, 2),
             latest: intent(latest, 3),
+            earlier: intent(earlier, 4),
             git: branch.map(|b| GitInfo { branch: Some(b), head: Some("a".repeat(40)) }),
             edit_count: edits,
             last_test: Some(CommandRef { id: 1, command: "pytest".into(), outcome: Outcome::Fail }),
@@ -405,6 +409,15 @@ prop_compose! {
                 ts_ms: common::BASE_MS,
             }),
             failing_count: 1,
+            tests: tests.into_iter().enumerate().map(|(i, (id, failing))| TestStatusView {
+                id,
+                failing,
+                detail: Some("d".repeat(200)),
+                last_fail: CommandRef { id: i as i64, command: "pytest".into(), outcome: Outcome::Fail },
+                last_fail_ms: common::BASE_MS,
+                passed: (!failing).then(|| CommandRef { id: 99, command: "z".repeat(300), outcome: Outcome::Pass }),
+                passed_ms: (!failing).then_some(common::BASE_MS),
+            }).collect(),
             dead_ends: (0..dead_ends).map(|i| DeadEndView {
                 id: i as i64,
                 path: format!("src/{}.rs", "d".repeat(60)),
@@ -415,9 +428,12 @@ prop_compose! {
                 resolved_ms: common::BASE_MS,
                 minus: Some("-".repeat(160)),
                 plus: Some("+".repeat(160)),
+                excerpt_edit: None,
                 observed_after: Some(CommandRef { id: 2, command: "y".repeat(200), outcome: Outcome::Fail }),
             }).collect(),
             dead_end_total: dead_ends as u32,
+            constraint_total: 0,
+            rejection_total: 0,
             attempts: (0..attempts).map(|i| AttemptView {
                 edit_id: i as i64,
                 path: format!("src/attempt{}.rs", "a".repeat(60)),
@@ -498,15 +514,20 @@ fn arb_snapshot_minimal() -> Snapshot {
         epoch: 1,
         root: None,
         constraints: vec![],
+        rejections: vec![],
         subtask: None,
         latest: None,
+        earlier: None,
         git: None,
         edit_count: 0,
         last_test: None,
         failure: None,
         failing_count: 0,
+        tests: vec![],
         dead_ends: vec![],
         dead_end_total: 0,
+        constraint_total: 0,
+        rejection_total: 0,
         attempts: vec![],
         working_files: vec![],
         next_target: None,

@@ -67,7 +67,7 @@ fn staged_workspace_with(
 
     let staged = edit(staged);
     let env = log.into_env();
-    staging::stage(&staging::staged_path(&env.home, &workspace_id), &staged).expect("stage");
+    staging::stage(&staging::staged_dir(&env.home, &workspace_id), &staged).expect("stage");
     (env, staged)
 }
 
@@ -80,8 +80,20 @@ fn session_start(env: &Env, source: &str) -> common::HookOutput {
     env.hook("session-start", &payload)
 }
 
+fn staged_dir(env: &Env) -> std::path::PathBuf {
+    staging::staged_dir(&env.home, &env.project_id())
+}
+
+/// Whether a record is staged for the environment's workspace.
+fn is_staged(env: &Env) -> bool {
+    !staging::records(&staged_dir(env)).is_empty()
+}
+
+/// The newest staged record's file.
 fn staged_file(env: &Env) -> std::path::PathBuf {
-    staging::staged_path(&env.home, &env.project_id())
+    staging::newest(&staged_dir(env))
+        .expect("a staged record")
+        .path
 }
 
 /// Asserts stdout is exactly one JSON object and nothing else, and returns it.
@@ -135,7 +147,7 @@ fn startup_delivers_startup_capsule() {
         "the staged bytes, unchanged"
     );
     assert!(additional_context(&value).contains("invoice"));
-    assert!(!staged_file(&env).exists(), "delivery consumes the capsule");
+    assert!(!is_staged(&env), "delivery consumes the capsule");
 }
 
 #[test]
@@ -200,10 +212,10 @@ fn assert_refuses(source: &str) {
     assert_eq!(out.code, 0, "{source}");
     assert!(out.stdout.is_empty(), "{source} emitted: {:?}", out.stdout);
     assert!(out.stderr.is_empty(), "{source} stderr: {:?}", out.stderr);
-    assert!(staged_file(&env).is_file(), "{source} consumed the capsule");
+    assert!(is_staged(&env), "{source} consumed the capsule");
     // Byte-identical, not merely present: a refusal must not rewrite it.
     assert_eq!(
-        staging::peek(&staged_file(&env)).expect("still readable"),
+        staging::peek(&staged_dir(&env)).expect("still readable"),
         staged,
         "{source} altered the capsule"
     );
@@ -237,11 +249,11 @@ fn a_capsule_survives_every_refusing_source_and_then_delivers() {
     for source in REFUSING.iter().chain(REFUSING.iter()) {
         let out = session_start(&env, source);
         assert!(out.stdout.is_empty(), "{source} emitted");
-        assert!(staged_file(&env).is_file(), "{source} ate it");
+        assert!(is_staged(&env), "{source} ate it");
     }
     let value = assert_only_json(&session_start(&env, STARTUP));
     assert_eq!(additional_context(&value), staged.capsule);
-    assert!(!staged_file(&env).exists());
+    assert!(!is_staged(&env));
 }
 
 /// A capsule whose metadata names sources this build does not ship is refused
@@ -257,7 +269,7 @@ fn wrong_source_metadata_rejected() {
         let out = session_start(&env, source);
         assert_eq!(out.code, 0, "{source}");
         assert!(out.stdout.is_empty(), "{source} emitted: {:?}", out.stdout);
-        assert!(staged_file(&env).is_file(), "{source} consumed it");
+        assert!(is_staged(&env), "{source} consumed it");
     }
 }
 
@@ -287,7 +299,7 @@ fn an_unknown_session_start_source_is_refused() {
             "{source:?} delivered: {}",
             out.stdout
         );
-        assert!(staged_file(&env).is_file(), "{source:?} consumed it");
+        assert!(is_staged(&env), "{source:?} consumed it");
     }
 }
 
@@ -300,13 +312,13 @@ fn wrong_workspace_rejected() {
 
     // The same capsule, filed under a different workspace key.
     let elsewhere = "ffffffffffffffff";
-    staging::stage(&staging::staged_path(&env.home, elsewhere), &staged).expect("stage");
+    staging::stage(&staging::staged_dir(&env.home, elsewhere), &staged).expect("stage");
 
     let out = session_start(&env, STARTUP);
     assert_eq!(out.code, 0);
     assert!(out.stdout.is_empty(), "{:?}", out.stdout);
     assert!(
-        staging::staged_path(&env.home, elsewhere).is_file(),
+        !staging::records(&staging::staged_dir(&env.home, elsewhere)).is_empty(),
         "the other workspace's capsule is untouched"
     );
 }
@@ -334,12 +346,12 @@ fn stale_capsule_rejected() {
     assert_eq!(out.code, 0);
     assert!(out.stdout.is_empty(), "{:?}", out.stdout);
     assert!(out.stderr.is_empty());
-    assert!(!staged_file(&env).exists(), "and it is cleared away");
+    assert!(!is_staged(&env), "and it is cleared away");
 }
 
 #[test]
 fn malformed_capsule_rejected() {
-    let (env, _) = staged_workspace();
+    let (env, staged) = staged_workspace();
     for garbage in [
         "",
         "{ not json",
@@ -350,7 +362,10 @@ fn malformed_capsule_rejected() {
         "\u{0}\u{1}\u{2}",
         "{\"version\":2,\"workspace_id\":\"truncated",
     ] {
-        std::fs::write(staged_file(&env), garbage).expect("write garbage");
+        // The newest record, written over: a record is never rewritten by
+        // Velra, so this is a mangled file, not a restage.
+        let path = staging::stage(&staged_dir(&env), &staged).expect("stage");
+        std::fs::write(&path, garbage).expect("write garbage");
         let out = session_start(&env, STARTUP);
         assert_eq!(out.code, 0, "{garbage:?}");
         assert!(out.stdout.is_empty(), "{garbage:?} -> {:?}", out.stdout);
@@ -386,10 +401,7 @@ fn oversized_capsule_rejected() {
     assert_eq!(out.code, 0);
     assert!(out.stdout.is_empty(), "oversized capsule was emitted");
     assert!(out.stderr.is_empty());
-    assert!(
-        staged_file(&env).is_file(),
-        "left recoverable, not consumed"
-    );
+    assert!(is_staged(&env), "left recoverable, not consumed");
 }
 
 /// The largest capsule still inside the margin must deliver intact — the
@@ -405,7 +417,7 @@ fn a_maximum_size_capsule_still_delivers() {
     let value = assert_only_json(&session_start(&env, STARTUP));
     assert_eq!(additional_context(&value), staged.capsule);
     assert_eq!(additional_context(&value).chars().count(), SIZE);
-    assert!(!staged_file(&env).exists());
+    assert!(!is_staged(&env));
 }
 
 // ------------------------------------------------------------ exactly once
@@ -428,7 +440,7 @@ fn duplicate_session_start_delivers_once() {
 fn consumed_capsule_is_not_redelivered() {
     let (env, _) = staged_workspace();
     assert_only_json(&session_start(&env, STARTUP));
-    assert!(!staged_file(&env).exists());
+    assert!(!is_staged(&env));
 
     for source in std::iter::once(&STARTUP).chain(REFUSING.iter()) {
         let out = session_start(&env, source);
@@ -490,37 +502,49 @@ fn concurrent_session_start_single_winner() {
 
     let value: Value = serde_json::from_str(winners[0].trim_end()).expect("winner JSON");
     assert_eq!(additional_context(&value), staged.capsule);
-    assert!(!staged_file(&env).exists());
+    assert!(!is_staged(&env));
 }
 
-/// A claimant that dies holding the claim must not wedge the slot forever:
-/// the lease expires and the next session start recovers the capsule.
+/// A claimant that dies holding the claim may already have delivered the
+/// capsule, so nothing takes its claim over: the capsule is not delivered
+/// again, however old the claim, and a restage is delivered normally. (Until
+/// Phase 6 an expired claim was broken and the capsule delivered a second
+/// time; `staging_claims.rs` reproduces that through the watchdog.)
 #[test]
-fn interrupted_claim_recovers() {
+fn an_interrupted_claim_is_not_redelivered_and_a_restage_is() {
     let (env, staged) = staged_workspace();
-    let marker = staging::staged_dir(&env.home, &env.project_id()).join("staged_capsule.claim");
+    let record = staging::newest(&staged_dir(&env)).expect("staged");
+    let now = velra_core::time::now_ms();
 
-    // A claim left behind by a process that never came back.
-    std::fs::write(&marker, "pid=999999 at=0").expect("marker");
-    let blocked = session_start(&env, STARTUP);
-    assert_eq!(blocked.code, 0);
-    assert!(blocked.stdout.is_empty(), "a held claim must block");
-    assert!(staged_file(&env).is_file(), "and must not consume");
+    // A claim held right now: another session start is delivering it.
+    std::fs::write(record.claim_path(), format!("at={now} pid=999999")).expect("claim");
+    let busy = session_start(&env, STARTUP);
+    assert_eq!(busy.code, 0);
+    assert!(busy.stdout.is_empty(), "a held claim must block");
+    assert!(is_staged(&env), "and must not consume");
 
-    // Age the marker past its lease, as a dead holder's would be.
-    let stale = std::time::SystemTime::now()
-        - std::time::Duration::from_millis((staging::CLAIM_LEASE_MS + 120_000) as u64);
-    let f = std::fs::OpenOptions::new()
-        .write(true)
-        .open(&marker)
-        .expect("open marker");
-    f.set_modified(stale).expect("age the marker");
-    drop(f);
+    // A claim left by a process that never came back.
+    let old = now - staging::CLAIM_LEASE_MS - 120_000;
+    std::fs::write(record.claim_path(), format!("at={old} pid=999999")).expect("claim");
+    let interrupted = session_start(&env, STARTUP);
+    assert_eq!(interrupted.code, 0);
+    assert!(interrupted.stderr.is_empty(), "{:?}", interrupted.stderr);
+    assert!(
+        interrupted.stdout.is_empty(),
+        "an interrupted delivery is not repeated: {}",
+        interrupted.stdout
+    );
+    assert!(record.path.is_file() && record.claim_path().is_file());
 
+    // The user stages it again: that record is new, and it is delivered.
+    staging::stage(&staged_dir(&env), &staged).expect("restage");
     let value = assert_only_json(&session_start(&env, STARTUP));
     assert_eq!(additional_context(&value), staged.capsule);
-    assert!(!marker.exists(), "the broken claim is cleaned up");
-    assert!(!staged_file(&env).exists());
+    assert!(!is_staged(&env));
+    assert!(
+        !record.claim_path().exists(),
+        "the restage removed the interrupted record and its claim"
+    );
 }
 
 // --------------------------------------------------------------- fail open
@@ -548,7 +572,7 @@ fn fail_open_on_database_failure() {
 
     let value = assert_only_json(&session_start(&env, STARTUP));
     assert_eq!(additional_context(&value), staged.capsule);
-    assert!(!staged_file(&env).exists(), "consumed exactly once");
+    assert!(!is_staged(&env), "consumed exactly once");
 }
 
 /// The mirror: with the ledger broken, a refusing source still refuses.
@@ -560,7 +584,7 @@ fn fail_open_on_database_failure_still_refuses_other_sources() {
         let out = session_start(&env, source);
         assert_eq!(out.code, 0, "{source}");
         assert!(out.stdout.is_empty(), "{source}: {}", out.stdout);
-        assert!(staged_file(&env).is_file(), "{source} consumed it");
+        assert!(is_staged(&env), "{source} consumed it");
     }
 }
 
@@ -598,7 +622,7 @@ fn malformed_hook_input_is_fail_open() {
         assert_eq!(out.code, 0, "{raw:?}");
         assert!(out.stdout.is_empty(), "{raw:?} -> {:?}", out.stdout);
         assert!(out.stderr.is_empty(), "{raw:?} -> {:?}", out.stderr);
-        assert!(staged_file(&env).is_file(), "{raw:?} consumed the capsule");
+        assert!(is_staged(&env), "{raw:?} consumed the capsule");
     }
 }
 
@@ -615,7 +639,7 @@ fn missing_optional_sessionstart_fields_is_safe() {
     });
     let value = assert_only_json(&env.hook("session-start", &minimal));
     assert_eq!(additional_context(&value), staged.capsule);
-    assert!(!staged_file(&env).exists());
+    assert!(!is_staged(&env));
 }
 
 /// Even the session id is optional as far as delivery is concerned — the
@@ -632,10 +656,10 @@ fn a_session_start_without_a_session_id_still_resolves_the_workspace() {
     // Whether a session-less input is delivered to or skipped, it must never
     // crash and never half-consume.
     if out.stdout.is_empty() {
-        assert!(staged_file(&env).is_file());
+        assert!(is_staged(&env));
     } else {
         assert_only_json(&out);
-        assert!(!staged_file(&env).exists());
+        assert!(!is_staged(&env));
     }
 }
 
@@ -647,7 +671,7 @@ fn a_disabled_velra_delivers_nothing() {
     let out = env.hook_with_env("session-start", &payload, &[("VELRA_DISABLE", "1")]);
     assert_eq!(out.code, 0);
     assert!(out.stdout.is_empty(), "{:?}", out.stdout);
-    assert!(staged_file(&env).is_file(), "nothing was consumed");
+    assert!(is_staged(&env), "nothing was consumed");
 }
 
 // ------------------------------------------------------ the output contract
@@ -704,7 +728,7 @@ fn capsule_content_is_byte_exact_after_json_decode() {
         out.stdout.contains("\\r"),
         "carriage returns must be escaped"
     );
-    assert!(!staged_file(&env).exists(), "consumed exactly once");
+    assert!(!is_staged(&env), "consumed exactly once");
 }
 
 #[test]
@@ -846,7 +870,7 @@ fn clear_still_expires_the_continuation_without_touching_the_staged_capsule() {
             .is_none(),
         "clear expires the live continuation"
     );
-    assert!(staged_file(&env).is_file(), "and leaves staging alone");
+    assert!(is_staged(&env), "and leaves staging alone");
 }
 
 // -------------------------------------------------------- workspace identity
@@ -876,6 +900,10 @@ fn hook_and_cli_agree_on_workspace_identity() {
 /// staged under one key, `SessionStart` looked under another, and because a
 /// missing capsule is indistinguishable from nothing staged, the feature
 /// would simply never work, silently.
+///
+/// Both processes here carry `CLAUDE_PROJECT_DIR` (the harness sets it), so
+/// this pins the variable's route only. The CLI's own discovery, in a
+/// terminal without it, is `tests/workspace_identity.rs`.
 #[test]
 fn the_cli_and_the_hook_agree_even_from_a_subdirectory() {
     let (env, _) = staged_workspace();
@@ -981,10 +1009,10 @@ fn recorded_session_start_fixtures_drive_the_matrix() {
         if delivers {
             let value = assert_only_json(&out);
             assert_eq!(additional_context(&value), staged.capsule, "{file}");
-            assert!(!staged_file(&env).exists(), "{file} did not consume");
+            assert!(!is_staged(&env), "{file} did not consume");
         } else {
             assert!(out.stdout.is_empty(), "{file} delivered: {:?}", out.stdout);
-            assert!(staged_file(&env).is_file(), "{file} consumed the capsule");
+            assert!(is_staged(&env), "{file} consumed the capsule");
         }
     }
 }

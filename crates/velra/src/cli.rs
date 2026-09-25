@@ -25,7 +25,7 @@ pub const VERSION: &str = concat!(
 #[command(
     name = "velra",
     version = VERSION,
-    about = "Lossless compaction for Claude Code: your task survives /compact.",
+    about = "Local-first session continuity for Claude Code: clear the context, keep the state.",
     max_term_width = 100
 )]
 struct Cli {
@@ -72,6 +72,11 @@ enum Command {
         /// Full detail for one section: dead-ends, failure, files, attempts.
         #[arg(long)]
         section: Option<String>,
+        /// Trace a string (a test name, symbol, path) through every layer from
+        /// the recorded events to the capsule, and report where it was lost.
+        /// Repeatable.
+        #[arg(long, value_name = "MARKER")]
+        trace: Vec<String>,
         #[arg(long)]
         json: bool,
     },
@@ -215,8 +220,9 @@ pub fn run() -> i32 {
             last,
             checkpoint,
             section,
+            trace,
             json,
-        } => cmd_inspect(session, last, checkpoint, section, json),
+        } => cmd_inspect(session, last, checkpoint, section, trace, json),
         Command::Doctor { json } => cmd_doctor(json),
         Command::Restore {
             session,
@@ -481,11 +487,22 @@ fn cmd_status(json: bool) -> i32 {
         .unwrap_or(false);
     let enabled = !installed.handlers.is_empty();
 
-    let db = open_db_ro(&home);
+    // A database the hooks cannot use -- a newer schema, a migration that
+    // cannot complete -- means every hook is a no-op that spools; status is
+    // not healthy then, whatever the settings say (DECISIONS D118).
+    let (db, database_error) = if home::db_path(&home).exists() {
+        match Db::open(&home::db_path(&home), Role::Cli) {
+            Ok(db) => (Some(db), None),
+            Err(e) => (None, Some(e.to_string())),
+        }
+    } else {
+        (None, None)
+    };
     let mut sessions = 0i64;
     let mut events = 0i64;
     let mut last_event_ms = 0i64;
     let mut live: Vec<(String, String)> = Vec::new();
+    let mut latest: Option<velra_core::continuation::Latest> = None;
     if let Some(db) = &db {
         sessions = db
             .conn
@@ -508,11 +525,15 @@ fn cmd_status(json: bool) -> i32 {
                 live = rows.flatten().collect();
             }
         }
+        latest = velra_core::continuation::latest(&db.conn).ok().flatten();
     }
     let db_size = std::fs::metadata(home::db_path(&home))
         .map(|m| m.len())
         .unwrap_or(0);
-    let healthy = enabled && bin_ok && installed.handlers.len() >= expected.min(1);
+    let healthy = enabled
+        && bin_ok
+        && installed.handlers.len() >= expected.min(1)
+        && database_error.is_none();
 
     if json {
         let value = serde_json::json!({
@@ -528,6 +549,15 @@ fn cmd_status(json: bool) -> i32 {
             "events": events,
             "last_event_age": (last_event_ms > 0).then(|| velra_core::time::human_age(velra_core::time::now_ms() - last_event_ms)),
             "live_continuations": live.iter().map(|(s, st)| serde_json::json!({"session": s, "state": st})).collect::<Vec<_>>(),
+            "latest_continuation": latest.as_ref().map(|l| serde_json::json!({
+                "session": l.session_id,
+                "checkpoint": l.checkpoint_id,
+                "state": l.state,
+                "channel": l.attached_channel,
+                "attach_count": l.attach_count,
+                "meaning": velra_core::continuation::meaning(&l.state),
+            })),
+            "database_error": database_error,
             "healthy": healthy,
         });
         println!(
@@ -555,11 +585,18 @@ fn cmd_status(json: bool) -> i32 {
         ),
         (None, _) => println!("  Binary:      (not recorded; run `velra enable`)"),
     }
-    println!(
-        "  Database:    {} ({} KiB)",
-        home::db_path(&home).display(),
-        db_size / 1024
-    );
+    match &database_error {
+        None => println!(
+            "  Database:    {} ({} KiB)",
+            home::db_path(&home).display(),
+            db_size / 1024
+        ),
+        Some(e) => println!(
+            "{} Database:    {} will not open: {e}. Hooks record nothing until it does; see `velra doctor`.",
+            fail_mark(),
+            home::db_path(&home).display()
+        ),
+    }
     println!("  Tracking:    {sessions} session(s), {events} event(s)");
     if last_event_ms > 0 {
         println!(
@@ -576,39 +613,74 @@ fn cmd_status(json: bool) -> i32 {
             println!("  Continuation: {session} {state}");
         }
     }
+    // The last one in any state: whether the previous `/compact` was written
+    // out, and what that does and does not establish (DECISIONS D113).
+    if let Some(l) = &latest {
+        println!(
+            "  Last continuation: {} {}{} \u{2014} {}",
+            l.session_id.chars().take(8).collect::<String>(),
+            l.state,
+            l.attached_channel
+                .as_deref()
+                .map(|c| format!(" on {c}"))
+                .unwrap_or_default(),
+            velra_core::continuation::meaning(&l.state)
+        );
+    }
     // A staged capsule is invisible everywhere else — it is one file outside
     // the repository — so `status` is where a user finds out that their next
     // session in this workspace is going to start with restored state.
-    if let Some((workspace_id, _)) = workspace_for_cwd() {
-        if let Some(c) = velra_core::staging::peek(&restore_ui::staged_path(&home, &workspace_id)) {
+    let (workspace_id, workspace_root) = workspace_for_cwd(db.as_ref().map(|d| &d.conn));
+    let staged_dir = velra_core::staging::staged_dir(&home, &workspace_id);
+    let summary = |c: &velra_core::staging::StagedCapsule| {
+        format!(
+            "{} ({} tokens) from session {}",
+            if c.summary.is_empty() {
+                "task state"
+            } else {
+                &c.summary
+            },
+            c.tokens,
+            c.source_session_id.chars().take(8).collect::<String>()
+        )
+    };
+    match velra_core::staging::slot(&staged_dir, velra_core::time::now_ms()) {
+        velra_core::staging::Slot::Empty => {}
+        velra_core::staging::Slot::Staged(c) => {
+            println!("  Staged:      {}", summary(&c));
             println!(
-                "  Staged:      {} ({} tokens) from session {}",
-                if c.summary.is_empty() {
-                    "task state"
-                } else {
-                    &c.summary
-                },
-                c.tokens,
-                c.source_session_id.chars().take(8).collect::<String>()
-            );
-            println!(
-                "               delivered on SessionStart({}) \u{2014} start a new session to pick it up",
+                "               delivered on SessionStart({}) \u{2014} start a new session in {workspace_root} to pick it up",
                 c.deliver_on.join("|")
             );
         }
+        velra_core::staging::Slot::Claimed {
+            capsule,
+            interrupted: true,
+        } => {
+            println!(
+                "{} Staged:      {} was claimed by a session start that did not finish.",
+                warn_mark(),
+                capsule.as_ref().map_or("a capsule".to_string(), summary)
+            );
+            println!(
+                "               It may already have been delivered, so it will not be delivered again; run `velra restore` to stage it again."
+            );
+        }
+        velra_core::staging::Slot::Claimed { .. } => {
+            println!("  Staged:      being delivered to a session that is starting now");
+        }
+        velra_core::staging::Slot::Unreadable => println!(
+            "{} Staged:      unreadable; it will not be delivered (`velra restore --clear` removes it)",
+            warn_mark()
+        ),
+    }
+    if velra_core::staging::has_legacy(&staged_dir) {
+        println!(
+            "{} Staged:      a capsule in an earlier development format is ignored; run `velra restore` again.",
+            warn_mark()
+        );
     }
     i32::from(!healthy)
-}
-
-fn project_id_for_cwd() -> Option<String> {
-    let cwd = std::env::current_dir().ok()?;
-    let root = velra_core::git::find_repo_root(&cwd).unwrap_or(cwd);
-    let canonical = velra_core::paths::canonical(&root).unwrap_or(root);
-    let normalized = velra_core::paths::normalize_abs(&canonical.to_string_lossy());
-    Some(velra_core::hash::hex_prefix(
-        velra_core::paths::identity(&normalized).as_bytes(),
-        16,
-    ))
 }
 
 fn cmd_inspect(
@@ -616,6 +688,7 @@ fn cmd_inspect(
     last: bool,
     checkpoint: Option<String>,
     section: Option<String>,
+    trace: Vec<String>,
     json: bool,
 ) -> i32 {
     let Some(home) = require_home() else { return 1 };
@@ -683,11 +756,10 @@ fn cmd_inspect(
         Some(s) => Some(s),
         None if last => inspect::latest_session(&db.conn).ok().flatten(),
         None => {
-            let by_project = project_id_for_cwd().and_then(|pid| {
-                inspect::latest_session_for_project(&db.conn, &pid)
-                    .ok()
-                    .flatten()
-            });
+            let (pid, _) = workspace_for_cwd(Some(&db.conn));
+            let by_project = inspect::latest_session_for_project(&db.conn, &pid)
+                .ok()
+                .flatten();
             match by_project {
                 Some(s) => Some(s),
                 None => inspect::latest_session(&db.conn).ok().flatten(),
@@ -699,6 +771,25 @@ fn cmd_inspect(
         return 1;
     };
     let now = velra_core::time::now_ms();
+    if !trace.is_empty() {
+        return match inspect::trace(&db.conn, &home, &session_id, now, &config.render(), &trace) {
+            Ok(traces) => {
+                if json {
+                    let all: Vec<serde_json::Value> = traces.iter().map(|t| t.to_json()).collect();
+                    println!("{}", serde_json::to_string_pretty(&all).unwrap_or_default());
+                } else {
+                    for t in &traces {
+                        println!("{}", t.report());
+                    }
+                }
+                0
+            }
+            Err(e) => {
+                println!("{} {e}", fail_mark());
+                1
+            }
+        };
+    }
     let snapshot = match inspect::preview(&db.conn, &session_id, now) {
         Ok(s) => s,
         Err(e) => {
@@ -771,33 +862,32 @@ fn on_network_fs(path: &Path) -> bool {
 
 /// The workspace the current directory belongs to: `(project_id, root)`.
 ///
-/// Derived exactly as the hook derives it ([`crate::hook`]), because the two
-/// must agree on what "this workspace" means or restore would look for state
-/// under an id nothing was ever recorded against.
-fn workspace_for_cwd() -> Option<(String, String)> {
-    Some(velra_core::workspace::resolve(None))
+/// The hook's mapping (`velra_core::workspace::resolve`), except that inside a
+/// repository the nearest directory the ledger recorded a session in wins
+/// (`resolve_recorded`): Claude Code started in a subdirectory records it
+/// as the workspace, and a terminal there has no `CLAUDE_PROJECT_DIR` to say
+/// so. Without a ledger it is the plain mapping.
+fn workspace_for_cwd(conn: Option<&rusqlite::Connection>) -> (String, String) {
+    velra_core::workspace::resolve_recorded(None, |id| {
+        conn.is_some_and(|c| velra_core::restore::is_recorded_workspace(c, id))
+    })
 }
 
 fn cmd_restore(session: Option<String>, list: bool, dry_run: bool, clear: bool, json: bool) -> i32 {
     let Some(home) = require_home() else { return 1 };
-    let Some((workspace_id, workspace_root)) = workspace_for_cwd() else {
-        println!("{} Could not determine the current workspace.", fail_mark());
-        return 1;
-    };
     let now = velra_core::time::now_ms();
 
     if clear {
-        let path = restore_ui::staged_path(&home, &workspace_id);
-        let existed = path.exists();
-        let _ = std::fs::remove_file(&path);
-        velra_core::staging::sweep(&home, &workspace_id, now);
+        let (workspace_id, workspace_root) =
+            workspace_for_cwd(open_db_ro(&home).as_ref().map(|d| &d.conn));
+        let removed = velra_core::staging::clear(&home, &workspace_id);
         println!(
             "{} {}",
             ok_mark(),
-            if existed {
-                "Discarded the staged capsule."
+            if removed > 0 {
+                format!("Discarded the staged capsule for {workspace_root}.")
             } else {
-                "Nothing was staged."
+                format!("Nothing was staged for {workspace_root}.")
             }
         );
         return 0;
@@ -818,6 +908,7 @@ fn cmd_restore(session: Option<String>, list: bool, dry_run: bool, clear: bool, 
     if let Err(e) = reducer::reduce_all(&mut db.conn, Some(&home::spool_dir(&home))) {
         println!("{} Could not catch up the reducer: {e}", warn_mark());
     }
+    let (workspace_id, workspace_root) = workspace_for_cwd(Some(&db.conn));
     // Clear out anything abandoned by an earlier run before writing.
     velra_core::staging::sweep(&home, &workspace_id, now);
 
@@ -853,7 +944,7 @@ fn cmd_restore(session: Option<String>, list: bool, dry_run: bool, clear: bool, 
             );
         } else if candidates.is_empty() {
             println!(
-                "{} No previous sessions found for this workspace.",
+                "{} No previous sessions found for this workspace ({workspace_root}).",
                 warn_mark()
             );
         } else {
@@ -870,12 +961,13 @@ fn cmd_restore(session: Option<String>, list: bool, dry_run: bool, clear: bool, 
         None => {
             if candidates.is_empty() {
                 println!(
-                    "{} No previous sessions found for this workspace.",
+                    "{} No previous sessions found for this workspace ({workspace_root}).",
                     warn_mark()
                 );
                 println!(
                     "  Velra records a session once Claude Code runs here with its hooks enabled."
                 );
+                println!("  Run `velra restore` from the directory Claude Code was started in.");
                 return 1;
             }
             let restorable = candidates.iter().filter(|c| c.restorable()).count();
@@ -944,15 +1036,20 @@ fn cmd_restore(session: Option<String>, list: bool, dry_run: bool, clear: bool, 
         return 0;
     }
 
-    let path = restore_ui::staged_path(&home, &workspace_id);
     if let Err(e) = home::ensure_home(&home) {
         println!("{} Could not create {}: {e}", fail_mark(), home.display());
         return 1;
     }
-    if let Err(e) = velra_core::staging::stage(&path, &staged) {
-        println!("{} Could not stage the capsule: {e}", fail_mark());
-        return 1;
-    }
+    let path = match velra_core::staging::stage(
+        &velra_core::staging::staged_dir(&home, &workspace_id),
+        &staged,
+    ) {
+        Ok(p) => p,
+        Err(e) => {
+            println!("{} Could not stage the capsule: {e}", fail_mark());
+            return 1;
+        }
+    };
 
     if json {
         println!(
@@ -966,6 +1063,7 @@ fn cmd_restore(session: Option<String>, list: bool, dry_run: bool, clear: bool, 
                 "summary": staged.summary,
                 "staged": true,
                 "staged_path": path.to_string_lossy(),
+                "workspace_root": staged.workspace_root,
             }))
             .unwrap_or_default()
         );
@@ -984,7 +1082,10 @@ fn cmd_restore(session: Option<String>, list: bool, dry_run: bool, clear: bool, 
     );
     println!("  {} estimated tokens · {}", staged.tokens, path.display());
     println!();
-    println!("  Start a new Claude Code session in this workspace to pick it up.");
+    println!(
+        "  Start a new Claude Code session in {} to pick it up.",
+        staged.workspace_root
+    );
     0
 }
 

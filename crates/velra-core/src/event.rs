@@ -27,6 +27,129 @@ pub struct FileObservation {
     pub size: u64,
 }
 
+/// An injected block of a prompt that was not stored (see
+/// [`Payload::prompt_omitted`]).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct OmittedBlock {
+    pub tag: String,
+    /// Size as delivered, in bytes.
+    pub bytes: u64,
+}
+
+/// One constraint sentence extracted from the whole prompt (see
+/// [`PromptFacts`]).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PromptConstraint {
+    /// The sentence as the user wrote it, whitespace-collapsed and redacted.
+    pub text: String,
+    /// The literal cue that selected it (`crate::constraint`).
+    pub cue: String,
+    /// `labelled` / `prohibition` / `requirement`.
+    pub kind: String,
+    /// Byte offset, in the user's redacted text, of the paragraph or list
+    /// item it was quoted from. Past the scan bound the unexamined middle is
+    /// counted at its delivered size.
+    pub at: u64,
+    /// Why it was selected (`crate::constraint::Basis`): `cue`,
+    /// `rejection`, or `rejection+antecedent`.
+    pub basis: String,
+}
+
+/// What the hook read from the whole of the user's text before the prompt
+/// was bounded for storage (`crate::prompt::for_storage`).
+///
+/// The reducer takes a prompt's constraints from here rather than from
+/// [`Payload::prompt`], so a rule stated past the storage bound is not lost to
+/// it. Absent on events written before v0.1.2's Phase 1B hardening, and on
+/// prompts delivered without text; the reducer then extracts from `prompt`.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PromptFacts {
+    /// Version of the extraction rules that produced this record.
+    pub v: u32,
+    /// The user's own text as delivered, in bytes.
+    pub authored_bytes: u64,
+    /// How much of it was examined: less than `authored_bytes` only past the
+    /// scan bound (`crate::prompt::SCAN_LIMIT`).
+    pub scanned_bytes: u64,
+    /// Bytes of the user's text that `prompt` does not hold.
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub elided_bytes: u64,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub constraints: Vec<PromptConstraint>,
+    /// Constraint sentences that qualified before the per-prompt caps.
+    /// Recorded only when a cap dropped some, so that the record says it
+    /// holds fewer than the prompt stated.
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub constraints_found: u64,
+    /// Identifiers named only in text `prompt` does not hold.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifiers: Vec<String>,
+    /// Injected blocks left out of `prompt`, all of them counted;
+    /// [`Payload::prompt_omitted`] lists at most 32.
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub omitted_blocks: u64,
+    /// Bytes past `crate::prompt::MAX_EDGE_BLOCKS` injected blocks that were
+    /// not classified and are not stored.
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub unparsed_bytes: u64,
+    /// The prompt was not processed: the hook's watchdog fired first, or the
+    /// input exceeded the size the hook parses a prompt from. Nothing of the
+    /// prompt is stored; `authored_bytes` is then the size of the whole prompt
+    /// as delivered (of the whole hook input, when it was not parsed), and the
+    /// record exists so that the log says a prompt arrived rather than
+    /// holding nothing.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub unprocessed: bool,
+}
+
+/// The version of [`PromptFacts`] this build writes.
+pub const PROMPT_FACTS_VERSION: u32 = 1;
+
+impl PromptFacts {
+    /// Whether this build may take state from the record: its version is one
+    /// this build knows (1 through [`PROMPT_FACTS_VERSION`]).
+    ///
+    /// A record from a newer build can mean something different in fields
+    /// this build reads -- a constraint list filtered differently, an
+    /// `unprocessed` flag with new conditions -- and reading it as version 1
+    /// would assert state the newer build did not. The reducer then does what
+    /// it does for events written before the record existed: extracts from
+    /// the stored prompt. A record with no version (0) is malformed.
+    pub fn usable(&self) -> bool {
+        (1..=PROMPT_FACTS_VERSION).contains(&self.v)
+    }
+}
+
+/// `prompt_facts` that parses, or `None`.
+fn lenient_facts<'de, D: serde::Deserializer<'de>>(d: D) -> Result<Option<PromptFacts>, D::Error> {
+    let v = Option::<serde_json::Value>::deserialize(d)?;
+    Ok(v.and_then(|v| serde_json::from_value(v).ok()))
+}
+
+fn lenient_mentions<'de, D: serde::Deserializer<'de>>(
+    d: D,
+) -> Result<Option<Vec<PathMention>>, D::Error> {
+    let v = Option::<serde_json::Value>::deserialize(d)?;
+    Ok(v.and_then(|v| serde_json::from_value(v).ok()))
+}
+
+fn is_zero(n: &u64) -> bool {
+    *n == 0
+}
+
+/// A workspace file named in a command's output that existed when the
+/// command ran (see [`Payload::mentioned`]). The same shape as an entry of
+/// `commands.mentioned_paths`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PathMention {
+    /// Project-relative, `/`-separated.
+    pub path: String,
+    #[serde(default)]
+    pub line: Option<u32>,
+    /// The token as it appeared in the output.
+    pub raw: String,
+}
+
 /// Git-aware observation attached to shell tool events.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct GitObservation {
@@ -50,6 +173,41 @@ pub struct Payload {
     pub prompt: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub prompt_id: Option<String>,
+    /// Injected blocks the hook left out whole to keep `prompt` within its
+    /// budget (`crate::prompt::for_storage`). Recorded so the log says what it
+    /// does not hold rather than silently holding less.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prompt_omitted: Option<Vec<OmittedBlock>>,
+    /// Some of the user's own text is not in `prompt`: it was kept as a
+    /// digest to fit `limits::PROMPT` (`crate::prompt::for_storage`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prompt_truncated: Option<bool>,
+    /// What was extracted from the whole prompt before it was bounded.
+    ///
+    /// Read leniently: a record this build cannot parse is `None`, never a
+    /// reason to discard the rest of the payload (which `from_json` would
+    /// otherwise do, prompt and all). Whether a parsed record is used is the
+    /// reducer's decision (`PromptFacts::usable`).
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "lenient_facts"
+    )]
+    pub prompt_facts: Option<PromptFacts>,
+
+    /// The hook could not append this event and wrote it to the spool
+    /// (`crate::spool::write`); it was ingested later, after rows that
+    /// happened after it. The reducer places it by its timestamp
+    /// (`crate::order`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub spooled: Option<bool>,
+
+    /// Stop: the files edited in the session, hashed by the Stop hook when the
+    /// turn ended. `None` when no observation was made (the database was
+    /// unreachable, the event predates the field): the reducer then records
+    /// no turn-end state rather than hashing the disk as it is when it runs.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub turn_scan: Option<Vec<FileObservation>>,
 
     // SessionStart / SessionEnd / Stop / compaction
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -108,6 +266,18 @@ pub struct Payload {
     pub stderr_tail: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub git: Option<GitObservation>,
+    /// Workspace files the command's stored output names, checked against
+    /// the disk by the hook when the command returned
+    /// (`crate::commands::mentioned_files`). `None` when no check was made (a
+    /// command that is not a test, build or lint run; an event from an earlier
+    /// build): the reducer then records no mentions rather than checking the
+    /// disk as it is when it runs. Read leniently, like `prompt_facts`.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "lenient_mentions"
+    )]
+    pub mentioned: Option<Vec<PathMention>>,
 
     // PostToolUseFailure
     #[serde(default, skip_serializing_if = "Option::is_none")]

@@ -22,10 +22,20 @@ for what only a live session can show.
 1. Fresh install from the published artifact (not a local build):
 
    ```sh
-   curl -LsSf https://github.com/aryanghai12/Velra/install.sh | sh
+   # macOS / Linux
+   curl -LsSf https://raw.githubusercontent.com/aryanghai12/velra/main/install/install.sh | sh
+   # Windows (PowerShell)
+   irm https://raw.githubusercontent.com/aryanghai12/velra/main/install/install.ps1 | iex
+
+   velra --version       # must be the version being released
    velra enable
    velra doctor          # every line ✓ or an explained !
    ```
+
+   The installers fetch the latest *published* release. Before the release
+   is published, run this checklist against a local release build instead
+   (`cargo build --release -p velra`), and repeat steps 1 and 14–19 against
+   the published artifact afterwards ([RELEASING.md](RELEASING.md)).
 
 2. Create a sample repository with a failing test:
 
@@ -50,9 +60,24 @@ for what only a live session can show.
 | 8 | `velra inspect --checkpoint <id from step 6> --section dead-ends`. | Full, untruncated dead-end detail. | |
 | 9 | Repeat with **auto-compaction**: long session (or reduce the auto-compact window) and no user interaction. | Capsule delivered mid-turn on the first `PostToolUse` after compaction, or on `SessionStart(compact)`. | |
 | 10 | Remove the `SessionStart` handler temporarily, compact, then press Ctrl+C immediately after the first post-compaction prompt. | The next prompt receives the capsule again (T4 re-emission). Restore the handler afterwards. | |
-| 11 | `velra status`. | Enabled, session count ≥ 1, continuation CONFIRMED. Exit code 0. | |
+| 11 | `velra status`. | Enabled, session count ≥ 1, `Last continuation: … CONFIRMED` (the capsule was written and the session went on; not proof the model read it). For receipt by Claude Code, the session transcript should hold a `hook_additional_context` attachment containing `<VELRA_WORKSPACE_STATE`. Exit code 0. | |
 | 12 | `velra disable`. | Hooks gone; `git diff` of the settings file (if version-controlled) is empty, or the file is byte-identical to the pre-enable backup in `~/.velra/backups/`. | |
 | 13 | Continue using Claude Code for one more turn. | Unaffected: no hook errors, no messages from Velra. | |
+
+### Cross-session restore (0.1.2+)
+
+Run `velra enable` again first if step 12 disabled it.
+
+| # | Step | Expected | Result |
+|---|---|---|---|
+| 14 | In the sample repo, start `claude`; repeat steps 2–4; say once in chat "don't touch anything outside calc.py"; exit. | — | |
+| 15 | `velra restore --list`, then `velra restore` and pick that session. | The session is listed `state: yes`; `✓ Staged … from session <id>`; ≤ 1,000 estimated tokens. | |
+| 16 | `velra status`. | A `Staged:` line naming that session, `delivered on SessionStart(startup)`. | |
+| 17 | Start `claude --resume`, pick the old session, then exit. Run `velra status`. | The capsule is **still staged** (resume does not consume it). | |
+| 18 | Start a brand-new `claude` in the repo. Ask "what were we doing?". | "⚡ Velra restored: … from session <id>" surfaces; the answer names the task, the reverted attempt and the constraint without re-reading everything. `velra status` no longer shows `Staged:`. | |
+| 19 | Start another new `claude`. | No capsule this time (one-shot). | |
+| 20 | `velra restore --session <id> --dry-run`, then `velra inspect --session <id> --trace calc.py`. | The capsule prints without staging; the trace reports each layer and `first_loss`. | |
+| 21 | `velra restore --session <id>`, then `velra restore --clear`. | `✓ Discarded the staged capsule.` | |
 
 ## Verification commands
 
@@ -72,3 +97,4 @@ git -C /tmp/velra-e2e status --porcelain
 - [ ] Every step above passed on the recorded Claude Code version.
 - [ ] `velra doctor` is clean on a fresh install.
 - [ ] Zero-to-"⚡ Velra restored" took two commands and one `/compact`.
+- [ ] Restore steps 14–21 passed: staged once, survived `--resume`, delivered once to a new session.

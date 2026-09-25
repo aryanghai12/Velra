@@ -61,6 +61,48 @@ pub fn preview(conn: &Connection, session_id: &str, now_ms: i64) -> rusqlite::Re
     snapshot::build(conn, session_id, &meta)
 }
 
+/// `--trace`: each marker through every layer, against a live preview.
+///
+/// The staged capsule is compared only when it was staged from this session;
+/// one staged from another session says nothing about this one's losses.
+pub fn trace(
+    conn: &Connection,
+    home: &std::path::Path,
+    session_id: &str,
+    now_ms: i64,
+    cfg: &velra_core::render::RenderConfig,
+    markers: &[String],
+) -> rusqlite::Result<Vec<velra_core::provenance::MarkerTrace>> {
+    let meta = SnapshotMeta {
+        checkpoint_id: "preview".to_string(),
+        created_ms: now_ms,
+        trigger: Trigger::Cli,
+        partial: false,
+        preview: true,
+        tz_offset_secs: local_offset_secs(now_ms),
+    };
+    let project: Option<String> = conn
+        .query_row(
+            "SELECT project_id FROM sessions WHERE session_id = ?1",
+            [session_id],
+            |r| r.get(0),
+        )
+        .optional()?;
+    let staged = project
+        .and_then(|p| velra_core::staging::peek(&velra_core::staging::staged_dir(home, &p)))
+        .filter(|s| s.source_session_id == session_id)
+        .map(|s| s.capsule);
+    let inputs = velra_core::provenance::TraceInputs {
+        meta: &meta,
+        cfg,
+        staged: staged.as_deref(),
+    };
+    markers
+        .iter()
+        .map(|m| velra_core::provenance::trace_marker(conn, session_id, &inputs, m))
+        .collect()
+}
+
 fn header(title: &str) -> String {
     format!("{title}\n{}", "-".repeat(title.len()))
 }
@@ -203,7 +245,9 @@ pub fn section_detail(
             let mut stmt = conn.prepare(
                 "SELECT path, edits, reads, in_failure, last_touch_ms FROM file_stats \
                  WHERE session_id = ?1 AND epoch = ?2 AND last_touch_ms <= ?3 \
-                 ORDER BY (4 * in_failure + 3 * MIN(edits, 3) + 2 * (reads >= 2) + MIN(reads, 3)) DESC, \
+                 ORDER BY (substr(path, 1, 1) IN ('/', '\\') OR substr(path, 2, 1) = ':' \
+                   OR substr(path, 1, 3) IN ('../', '..\\')) ASC, \
+                   (4 * in_failure + 3 * MIN(edits, 3) + 2 * (reads >= 2) + MIN(reads, 3)) DESC, \
                    edits DESC, reads DESC, first_touch_ms ASC, path ASC",
             )?;
             let rows = stmt.query_map(params![session_id, epoch, as_of_ms], |r| {

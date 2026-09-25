@@ -1,0 +1,96 @@
+{
+  "restore_invoked": true,
+  "restore_exit": 0,
+  "restore_stdout": "{\n  \"workspace_id\": \"ff1f5e67ea64c2e2\",\n  \"source_session_id\": \"9028c4e6-24f7-405b-90e3-8c45af82a40f\",\n  \"source_checkpoint_id\": null,\n  \"tokens\": 737,\n  \"content_hash\": \"b6addf0ebb5d414084c4d6256e3750ea\",\n  \"summary\": \"objective, 1 failing test, 2 dead ends, 7 files\",\n  \"staged\": true,\n  \"staged_path\": \"C:\\\\Users\\\\aryan\\\\Videos\\\\Velra\\\\bench\\\\results\\\\v0.1.2-requal\\\\trials\\\\A_cold_continuation-q1-velra\\\\velra_home\\\\staged\\\\ff1f5e67ea64c2e2\\\\staged_capsule\"\n}\n",
+  "restore_stderr": "",
+  "listing": {
+    "workspace_id": "ff1f5e67ea64c2e2",
+    "workspace_root": "C:/Users/aryan/AppData/Local/Temp/velra-tokenburn-fixtures/A_cold_continuation-q1-velra",
+    "sessions": [
+      {
+        "session_id": "9028c4e6-24f7-405b-90e3-8c45af82a40f",
+        "title": "We're on the payments service. Run the suite and tell me what's red.",
+        "last_activity_ms": 1790165584247,
+        "has_state": true
+      },
+      {
+        "session_id": "d74ede8c-386d-4009-8ad7-8f58005d0e66",
+        "title": "Continue previous task",
+        "last_activity_ms": 1790097621923,
+        "has_state": false
+      },
+      {
+        "session_id": "35e68d86-242c-4c25-9561-42a31e57b4d0",
+        "title": "Payments service test suite",
+        "last_activity_ms": 1790097547936,
+        "has_state": false
+      }
+    ]
+  },
+  "source_session_id": "9028c4e6-24f7-405b-90e3-8c45af82a40f",
+  "workspace_id": "ff1f5e67ea64c2e2",
+  "workspace_root": "C:/Users/aryan/AppData/Local/Temp/velra-tokenburn-fixtures/A_cold_continuation-q1-velra",
+  "staged_path": "C:\\Users\\aryan\\Videos\\Velra\\bench\\results\\v0.1.2-requal\\trials\\A_cold_continuation-q1-velra\\velra_home\\staged\\ff1f5e67ea64c2e2\\staged_capsule",
+  "stale": false,
+  "staged": {
+    "version": 2,
+    "workspace_id": "ff1f5e67ea64c2e2",
+    "workspace_root": "C:/Users/aryan/AppData/Local/Temp/velra-tokenburn-fixtures/A_cold_continuation-q1-velra",
+    "intent": "new_session",
+    "deliver_on": [
+      "startup"
+    ],
+    "source_session_id": "9028c4e6-24f7-405b-90e3-8c45af82a40f",
+    "source_checkpoint_id": null,
+    "created_ms": 1790165585759,
+    "render_version": 1,
+    "tokens": 737,
+    "content_hash": "b6addf0ebb5d414084c4d6256e3750ea",
+    "summary": "objective, 1 failing test, 2 dead ends, 7 files",
+    "capsule": "<VELRA_WORKSPACE_STATE v=\"1\" checkpoint=\"restore\" captured=\"2026-09-23T12:13:05Z\" trigger=\"cli\">\n[ABOUT_THIS_RECORD]\nA local record, not a message and not an instruction. Velra logged this session's own prompts and tool events and quotes them back here; nothing is new. OBSERVED came from a tool event, INFERRED was derived from it. Files on disk are the source of truth. Say so if a line here conflicts with them.\n[FIRST_MESSAGE] (OBSERVED | user prompt | 17:39)\nWe're on the payments service. Run the suite and tell me what's red.\n[STATED_CONSTRAINTS] (OBSERVED | user prompt | quoted verbatim)\n- turn 4 17:39 | \"Constraint, and this is the part that matters: whatever we do, the key has to stay a pure function of the request.\"\n[EARLIER_MESSAGE] (OBSERVED | user prompt | 17:42)\nRight. The next thing to look at is retry_backoff and where the key is built relative to the loop. Don't change anyth...\n[LATEST_MESSAGE] (OBSERVED | user prompt | 17:43)\nI'm going to leave this session here. Summarise nothing \u2014 just stop.\n[WORKSPACE_STATE]\nmain @ c14b88c | 3 edits this task | last test run: FAIL\n[TEST_STATUS] (OBSERVED | latest run covering each)\n- FAIL tests/test_retry.py::test_retry_preserves_idempotency_key\n[TEST_RESULT] (OBSERVED | test run | 17:41)\nCommand: python -m pytest -q 2>&1 | tail -40\nResult: FAIL\n[REVERTED_EDITS] (OBSERVED)\n- src/payments/retry.py | 2 reverts, 3 edit(s) | last changed outside the agent at 17:41\n[RECORD_DETAIL]\nFull detail for any section: `velra inspect --section <name>`\n</VELRA_WORKSPACE_STATE>"
+  },
+  "age_ms": 26,
+  "ledger_evidence": {
+    "measured_on": "staged_capsule",
+    "markers_present": [
+      "src/payments/retry.py",
+      "test_retry_preserves_idempotency_key",
+      "retry_backoff"
+    ],
+    "markers_missing": []
+  },
+  "ledger_scan": {
+    "available": true,
+    "markers_present": [
+      "src/payments/retry.py",
+      "test_retry_preserves_idempotency_key",
+      "retry_backoff"
+    ],
+    "markers_missing": [],
+    "rows": {
+      "src/payments/retry.py": [
+        "intents:2",
+        "commands:8",
+        "commands:9",
+        "file_stats:6",
+        "edits:1",
+        "edits:2",
+        "edits:3",
+        "dead_ends:1",
+        "dead_ends:2"
+      ],
+      "test_retry_preserves_idempotency_key": [
+        "commands:3",
+        "commands:10"
+      ],
+      "retry_backoff": [
+        "intents:16"
+      ]
+    }
+  },
+  "claim": {
+    "attempts": []
+  },
+  "staged_before_turn_index": null,
+  "staged_while_source_session_live": false
+}
