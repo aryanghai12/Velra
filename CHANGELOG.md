@@ -273,6 +273,14 @@ schema is unchanged (v2).
 
 ### Fixed
 
+- **Storage.** One spool file whose payload was not JSON stopped the reducer
+  for every session (D116); a spool file that was not UTF-8 was never
+  quarantined (D117); both now go to `spool/bad/`. Reducing a run of spooled
+  events was quadratic in the session's length: a 2,000-event tail on a
+  20,000-event session took 14.8 s, now 1.4 s (D119). `velra status`
+  reported healthy while the database could not be opened or migrated
+  (D118). A tool call that went to the spool no longer counts as "no
+  progress" for the prompt channel's re-emission (D120).
 - **In-session continuation (`/compact`).** A PreCompact checkpoint that had
   to go through the spool was silently never made when the session had
   moved on before the spool was read, and one read after a newer

@@ -78,6 +78,8 @@ database. To throw away a staged capsule, use `velra restore --clear`.
 | Wrong Claude Code version detected (`claude` not on `PATH`, extension only) | detection falls back to the VS Code extension, then to the newest version this build knows | `velra status` | your actual version | set `VELRA_CLAUDE_VERSION=<x.y.z>` and re-run `velra enable` |
 | "Did the hook fail?" | hooks always exit 0 by design; failure shows only in logs | `velra doctor` (last three errors), `tail ~/.velra/logs/errors.log` | `✓ no recent errors` | act on the logged error, or report it |
 | Velra is silent: no `⚡ Velra …` message | normal when nothing is staged, or when there is no `/compact` continuation. Whether `systemMessage` text is shown also depends on the Claude Code surface | `VELRA_LOG=debug claude`, then `~/.velra/logs/debug.log` | per-hook lines | none needed if the debug log shows the hooks running |
+| `velra status` exits 1 with `Database: … will not open` | the database has a newer schema than this binary, or its migration could not complete; hooks write to the spool meanwhile and nothing is lost | `velra doctor` | — | install the Velra that wrote it, or report the migration error; the spool is ingested once the database opens |
+| Files in `~/.velra/spool/bad/` | spool files that were not an event and were set aside instead of stored | `ls ~/.velra/spool/bad` | — | none needed; attach them to a bug report if they keep appearing |
 | `N events not reduced yet` / large spool backlog | the async reducer is behind (it is capped per run) | `velra doctor` | no warning | any `velra inspect`/`restore` catches the reducer up |
 
 ### Checking `SessionStart` delivery without Claude Code

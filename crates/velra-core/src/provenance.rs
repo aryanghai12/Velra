@@ -490,7 +490,7 @@ pub fn trace_marker(
     // reached it after rows that happened later (`crate::order`).
     let matched: Vec<(i64, i64, bool)> = conn
         .prepare(
-            "SELECT id, ts_ms, COALESCE(json_extract(payload, '$.spooled'), 0) != 0 FROM events \
+            "SELECT id, ts_ms, COALESCE(CASE WHEN json_valid(payload) THEN json_extract(payload, '$.spooled') END, 0) != 0 FROM events \
              WHERE session_id = ?1 \
              AND lower(replace(replace(payload, '\\\\', '/'), '\\', '/')) LIKE ?2 ORDER BY id",
         )?

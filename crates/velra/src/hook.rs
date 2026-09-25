@@ -686,6 +686,37 @@ impl<'a> Ctx<'a> {
         }
     }
 
+    /// Makes spooled confirmation evidence visible before the prompt channel
+    /// decides whether to write a continuation again (T4).
+    ///
+    /// The question T4 asks is whether the last turn went on after the
+    /// delivery. A tool call whose hook met a locked database answered it in
+    /// the spool, where `reconcile` cannot see it, and the capsule was written
+    /// a second time into a conversation that had already used it (D120). So
+    /// when -- and only when -- a re-emission is at stake, the oldest
+    /// [`EVIDENCE_INGEST_MAX`] spool files are ingested first. Ingestion is
+    /// idempotent and ordering is the reducer's (`crate::order`), so this
+    /// changes when those events are stored, not what they mean.
+    fn ingest_evidence(&self, db: &mut Db) {
+        let at_stake = matches!(
+            continuation::live(&db.conn, &self.session_id),
+            Ok(Some(l)) if l.state == ContinuationState::Attached
+                && l.attached_channel.as_deref() == Some(Channel::UserPrompt.as_str())
+        );
+        let dir = home::spool_dir(self.home);
+        if !at_stake || spool::backlog(&dir) == 0 {
+            return;
+        }
+        if let Err(e) = spool::ingest(&mut db.conn, &dir, EVIDENCE_INGEST_MAX) {
+            log::debug(
+                Some(self.home),
+                &self.label,
+                Some(&self.session_id),
+                format!("evidence ingest: {e}"),
+            );
+        }
+    }
+
     fn reconcile(&self, db: &mut Db) {
         if let Err(e) = continuation::reconcile(&mut db.conn, &self.session_id, self.ts_ms) {
             log::debug(
@@ -872,10 +903,15 @@ fn user_prompt_submit(ctx: &Ctx<'_>) -> Result<(), String> {
     let Some(mut db) = ctx.store(ev, Role::HookDelivery) else {
         return Ok(());
     };
+    ctx.ingest_evidence(&mut db);
     ctx.reconcile(&mut db);
     ctx.deliver(&mut db, Channel::UserPrompt);
     Ok(())
 }
+
+/// Spool files a prompt ingests, at most, before deciding on a re-emission.
+/// Measured at about a millisecond a file on Windows (DECISIONS D120).
+const EVIDENCE_INGEST_MAX: usize = 32;
 
 /// A `UserPromptSubmit` whose input exceeds [`PROMPT_MAX_STDIN`]: recorded
 /// without parsing, as a prompt of `total` bytes that was not processed.

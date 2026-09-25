@@ -118,8 +118,39 @@ fn age_ms(path: &Path) -> u128 {
         .unwrap_or(0)
 }
 
+/// What a spool file holds.
+enum Record {
+    Event(Box<NewEvent>),
+    /// Not (yet) a whole record: not UTF-8, not JSON, or not an event.
+    /// It may still be being written, so it waits out [`PARSE_GRACE_MS`].
+    Unparsed,
+    /// A whole, parseable record that is not an event Velra writes: its
+    /// `payload` is not a JSON object. Nothing will ever make it one.
+    Invalid,
+}
+
+fn parse_record(bytes: &[u8]) -> Record {
+    let Ok(text) = std::str::from_utf8(bytes) else {
+        return Record::Unparsed;
+    };
+    let Ok(ev) = serde_json::from_str::<NewEvent>(text.trim()) else {
+        return Record::Unparsed;
+    };
+    // The reducer reads payloads with SQLite's JSON functions, which raise
+    // an error on text that is not JSON; one such row stopped every
+    // reduction after it (DECISIONS D116).
+    match serde_json::from_str::<serde_json::Value>(&ev.payload) {
+        Ok(v) if v.is_object() => Record::Event(Box::new(ev)),
+        _ => Record::Invalid,
+    }
+}
+
 /// Ingests up to `max_files` spool files in one transaction, then deletes
 /// them. Returns the number of files consumed.
+///
+/// A file that is not an event is moved to `bad/`, never stored: at once
+/// when it is a whole record that is not one, after [`PARSE_GRACE_MS`] when
+/// it may still be being written (D116, D117).
 pub fn ingest(conn: &mut Connection, dir: &Path, max_files: usize) -> Result<usize> {
     let files = pending(dir);
     if files.is_empty() {
@@ -131,16 +162,18 @@ pub fn ingest(conn: &mut Connection, dir: &Path, max_files: usize) -> Result<usi
     let mut consumed = Vec::new();
     let mut bad = Vec::new();
     for path in files.into_iter().take(max_files) {
-        let Ok(text) = std::fs::read_to_string(&path) else {
+        // Unreadable: removed under us, or still held open. Next time.
+        let Ok(bytes) = std::fs::read(&path) else {
             continue;
         };
-        match serde_json::from_str::<NewEvent>(text.trim()) {
-            Ok(ev) => {
+        match parse_record(&bytes) {
+            Record::Event(ev) => {
                 insert_event(&tx, &ev).map_err(DbError::from)?;
                 consumed.push(path);
             }
-            Err(_) if age_ms(&path) > PARSE_GRACE_MS => bad.push(path),
-            Err(_) => {}
+            Record::Invalid => bad.push(path),
+            Record::Unparsed if age_ms(&path) > PARSE_GRACE_MS => bad.push(path),
+            Record::Unparsed => {}
         }
     }
     tx.commit().map_err(DbError::from)?;

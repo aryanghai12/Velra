@@ -82,9 +82,83 @@ pub fn logical_order(events: &[Key]) -> Vec<usize> {
     out
 }
 
+/// What [`logical_order`] needs to know about a session's events, taken in
+/// ingestion (id) order, to say whether the next one is logically last: the
+/// clock of the last directly appended event, and the latest clock among
+/// the spooled events ingested after it.
+///
+/// A spooled event is placed after the last direct event whose clock is not
+/// later than its own, and among the spooled events placed there by
+/// `(ts_ms, id)`. So it is last exactly when that last direct event is not
+/// later than it and no spooled event since is later than it -- a check of
+/// two numbers, where computing the order is a scan and a sort of the whole
+/// session. Reducing a spooled tail with the full computation was
+/// quadratic: 28 ms an event on a 20,000-event session (DECISIONS D119).
+/// `the_tail_agrees_with_the_full_order` holds the two to the same answer.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct Tail {
+    pub last_direct_ts: Option<i64>,
+    pub max_spooled_ts_since: Option<i64>,
+}
+
+impl Tail {
+    /// Whether `next`, ingested after every event observed so far, is last
+    /// in the logical order of those events and itself.
+    pub fn is_last(&self, next: Key) -> bool {
+        !next.spooled
+            || (self.last_direct_ts.is_none_or(|t| t <= next.ts_ms)
+                && self.max_spooled_ts_since.is_none_or(|t| t <= next.ts_ms))
+    }
+
+    /// Takes `ev`, the next event in ingestion order, into account.
+    pub fn observe(&mut self, ev: Key) {
+        if ev.spooled {
+            self.max_spooled_ts_since = Some(
+                self.max_spooled_ts_since
+                    .map_or(ev.ts_ms, |t| t.max(ev.ts_ms)),
+            );
+        } else {
+            self.last_direct_ts = Some(ev.ts_ms);
+            self.max_spooled_ts_since = None;
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Property: over random sessions -- clocks that repeat, run backwards
+    /// and jump, any mix of direct and spooled -- the incremental [`Tail`]
+    /// answers "is the next event last?" exactly as [`logical_order`] does,
+    /// at every prefix.
+    #[test]
+    fn the_tail_agrees_with_the_full_order() {
+        let mut seed: u64 = 0x9e37_79b9_7f4a_7c15;
+        let mut next = || {
+            seed ^= seed << 13;
+            seed ^= seed >> 7;
+            seed ^= seed << 17;
+            seed
+        };
+        for _case in 0..3_000 {
+            let len = 1 + (next() % 24) as usize;
+            let spread = 1 + (next() % 12) as i64;
+            let mut keys: Vec<Key> = Vec::with_capacity(len);
+            let mut tail = Tail::default();
+            for i in 0..len {
+                let k = Key {
+                    id: i as i64 + 1,
+                    ts_ms: (next() % spread as u64) as i64,
+                    spooled: next() % 3 != 0,
+                };
+                keys.push(k);
+                let full = logical_order(&keys).last().map(|&j| keys[j].id) == Some(k.id);
+                assert_eq!(tail.is_last(k), full, "{keys:?}");
+                tail.observe(k);
+            }
+        }
+    }
 
     fn d(id: i64, ts: i64) -> Key {
         Key {

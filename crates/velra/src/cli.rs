@@ -487,7 +487,17 @@ fn cmd_status(json: bool) -> i32 {
         .unwrap_or(false);
     let enabled = !installed.handlers.is_empty();
 
-    let db = open_db_ro(&home);
+    // A database the hooks cannot use -- a newer schema, a migration that
+    // cannot complete -- means every hook is a no-op that spools; status is
+    // not healthy then, whatever the settings say (DECISIONS D118).
+    let (db, database_error) = if home::db_path(&home).exists() {
+        match Db::open(&home::db_path(&home), Role::Cli) {
+            Ok(db) => (Some(db), None),
+            Err(e) => (None, Some(e.to_string())),
+        }
+    } else {
+        (None, None)
+    };
     let mut sessions = 0i64;
     let mut events = 0i64;
     let mut last_event_ms = 0i64;
@@ -520,7 +530,10 @@ fn cmd_status(json: bool) -> i32 {
     let db_size = std::fs::metadata(home::db_path(&home))
         .map(|m| m.len())
         .unwrap_or(0);
-    let healthy = enabled && bin_ok && installed.handlers.len() >= expected.min(1);
+    let healthy = enabled
+        && bin_ok
+        && installed.handlers.len() >= expected.min(1)
+        && database_error.is_none();
 
     if json {
         let value = serde_json::json!({
@@ -544,6 +557,7 @@ fn cmd_status(json: bool) -> i32 {
                 "attach_count": l.attach_count,
                 "meaning": velra_core::continuation::meaning(&l.state),
             })),
+            "database_error": database_error,
             "healthy": healthy,
         });
         println!(
@@ -571,11 +585,18 @@ fn cmd_status(json: bool) -> i32 {
         ),
         (None, _) => println!("  Binary:      (not recorded; run `velra enable`)"),
     }
-    println!(
-        "  Database:    {} ({} KiB)",
-        home::db_path(&home).display(),
-        db_size / 1024
-    );
+    match &database_error {
+        None => println!(
+            "  Database:    {} ({} KiB)",
+            home::db_path(&home).display(),
+            db_size / 1024
+        ),
+        Some(e) => println!(
+            "{} Database:    {} will not open: {e}. Hooks record nothing until it does; see `velra doctor`.",
+            fail_mark(),
+            home::db_path(&home).display()
+        ),
+    }
     println!("  Tracking:    {sessions} session(s), {events} event(s)");
     if last_event_ms > 0 {
         println!(

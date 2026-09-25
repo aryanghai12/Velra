@@ -161,10 +161,11 @@ works, Velra assumes the latest version it knows about.
 `binary_exists`, `claude_code`, `db_path`, `db_bytes`, `sessions`, `events`,
 `last_event_age`, `live_continuations`, `latest_continuation` (`session`,
 `checkpoint`, `state`, `channel`, `attach_count`, `meaning`; `null` when there
-is none), `healthy`.
+is none), `database_error` (`null`, or why the database will not open),
+`healthy`.
 
-**Exit:** 0 when healthy (hooks registered and the recorded binary exists),
-1 otherwise. This makes it usable in scripts.
+**Exit:** 0 when healthy (hooks registered, the recorded binary exists, and
+the database opens at this schema), 1 otherwise. This makes it usable in scripts.
 
 ## `velra doctor`
 

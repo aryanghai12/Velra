@@ -121,12 +121,38 @@ pub fn reduce(conn: &mut Connection, opts: &ReduceOptions) -> Result<ReduceStats
         let mut last = cur;
         // Events a rebuild already applied, by id.
         let mut rebuilt_upto: std::collections::HashMap<String, i64> = Default::default();
+        // Per session, what decides whether the next event is logically
+        // last (`order::Tail`): read once per batch, then kept up to date.
+        let mut tails: std::collections::HashMap<String, crate::order::Tail> = Default::default();
         for (k, ev) in events.iter().enumerate() {
             let covered = rebuilt_upto
                 .get(&ev.session_id)
                 .is_some_and(|&upto| ev.id <= upto);
             if !covered {
-                if is_logically_last(&tx, ev)? {
+                let key = crate::order::Key {
+                    id: ev.id,
+                    ts_ms: ev.ts_ms,
+                    spooled: ev.payload.spooled == Some(true),
+                };
+                // A direct event is always last, and resets the tail whatever
+                // it held: only a spooled one needs what came before it.
+                let last = if key.spooled {
+                    let tail = match tails.get_mut(&ev.session_id) {
+                        Some(t) => t,
+                        None => tails.entry(ev.session_id.clone()).or_insert(session_tail(
+                            &tx,
+                            &ev.session_id,
+                            ev.id,
+                        )?),
+                    };
+                    let last = tail.is_last(key);
+                    tail.observe(key);
+                    last
+                } else {
+                    tails.entry(ev.session_id.clone()).or_default().observe(key);
+                    true
+                };
+                if last {
                     apply(&tx, ev, opts, &incremental)?;
                 } else {
                     // One rebuild covers every event of the session in this
@@ -158,12 +184,31 @@ pub fn reduce(conn: &mut Connection, opts: &ReduceOptions) -> Result<ReduceStats
                 break;
             }
         }
+        before_batch_commit();
         tx.execute(
             "UPDATE reducer_cursor SET last_event_id = ?1 WHERE id = 1",
             [last],
         )?;
         tx.commit()?;
     }
+}
+
+#[cfg(any(test, feature = "fault-injection"))]
+thread_local! {
+    /// Runs once a batch is applied and before its cursor and commit: where
+    /// a reducer interrupted mid-reduction stops (`tests/storage_faults.rs`).
+    pub static BEFORE_BATCH_COMMIT: std::cell::RefCell<Option<Box<dyn FnMut()>>> =
+        const { std::cell::RefCell::new(None) };
+}
+
+fn before_batch_commit() {
+    #[cfg(any(test, feature = "fault-injection"))]
+    BEFORE_BATCH_COMMIT.with(|h| {
+        let f = h.borrow_mut().take();
+        if let Some(mut f) = f {
+            f()
+        }
+    });
 }
 
 fn load_events(conn: &Connection, after: i64, limit: usize) -> rusqlite::Result<Vec<EventRow>> {
@@ -204,7 +249,7 @@ pub fn scan_paths(
          SELECT path AS path, MAX(id) AS ord FROM edits \
            WHERE session_id = ?1 AND epoch = COALESCE((SELECT epoch FROM sessions WHERE session_id = ?1), 1) GROUP BY path \
          UNION ALL \
-         SELECT json_extract(payload, '$.path') AS path, MAX(id) AS ord FROM events \
+         SELECT CASE WHEN json_valid(payload) THEN json_extract(payload, '$.path') END AS path, MAX(id) AS ord FROM events \
            WHERE session_id = ?1 AND hook_event = 'PostToolUse' \
              AND tool_name IN ('Write', 'Edit', 'MultiEdit', 'NotebookEdit') \
              AND id > COALESCE((SELECT last_event_id FROM reducer_cursor WHERE id = 1), 0) GROUP BY path) \
@@ -243,33 +288,28 @@ const SESSION_TABLES: &[&str] = &[
     "file_stats",
 ];
 
-/// The logical-order keys of a session's events with ids up to `upto`.
-fn session_keys(conn: &Connection, session_id: &str, upto: i64) -> Result<Vec<crate::order::Key>> {
-    Ok(conn
-        .prepare_cached(
-            "SELECT id, ts_ms, COALESCE(json_extract(payload, '$.spooled'), 0) FROM events \
-             WHERE session_id = ?1 AND id <= ?2 ORDER BY id",
-        )?
-        .query_map(params![session_id, upto], |r| {
-            Ok(crate::order::Key {
-                id: r.get(0)?,
-                ts_ms: r.get(1)?,
-                spooled: r.get::<_, i64>(2)? != 0,
-            })
-        })?
-        .collect::<rusqlite::Result<_>>()?)
-}
-
-/// Whether `ev`, about to be applied after every earlier row, is logically
-/// last in its session. Always true for a directly appended event
-/// (`crate::order`); a spooled one is checked.
-fn is_logically_last(conn: &Connection, ev: &EventRow) -> Result<bool> {
-    if ev.payload.spooled != Some(true) {
-        return Ok(true);
+/// The [`crate::order::Tail`] of a session's events with ids below `before`:
+/// read backwards from `before` to the session's last directly appended
+/// event. `+session_id` keeps SQLite on the rowid, scanning back from `before`
+/// and stopping there, instead of collecting and sorting the whole session
+/// through `events_session_ts`.
+fn session_tail(conn: &Connection, session_id: &str, before: i64) -> Result<crate::order::Tail> {
+    let mut stmt = conn.prepare_cached(
+        "SELECT ts_ms, COALESCE(CASE WHEN json_valid(payload) THEN json_extract(payload, '$.spooled') END, 0) \
+         FROM events WHERE +session_id = ?1 AND id < ?2 ORDER BY id DESC",
+    )?;
+    let mut rows = stmt.query(params![session_id, before])?;
+    let mut tail = crate::order::Tail::default();
+    while let Some(r) = rows.next()? {
+        let ts: i64 = r.get(0)?;
+        if r.get::<_, i64>(1)? != 0 {
+            tail.max_spooled_ts_since = Some(tail.max_spooled_ts_since.map_or(ts, |t| t.max(ts)));
+        } else {
+            tail.last_direct_ts = Some(ts);
+            break;
+        }
     }
-    let keys = session_keys(conn, &ev.session_id, ev.id)?;
-    let order = crate::order::logical_order(&keys);
-    Ok(order.last().map(|&i| keys[i].id) == Some(ev.id))
+    Ok(tail)
 }
 
 /// Estimated cost of re-folding one event, from measurement on the release
@@ -574,8 +614,9 @@ fn checkpoint_request_is_current(tx: &Connection, ev: &EventRow) -> Result<bool>
     type Boundary = (crate::order::Key, String, Option<String>, Option<String>);
     let rows: Vec<Boundary> = tx
         .prepare_cached(
-            "SELECT id, ts_ms, COALESCE(json_extract(payload, '$.spooled'), 0), hook_event, \
-             json_extract(payload, '$.source'), json_extract(payload, '$.reason') \
+            "SELECT id, ts_ms, COALESCE(CASE WHEN json_valid(payload) THEN json_extract(payload, '$.spooled') END, 0), \
+             hook_event, CASE WHEN json_valid(payload) THEN json_extract(payload, '$.source') END, \
+             CASE WHEN json_valid(payload) THEN json_extract(payload, '$.reason') END \
              FROM events WHERE session_id = ?1 ORDER BY id",
         )?
         .query_map([&ev.session_id], |r| {
