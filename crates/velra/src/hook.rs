@@ -380,6 +380,18 @@ impl<'a> Ctx<'a> {
         }
     }
 
+    /// The reported `cwd` resolved on disk, when it resolves to something
+    /// spelled differently (`Payload::cwd_real`). One syscall, taken only for
+    /// commands with a git effect.
+    fn cwd_real(&self) -> Option<String> {
+        let cwd = self.input.cwd.as_deref()?;
+        let real = paths::canonical(Path::new(cwd))?;
+        let real = paths::normalize_abs(&real.to_string_lossy());
+        let spelled = paths::normalize_abs(cwd);
+        (!paths::paths_equal(spelled.trim_end_matches('/'), real.trim_end_matches('/')))
+            .then_some(real)
+    }
+
     fn display_path(&self, abs: &Path) -> (String, bool) {
         normalize::display_path(&abs.to_string_lossy(), &self.root_str)
     }
@@ -980,6 +992,7 @@ fn pre_tool_use(ctx: &Ctx<'_>) -> Result<(), String> {
     let mut payload = Payload {
         command: Some(normalize::redact_capped(command, limits::COMMAND)),
         cwd: ctx.input.cwd.clone(),
+        cwd_real: ctx.cwd_real(),
         ..Default::default()
     };
     match ctx.open_db(Role::HookAppend) {
@@ -1073,6 +1086,7 @@ fn post_tool_use(ctx: &Ctx<'_>, failure: bool) -> Result<(), String> {
         });
         if effects.any() {
             git_effects = Some(effects);
+            payload.cwd_real = ctx.cwd_real();
         }
     }
     normalize::enforce_budget(&mut payload, limits::PAYLOAD);

@@ -14,9 +14,13 @@
 
 mod common;
 
+#[cfg(feature = "fault-injection")]
 use common::Env;
+#[cfg(feature = "fault-injection")]
 use serde_json::{json, Value};
-use std::cell::{Cell, RefCell};
+use std::cell::Cell;
+#[cfg(feature = "fault-injection")]
+use std::cell::RefCell;
 use std::path::{Path, PathBuf};
 use velra_core::staging::{self, source::STARTUP, ClaimError, Slot, StagedCapsule};
 
@@ -64,6 +68,11 @@ fn files(home: &Path) -> Vec<String> {
 
 /// Runs `f` once, in this thread, between the next claimant's validation and
 /// its claim.
+///
+/// `staging::BEFORE_CLAIM` exists only in `fault-injection` builds (and
+/// velra-core's own unit tests), so the test that opens this window is one
+/// of them; a default `cargo test` did not compile at all.
+#[cfg(feature = "fault-injection")]
 fn before_next_claim(f: impl FnOnce() + 'static) {
     let f = RefCell::new(Some(f));
     staging::BEFORE_CLAIM.with(|h| {
@@ -75,6 +84,7 @@ fn before_next_claim(f: impl FnOnce() + 'static) {
     });
 }
 
+#[cfg(feature = "fault-injection")]
 fn clear_hook() {
     staging::BEFORE_CLAIM.with(|h| *h.borrow_mut() = None);
 }
@@ -114,6 +124,7 @@ fn a_restage_during_a_delivery_survives_the_older_claims_cleanup() {
 
 /// A restage between a claimant's reading of A and its claim supersedes A:
 /// the claimant's claim on A leads nowhere, and it delivers B instead.
+#[cfg(feature = "fault-injection")]
 #[test]
 fn a_restage_before_the_claim_is_delivered_in_the_superseded_ones_place() {
     let d = tempfile::tempdir().unwrap();
@@ -317,6 +328,7 @@ fn a_claimant_that_dies_after_its_emit_is_not_followed_by_a_second_delivery() {
     ));
 }
 
+#[cfg(feature = "fault-injection")]
 fn startup_payload(env: &Env, session: &str) -> Value {
     json!({
         "session_id": session,
@@ -331,6 +343,10 @@ fn startup_payload(env: &Env, session: &str) -> Value {
 /// settled. The next session start -- with the claim aged past the threshold
 /// -- delivers nothing, `velra status` says what happened, and a restage is
 /// delivered normally.
+///
+/// The stall and the shortened watchdog are `fault-injection` knobs; without
+/// them the hook never stalls, and there is no crash to test.
+#[cfg(feature = "fault-injection")]
 #[test]
 fn the_hook_killed_by_its_watchdog_after_emitting_does_not_deliver_twice() {
     let env = Env::new();

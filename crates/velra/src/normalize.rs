@@ -356,10 +356,39 @@ pub fn redact_capped(s: &str, max_bytes: usize) -> String {
     text::prefix_bytes(&redacted, max_bytes).to_string()
 }
 
+/// Output read ahead of the tail [`redact_tail`] keeps: room for the longest
+/// secret the redactor knows to start before the kept bytes and still be
+/// seen whole (an RSA-4096 PEM body is about 3.2 KB).
+const TAIL_CONTEXT: usize = 4096;
+
 /// Keeps the tail of long output: cut with a margin, redact, then cut again
 /// so a secret spanning the first cut is still removed.
+///
+/// The first cut is moved forward to the next line (or, in a single long
+/// line, the next whitespace), so it never falls inside a secret: the
+/// fragment of one -- `p_16C7e…` with its `gh` cut off -- matches no
+/// detector and would be stored as it is. Redaction then shortens the text
+/// wherever it replaced a secret, and the second cut can reach back into the
+/// margin; starting the margin at a boundary is what makes that safe. A key
+/// whose `BEGIN` line lies before the window is the orphan-`END` detector's
+/// (`velra_core::redact`).
 pub fn redact_tail(s: &str, max_bytes: usize) -> String {
-    let window = text::suffix_bytes(s, max_bytes.saturating_add(1024));
+    let mut window = text::suffix_bytes(s, max_bytes.saturating_add(TAIL_CONTEXT));
+    if window.len() < s.len() {
+        let context = text::prefix_bytes(window, window.len().saturating_sub(max_bytes));
+        let skip = context
+            .find('\n')
+            .map(|i| i + 1)
+            .or_else(|| {
+                context
+                    .char_indices()
+                    .find(|(_, c)| c.is_whitespace())
+                    .map(|(i, c)| i + c.len_utf8())
+            })
+            // One unbroken run longer than the margin: keep the old cut.
+            .unwrap_or(context.len());
+        window = &window[skip..];
+    }
     let cleaned = text::clean_terminal_output(window);
     let redacted = redact::redact(&cleaned);
     text::suffix_bytes(&redacted, max_bytes).to_string()
@@ -501,6 +530,75 @@ mod tests {
         assert_eq!(r.stdout.as_deref(), Some("ok"));
         assert_eq!(r.exit_code, Some(3));
         assert_eq!(r.interrupted, Some(false));
+    }
+
+    /// Any 12-byte run of `secret` in `out`: a fragment of it that survived.
+    fn fragment_of(out: &str, secret: &str) -> Option<String> {
+        let b = secret.as_bytes();
+        (0..b.len().saturating_sub(12))
+            .map(|i| &secret[i..i + 12])
+            .find(|w| out.contains(*w))
+            .map(str::to_string)
+    }
+
+    /// Phase 9: a secret that straddles the tail window's first cut. The
+    /// fragment inside the window no longer matched its detector (`p_16C7…`
+    /// is not a GitHub token without its `gh`), and when redaction elsewhere
+    /// in the window shortened the text, the second cut reached back into the
+    /// margin and kept it.
+    #[test]
+    fn a_secret_cut_by_the_tail_window_leaves_no_fragment() {
+        let max = 2048;
+        let token = "ghp_16C7e42F292c6912E7710c838347Ae178B4a";
+        let key_body: String = (0..40)
+            .map(|i| {
+                format!("MIIEowIBAAKCAQEA{i:02}secretkeymaterialsecretkeymaterial0123456789ab\n")
+            })
+            .collect();
+        let key =
+            format!("-----BEGIN RSA PRIVATE KEY-----\n{key_body}-----END RSA PRIVATE KEY-----");
+        // A second key later in the output: its redaction shrinks the window
+        // by more than a kilobyte, which is what pulled the margin in.
+        let later = format!(
+            "-----BEGIN EC PRIVATE KEY-----\n{}-----END EC PRIVATE KEY-----\n",
+            "QkVHSU5FQ1NFQ1JFVEtFWU1BVEVSSUFMMDEyMzQ1Njc4OWFiY2RlZg==\n".repeat(30)
+        );
+        for (secret, sep) in [(token, " "), (key.as_str(), "\n")] {
+            // Offsets of the secret all around both cuts, in steps shorter
+            // than the secret so that some always straddle each cut.
+            let step = (secret.len() / 4).clamp(1, 97);
+            for pad in (0..secret.len() + TAIL_CONTEXT + max).step_by(step) {
+                for shrink in [false, true] {
+                    let tail = format!(
+                        "{}{}",
+                        if shrink { later.as_str() } else { "" },
+                        "y".repeat(pad)
+                    );
+                    let s = format!("{}{sep}{secret}{sep}{tail}", "x ".repeat(3000));
+                    let out = redact_tail(&s, max);
+                    assert!(out.len() <= max);
+                    if let Some(f) = fragment_of(&out, secret) {
+                        panic!(
+                            "pad {pad} shrink {shrink}: fragment {f:?} of the secret kept:\n{out}"
+                        );
+                    }
+                    assert!(!out.contains("secretkeymaterial"), "pad {pad}: {out}");
+                    assert!(
+                        !out.contains("QkVHSU5FQ1NFQ1JFVEtFWU1B"),
+                        "pad {pad}: {out}"
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn a_tail_that_fits_is_redacted_whole() {
+        let s = "short output with token=abcdefgh12345678 in it";
+        assert_eq!(
+            redact_tail(s, 4096),
+            "short output with token=[REDACTED:generic_secret] in it"
+        );
     }
 
     #[test]

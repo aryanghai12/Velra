@@ -251,6 +251,18 @@ impl Env {
         })
     }
 
+    /// What the hook records as `Payload::cwd_real` for a command run in
+    /// `project`: its resolved form, when that is spelled differently (a
+    /// symlinked temp dir, an 8.3 short name). `Log` mirrors it so that its
+    /// events are the ones the product writes on such a runner.
+    pub fn cwd_real(&self) -> Option<String> {
+        let real = paths::canonical(&self.project)?;
+        let real = paths::normalize_abs(&real.to_string_lossy());
+        let spelled = paths::normalize_abs(&self.project.to_string_lossy());
+        (!paths::paths_equal(spelled.trim_end_matches('/'), real.trim_end_matches('/')))
+            .then_some(real)
+    }
+
     pub fn write_file(&self, rel: &str, content: &str) -> PathBuf {
         let path = self.project.join(rel);
         if let Some(parent) = path.parent() {
@@ -698,6 +710,7 @@ impl Log {
                 Payload {
                     command: Some(command.into()),
                     cwd: Some(self.env.project.to_string_lossy().into_owned()),
+                    cwd_real: self.env.cwd_real(),
                     stdout_tail: Some(String::new()),
                     git,
                     ..Default::default()
@@ -708,6 +721,7 @@ impl Log {
                     Payload {
                         command: Some(command.into()),
                         cwd: Some(self.env.project.to_string_lossy().into_owned()),
+                        cwd_real: self.env.cwd_real(),
                         error: Some(format!("Exit code {exit}\n{output}")),
                         is_interrupt: Some(false),
                         tool_name: Some("Bash".into()),

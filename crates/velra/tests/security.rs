@@ -334,3 +334,337 @@ fn state_files_are_private_on_posix() {
         }
     }
 }
+
+// ------------------------------------------------ Phase 9: every surface
+
+/// The distinctive part of each planted secret. A surface that holds any of
+/// these holds a secret.
+const CANARIES: &[&str] = &[
+    "CanaryPrompt0001",
+    "CANARYKEYBODYCANARYKEYBODY",
+    "CanaryPromptFlag01",
+    "CanaryExcerpt0001",
+    "CanaryPw0001",
+    "Q2FuYXJ5QmFzaWNBdXRo",
+    "CanaryStdoutTail0001",
+    "CanaryStdoutCut0001",
+    "CANARYCUTKEYBODY",
+    "CanaryStderr0001",
+    "CanaryBearer000000000001",
+    "CanaryGrep0000000000001",
+    "CANARY0000000001",
+    "CanarySpool00000000000000000000000001",
+    "CanaryTitle0001",
+];
+
+/// Every file under `dir`, recursively, with its bytes.
+fn files_under(dir: &std::path::Path, out: &mut Vec<(std::path::PathBuf, Vec<u8>)>) {
+    let Ok(rd) = std::fs::read_dir(dir) else {
+        return;
+    };
+    for entry in rd.flatten() {
+        let p = entry.path();
+        if p.is_dir() {
+            files_under(&p, out);
+        } else if let Ok(bytes) = std::fs::read(&p) {
+            out.push((p, bytes));
+        }
+    }
+}
+
+fn leaked_in(bytes: &[u8]) -> Vec<&'static str> {
+    let text = String::from_utf8_lossy(bytes);
+    CANARIES
+        .iter()
+        .copied()
+        .filter(|c| text.contains(c))
+        .collect()
+}
+
+/// REDACTION BEFORE PERSISTENCE, end to end.
+///
+/// Secrets are planted in every text field a hook accepts -- the prompt, a
+/// private key in it, an edit's strings, a shell command's line, stdout
+/// longer than the stored tail, stderr, a failure's error, a search
+/// pattern, a compaction summary, the transcript a title is read from --
+/// and one event is forced through the spool by holding the write lock.
+/// Then every byte Velra left on disk (database, WAL, spool, logs, staged
+/// capsule, checkpoints) and everything each command prints (inspect in
+/// every form, status, doctor, restore list / dry run / stage, the capsule a
+/// new session is handed) is searched for them.
+///
+/// Paths are not in scope: a path is a file's identity, stored as given,
+/// and a secret spelled in one is persisted (see the Phase 9 report).
+#[test]
+fn a_planted_secret_reaches_no_persisted_or_printed_surface() {
+    let env = Env::new();
+    env.write_file("src/app.py", "api_key = load()\n");
+    let debug = [("VELRA_LOG", "debug"), ("VELRA_CLAUDE_VERSION", "2.1.269")];
+    let hook = |event: &str, p: &serde_json::Value| {
+        let out = env.hook_with_env(event, p, &debug);
+        out.assert_contract();
+        out
+    };
+    let transcript = env.dir.path().join("transcript.jsonl");
+    std::fs::write(
+        &transcript,
+        "{\"type\":\"ai-title\",\"aiTitle\":\"rotate token=CanaryTitle0001xyz for the api\"}\n",
+    )
+    .unwrap();
+
+    let mut p = env.base_payload("SessionStart");
+    p["source"] = json!("startup");
+    hook("session-start", &p);
+
+    let key = format!(
+        "-----BEGIN OPENSSH PRIVATE KEY-----\n{}\n-----END OPENSSH PRIVATE KEY-----",
+        "CANARYKEYBODYCANARYKEYBODY0123456789".repeat(3)
+    );
+    let mut p = env.base_payload("UserPromptSubmit");
+    p["prompt"] = json!(format!(
+        "Fix the api client in src/app.py. The token is ghp_CanaryPrompt0001abcdefghijklmnopqrstu \
+         and the deploy key is below; do not commit it.\n{key}\n\
+         Run it with `deploy --password CanaryPromptFlag01`."
+    ));
+    hook("user-prompt-submit", &p);
+
+    let file = env
+        .project
+        .join("src/app.py")
+        .to_string_lossy()
+        .into_owned();
+    let edit = json!({
+        "file_path": file,
+        "old_string": "api_key = load()",
+        "new_string": "api_key = \"CanaryExcerpt0001abcdef\"",
+    });
+    let mut p = env.base_payload("PreToolUse");
+    p["tool_name"] = json!("Edit");
+    p["tool_use_id"] = json!("e1");
+    p["tool_input"] = edit.clone();
+    hook("pre-tool-use", &p);
+    env.write_file("src/app.py", "api_key = \"CanaryExcerpt0001abcdef\"\n");
+    let mut p = env.base_payload("PostToolUse");
+    p["tool_name"] = json!("Edit");
+    p["tool_use_id"] = json!("e1");
+    p["tool_input"] = edit;
+    p["tool_response"] = json!({"filePath": file, "originalFile": "api_key = load()\n"});
+    hook("post-tool-use", &p);
+
+    // A command line with credentials, and output longer than the stored
+    // tail with secrets on both sides of where it is cut.
+    let command = "curl -u admin:CanaryPw0001 -H 'Authorization: Basic Q2FuYXJ5QmFzaWNBdXRoMDE=' \
+                   https://api.local/v1 && git restore src/app.py";
+    let cut_key = format!(
+        "-----BEGIN RSA PRIVATE KEY-----\n{}-----END RSA PRIVATE KEY-----\n",
+        "CANARYCUTKEYBODYCANARYCUTKEYBODY0123456789abcdefghijklmnopqrstu\n".repeat(40)
+    );
+    let stdout = format!(
+        "{}\ncut here: ghp_CanaryStdoutCut0001abcdefghijklmnopqrstu\n{cut_key}{}\nfinal token=CanaryStdoutTail0001\n",
+        "progress line\n".repeat(700),
+        "more output\n".repeat(400)
+    );
+    assert!(stdout.len() > 2 * velra_core::event::limits::OUTPUT_TAIL);
+    let mut p = env.base_payload("PreToolUse");
+    p["tool_name"] = json!("Bash");
+    p["tool_use_id"] = json!("b1");
+    p["tool_input"] = json!({"command": command});
+    hook("pre-tool-use", &p);
+    env.write_file("src/app.py", "api_key = load()\n");
+    let mut p = env.base_payload("PostToolUse");
+    p["tool_name"] = json!("Bash");
+    p["tool_use_id"] = json!("b1");
+    p["tool_input"] = json!({"command": command});
+    p["tool_response"] = json!({
+        "stdout": stdout,
+        "stderr": "warning: token=CanaryStderr0001 is about to expire",
+        "interrupted": false,
+        "exitCode": 0,
+    });
+    hook("post-tool-use", &p);
+
+    let mut p = env.base_payload("PostToolUseFailure");
+    p["tool_name"] = json!("Bash");
+    p["tool_use_id"] = json!("b2");
+    p["tool_input"] = json!({"command": "python -m pytest tests/test_api.py"});
+    p["error"] = json!(
+        "Exit code 1\nrequest failed: Authorization: Bearer CanaryBearer000000000001\nFAILED tests/test_api.py::test_auth"
+    );
+    hook("post-tool-use-failure", &p);
+
+    let mut p = env.base_payload("PostToolUse");
+    p["tool_name"] = json!("Grep");
+    p["tool_use_id"] = json!("g1");
+    p["tool_input"] = json!({"pattern": "sk-ant-api03-CanaryGrep0000000000001", "path": "src"});
+    hook("post-tool-use", &p);
+
+    let mut p = env.base_payload("Stop");
+    p["stop_hook_active"] = json!(false);
+    hook("stop", &p);
+    let mut p = env.base_payload("PreCompact");
+    p["trigger"] = json!("manual");
+    p["custom_instructions"] = json!("");
+    hook("pre-compact", &p);
+    let mut p = env.base_payload("PostCompact");
+    p["trigger"] = json!("manual");
+    p["compact_summary"] = json!("The user rotated AKIACANARY0000000001 and fixed the client.");
+    hook("post-compact", &p);
+
+    // One event forced through the spool: the write lock is held, so the
+    // hook's append gives up and the event is written to a spool file.
+    let blocker = env.open_db();
+    blocker.conn.execute_batch("BEGIN IMMEDIATE").unwrap();
+    let mut p = env.base_payload("PostToolUse");
+    p["tool_name"] = json!("Bash");
+    p["tool_use_id"] = json!("b3");
+    p["tool_input"] = json!({"command": "echo ok"});
+    p["tool_response"] = json!({
+        "stdout": "export GH=ghp_CanarySpool00000000000000000000000001",
+        "stderr": "",
+        "interrupted": false,
+        "exitCode": 0,
+    });
+    hook("post-tool-use", &p);
+    let mut spooled = Vec::new();
+    files_under(&env.spool_dir(), &mut spooled);
+    assert!(
+        !spooled.is_empty(),
+        "the event must have gone to the spool, or this part tests nothing"
+    );
+    // Every leak is collected and reported together, so a failure shows the
+    // whole of what escaped rather than its first instance.
+    let mut leaks: Vec<String> = Vec::new();
+    for (path, bytes) in &spooled {
+        for c in leaked_in(bytes) {
+            leaks.push(format!("spool {}: {c}", path.display()));
+        }
+    }
+    blocker.conn.execute_batch("ROLLBACK").unwrap();
+    drop(blocker);
+    env.drain();
+
+    // Every command a user or a script reads.
+    let mut printed: Vec<(String, std::process::Output)> = Vec::new();
+    let mut run = |args: &[&str]| {
+        let out = env
+            .cmd()
+            .env("VELRA_CLAUDE_VERSION", "2.1.269")
+            .args(args)
+            .output()
+            .expect("run velra");
+        printed.push((args.join(" "), out.clone()));
+        out
+    };
+    let checkpoint = {
+        let db = env.open_db();
+        db.conn
+            .query_row(
+                "SELECT checkpoint_id FROM checkpoints ORDER BY created_ms DESC LIMIT 1",
+                [],
+                |r| r.get::<_, String>(0),
+            )
+            .expect("pre-compact wrote a checkpoint")
+    };
+    for args in [
+        vec!["inspect"],
+        vec!["inspect", "--json"],
+        vec!["inspect", "--checkpoint", &checkpoint],
+        vec!["inspect", "--checkpoint", &checkpoint, "--json"],
+        vec!["inspect", "--trace", "src/app.py"],
+        vec!["inspect", "--trace", "src/app.py", "--json"],
+        vec!["status"],
+        vec!["status", "--json"],
+        vec!["doctor"],
+        vec!["doctor", "--json"],
+        vec!["restore", "--list"],
+        vec!["restore", "--list", "--json"],
+        vec!["restore", "--session", &env.session, "--dry-run"],
+        vec!["restore", "--session", &env.session, "--dry-run", "--json"],
+        vec!["restore", "--session", &env.session],
+    ] {
+        run(&args);
+    }
+    for section in ["dead-ends", "failure", "files", "attempts"] {
+        run(&["inspect", "--section", section]);
+        run(&["inspect", "--section", section, "--json"]);
+    }
+    let listing = printed
+        .iter()
+        .find(|(a, _)| a == "restore --list")
+        .map(|(_, o)| String::from_utf8_lossy(&o.stdout).into_owned())
+        .unwrap();
+    assert!(
+        listing.contains("[REDACTED:"),
+        "the title is read, and redacted: {listing}"
+    );
+    // The staged capsule, handed to a brand-new session.
+    let mut p = env.base_payload("SessionStart");
+    p["session_id"] = json!("next-session");
+    p["source"] = json!("startup");
+    let delivered = env.hook_with_env("session-start", &p, &debug);
+    delivered.assert_contract();
+    assert!(
+        delivered.stdout.contains("VELRA_WORKSPACE_STATE"),
+        "the staged capsule was delivered: {}",
+        delivered.stdout
+    );
+    for (what, out) in &printed {
+        for (stream, bytes) in [("stdout", &out.stdout), ("stderr", &out.stderr)] {
+            for c in leaked_in(bytes) {
+                leaks.push(format!("`velra {what}` {stream}: {c}"));
+            }
+        }
+    }
+    for c in leaked_in(delivered.stdout.as_bytes()) {
+        leaks.push(format!("delivered capsule: {c}"));
+    }
+
+    // Every byte left on disk, the database's own pages and WAL included.
+    env.drain();
+    let mut files = Vec::new();
+    files_under(&env.home, &mut files);
+    assert!(files.iter().any(|(p, _)| p.ends_with("velra.db")));
+    assert!(
+        files
+            .iter()
+            .any(|(p, _)| p.to_string_lossy().contains("debug.log")),
+        "debug logging was on, so its file is part of what is searched"
+    );
+    for (path, bytes) in &files {
+        for c in leaked_in(bytes) {
+            leaks.push(format!("{}: {c}", path.display()));
+        }
+    }
+    assert!(
+        leaks.is_empty(),
+        "{} leaks:\n{}",
+        leaks.len(),
+        leaks.join("\n")
+    );
+    // And the secrets did reach Velra: the ledger holds their markers.
+    let db = env.open_db();
+    let payloads: String = db
+        .conn
+        .prepare("SELECT payload FROM events")
+        .unwrap()
+        .query_map([], |r| r.get::<_, String>(0))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect::<Vec<_>>()
+        .join("\n");
+    for kind in [
+        "github_token",
+        "private_key",
+        "cli_credential",
+        "basic_auth",
+        "generic_secret",
+        "bearer_token",
+        "api_key",
+        "aws_access_key",
+    ] {
+        assert!(
+            payloads.contains(&format!("[REDACTED:{kind}]")),
+            "no {kind} marker in the ledger:\n{payloads}"
+        );
+    }
+}

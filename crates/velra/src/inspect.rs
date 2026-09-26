@@ -26,6 +26,27 @@ impl Section {
             _ => None,
         }
     }
+
+    /// The canonical spelling, as `--section` documents it.
+    pub fn name(self) -> &'static str {
+        match self {
+            Section::DeadEnds => "dead-ends",
+            Section::Failure => "failure",
+            Section::Files => "files",
+            Section::Attempts => "attempts",
+        }
+    }
+}
+
+/// Whether the ledger has anything of `session_id`: a reduced session, or
+/// events the reducer has not reached yet (it may just have failed to).
+pub fn is_recorded_session(conn: &Connection, session_id: &str) -> rusqlite::Result<bool> {
+    conn.query_row(
+        "SELECT EXISTS(SELECT 1 FROM sessions WHERE session_id = ?1) \
+         OR EXISTS(SELECT 1 FROM events WHERE session_id = ?1)",
+        [session_id],
+        |r| r.get(0),
+    )
 }
 
 /// The most recently active session of a project.

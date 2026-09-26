@@ -256,6 +256,14 @@ pub struct Payload {
     pub command: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cwd: Option<String>,
+    /// `cwd` as it resolved on disk when the command ran, recorded only when
+    /// that differs from how `cwd` is spelled (a symlink, `/var` for
+    /// `/private/var`, an 8.3 short name) and only for a command with a git
+    /// effect. The reducer matches restore pathspecs against the canonical
+    /// project root and cannot resolve the directory later
+    /// (`crate::shell::reaches_via`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cwd_real: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub exit_code: Option<i64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]

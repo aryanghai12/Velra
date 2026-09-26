@@ -709,6 +709,12 @@ type KeepSpec = (&'static str, Option<&'static str>, &'static [&'static str]);
 
 /// One removal pass: drops the first Velra handler matching `keep`'s
 /// complement, collapsing empty groups, arrays and the `hooks` object.
+///
+/// A kept registration is kept once: its first handler in document order --
+/// the one [`upsert`] updates -- and any later copy of it (a hand edit, two
+/// machines' dotfiles merged) is removed like a stale one. Otherwise Claude
+/// Code runs the same Velra hook several times per event, and `enable`
+/// reported the file as already correct.
 fn remove_one(
     text: &str,
     keep: Option<&[KeepSpec]>,
@@ -723,6 +729,7 @@ fn remove_one(
     let Some(events) = hooks_prop.value.as_object() else {
         return Ok(None);
     };
+    let mut seen: Vec<(String, Option<String>, Vec<String>)> = Vec::new();
     for event_prop in &events.properties {
         let event_name = event_prop.name.as_str().to_string();
         let Some(array) = event_prop.value.as_array() else {
@@ -750,7 +757,9 @@ fn remove_one(
                     let wanted = keep.iter().any(|(event, m, args)| {
                         *event == event_name && m.map(str::to_string) == matcher && role == *args
                     });
-                    if wanted {
+                    let key = (event_name.clone(), matcher.clone(), role);
+                    if wanted && !seen.contains(&key) {
+                        seen.push(key);
                         continue;
                     }
                 }
@@ -1054,17 +1063,27 @@ fn prune_backups(dir: &Path, base: &str, keep: usize) {
 
 /// Applies an edit to the settings file with backup, verification, atomic
 /// replacement and concurrent-modification retry (§6.2 steps 2–8).
+///
+/// `on_disk` is the file as read, `None` when there was none; `base` is what
+/// the edit was computed from, which differs from it for a blank file (read
+/// as `{}`). The backup and the concurrency check are about the file, so
+/// they use `on_disk`: comparing the disk with `base` failed every time for a
+/// blank file, and the backup recorded a `{}` the file never held. A file
+/// that did not exist has nothing to back up.
 fn write_change(
     target: &Path,
     home: &Path,
-    original: &str,
+    on_disk: Option<&str>,
+    base: &str,
     updated: &str,
-    created_file: bool,
-) -> Result<PathBuf> {
-    verify_semantics(if created_file { "{}" } else { original }, updated)?;
-    let backup_path = backup(home, target, original.as_bytes())?;
-    if !created_file {
-        let current = std::fs::read_to_string(target).unwrap_or_default();
+) -> Result<Option<PathBuf>> {
+    verify_semantics(base, updated)?;
+    let backup_path = match on_disk {
+        Some(original) => Some(backup(home, target, original.as_bytes())?),
+        None => None,
+    };
+    if let Some(original) = on_disk {
+        let current = std::fs::read_to_string(target).map_err(SettingsError::Io)?;
         if current != original {
             return Err(SettingsError::Concurrent);
         }
@@ -1106,9 +1125,10 @@ pub fn enable(
         if !outcome.changed {
             return Ok(outcome);
         }
-        match write_change(&target, home, &base, &updated, missing) {
+        let on_disk = (!missing).then_some(original.as_str());
+        match write_change(&target, home, on_disk, &base, &updated) {
             Ok(path) => {
-                outcome.backup = Some(path);
+                outcome.backup = path;
                 return Ok(outcome);
             }
             Err(SettingsError::Concurrent) if attempt < 2 => continue,
@@ -1149,9 +1169,9 @@ pub fn disable(
         if !outcome.changed {
             return Ok(outcome);
         }
-        match write_change(&target, home, &original, &updated, false) {
+        match write_change(&target, home, Some(&original), &original, &updated) {
             Ok(path) => {
-                outcome.backup = Some(path);
+                outcome.backup = path;
                 return Ok(outcome);
             }
             Err(SettingsError::Concurrent) if attempt < 2 => continue,
@@ -1207,6 +1227,38 @@ pub fn installed_handlers(text: &str) -> Vec<InstalledHandler> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// §6.2's concurrency check: a file changed by someone else after it was
+    /// read is never replaced with an edit computed from the old text.
+    #[test]
+    fn a_file_changed_after_it_was_read_is_not_overwritten() {
+        let dir = tempfile::tempdir().unwrap();
+        let home = dir.path().join("home");
+        let target = dir.path().join("settings.json");
+        let read_earlier = "{\"model\": \"a\"}\n";
+        let features = Features::for_version(crate::compat::Version::parse("2.1.268"));
+        let (updated, _) = apply_enable(read_earlier, "/bin/velra", &features, &target).unwrap();
+        // Another writer lands between the read and the write.
+        std::fs::write(&target, "{\"model\": \"b\"}\n").unwrap();
+        let err =
+            write_change(&target, &home, Some(read_earlier), read_earlier, &updated).unwrap_err();
+        assert!(matches!(err, SettingsError::Concurrent), "{err}");
+        assert_eq!(
+            std::fs::read_to_string(&target).unwrap(),
+            "{\"model\": \"b\"}\n"
+        );
+        // Its backup is of what was read, so nothing the other writer wrote
+        // is lost either way.
+        let backups: Vec<_> = std::fs::read_dir(crate::home::backups_dir(&home))
+            .unwrap()
+            .flatten()
+            .collect();
+        assert_eq!(backups.len(), 1);
+        assert_eq!(
+            std::fs::read_to_string(backups[0].path()).unwrap(),
+            read_earlier
+        );
+    }
 
     /// Every shipped registration filters git commands inside the binary
     /// rather than through an `if` rule (D58). The rule machinery is kept

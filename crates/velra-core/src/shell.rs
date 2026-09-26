@@ -913,6 +913,31 @@ fn reach_of(g: &GitInvocation) -> Reach {
 /// file, a directory above it, or matches it as a glob (`*`, `?`); `.` and
 /// `..` are resolved without touching the disk.
 pub fn reaches(target: &RestoreTarget, file: &str, cwd: Option<&str>, root: &str) -> Option<bool> {
+    reaches_via(target, file, cwd, root, None)
+}
+
+/// The directory a shell command started in as the hook reported it
+/// (`spelled`), and what that resolved to on disk when the command ran
+/// (`real`). They differ when the report reaches the directory by another
+/// route than the canonical project root takes: `/var` for `/private/var` on
+/// macOS, a symlinked checkout, an 8.3 short name on Windows.
+#[derive(Debug, Clone, Copy)]
+pub struct DirAlias<'a> {
+    pub spelled: &'a str,
+    pub real: &'a str,
+}
+
+/// [`reaches`], with the command's directory -- and any absolute directory
+/// the line spells through it, `cd "<the reported cwd>"` -- read as the
+/// directory it resolved to. Matching stays lexical: the one resolution it
+/// uses is the hook's, taken when the command ran.
+pub fn reaches_via(
+    target: &RestoreTarget,
+    file: &str,
+    cwd: Option<&str>,
+    root: &str,
+    alias: Option<DirAlias<'_>>,
+) -> Option<bool> {
     use crate::paths::{is_absolute_str, paths_equal};
     let root = clean_abs(root, root)?;
     let file_abs = if is_absolute_str(file) {
@@ -932,6 +957,16 @@ pub fn reaches(target: &RestoreTarget, file: &str, cwd: Option<&str>, root: &str
                 && path.get(..dir.len()).is_some_and(|h| paths_equal(h, dir))
                 && (path.as_bytes()[dir.len()] == b'/' || dir.ends_with('/')))
     };
+    let rebased = alias.and_then(|a| {
+        let spelled = clean_abs(a.spelled, &root)?;
+        let real = clean_abs(a.real, &root)?;
+        if within(&dir, &root) || !within(&dir, &spelled) {
+            return None;
+        }
+        let rest = dir.get(spelled.trim_end_matches('/').len()..)?;
+        Some(format!("{}{rest}", real.trim_end_matches('/')))
+    });
+    let dir = rebased.unwrap_or(dir);
     match &target.reach {
         Reach::Nothing => Some(false),
         Reach::Unknown => None,
@@ -1198,6 +1233,69 @@ mod tests {
             assert_eq!(posix(line, "a.py"), Some(true), "{line}");
             assert_eq!(posix(line, "b.py"), Some(false), "{line}");
         }
+    }
+
+    /// The CI failure of 2026-09-25 (macOS `/var` → `/private/var`, Windows
+    /// `RUNNER~1`): the hook reports the command's directory by one route and
+    /// the project root is stored canonical. Lexically the two never meet, and
+    /// a restore run from the project itself reached nothing.
+    #[test]
+    fn a_restore_run_through_an_aliased_directory_reaches_the_project() {
+        let spelled = "/w/link";
+        let alias = Some(DirAlias {
+            spelled,
+            real: ROOT,
+        });
+        let hit = |cmd: &str, file: &str, alias| {
+            restore_targets(cmd, Dialect::Posix)
+                .iter()
+                .map(|t| reaches_via(t, file, Some(spelled), ROOT, alias))
+                .find(|r| *r != Some(false))
+                .unwrap_or(Some(false))
+        };
+        // Without the resolution the restore is about some other directory.
+        assert_eq!(hit("git restore a.py", "a.py", None), Some(false));
+        assert_eq!(hit("git restore a.py", "a.py", alias), Some(true));
+        assert_eq!(hit("git restore a.py", "b.py", alias), Some(false));
+        assert_eq!(hit("git restore src/", "src/x.py", alias), Some(true));
+        // An absolute directory spelled through the alias is rebased as well.
+        assert_eq!(
+            hit("cd \"/w/link\" && git restore a.py", "a.py", alias),
+            Some(true)
+        );
+        assert_eq!(
+            hit("cd /w/link/sub && git restore a.py", "sub/a.py", alias),
+            Some(true)
+        );
+        assert_eq!(
+            hit("git -C /w/link/sub restore a.py", "a.py", alias),
+            Some(false)
+        );
+        // A tree-wide call from the alias is about this project.
+        assert_eq!(hit("git reset --hard", "a.py", alias), Some(true));
+        // Only that prefix is rebased: a sibling that shares its spelling is
+        // not, and a directory elsewhere stays elsewhere.
+        assert_eq!(
+            hit("cd /w/linked && git restore a.py", "a.py", alias),
+            Some(false)
+        );
+        assert_eq!(
+            hit("cd /w/other && git restore a.py", "a.py", alias),
+            Some(false)
+        );
+        // A directory already inside the project is never rewritten.
+        let inside = Some(DirAlias {
+            spelled: "/w/proj/sub",
+            real: "/elsewhere",
+        });
+        assert_eq!(
+            restore_targets("git restore a.py", Dialect::Posix)
+                .iter()
+                .map(|t| reaches_via(t, "a.py", Some(ROOT), ROOT, inside))
+                .next()
+                .flatten(),
+            Some(true)
+        );
     }
 
     #[test]

@@ -441,6 +441,7 @@ fn the_delayed_restore_rows_never_change_the_conclusion() {
         let post = Payload {
             command: Some("git restore src/money.py".into()),
             cwd: Some(log.env.project.to_string_lossy().into_owned()),
+            cwd_real: log.env.cwd_real(),
             stdout_tail: Some(String::new()),
             git: git(restored_files.clone()),
             ..Default::default()
@@ -856,6 +857,7 @@ fn a_restore_delivered_twice_is_one_restore() {
             Payload {
                 command: Some("git restore src/a.py".into()),
                 cwd: Some(log.env.project.to_string_lossy().into_owned()),
+                cwd_real: log.env.cwd_real(),
                 stdout_tail: Some(String::new()),
                 git: git(after),
                 ..Default::default()
@@ -1021,4 +1023,154 @@ fn a_dead_end_keeps_every_edit_it_groups() {
     let snap = log.snapshot();
     assert_eq!(snap.dead_ends.len(), 1);
     assert_eq!(snap.dead_ends[0].edit_ids, ids);
+}
+
+// ------------------------------------------- an aliased working directory
+
+/// `link` made a second route to `target`: a symlink, or on Windows a
+/// directory junction (which needs no privilege, unlike a symlink).
+fn alias_dir(target: &std::path::Path, link: &std::path::Path) {
+    #[cfg(unix)]
+    std::os::unix::fs::symlink(target, link).expect("symlink");
+    #[cfg(windows)]
+    {
+        let out = std::process::Command::new("cmd")
+            .arg("/C")
+            .arg("mklink")
+            .arg("/J")
+            .arg(link)
+            .arg(target)
+            .output()
+            .expect("run mklink");
+        assert!(
+            out.status.success(),
+            "mklink /J failed: {}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+    }
+}
+
+/// An `Env` whose session reports the project by another route than its
+/// canonical root: what a macOS runner's `/var` → `/private/var` temp dir and
+/// a Windows runner's `RUNNER~1` 8.3 short name did to CI on 2026-09-25,
+/// reproduced on any machine. Hooks, tool paths and commands all spell the
+/// project through the alias, as Claude Code does when it was started there.
+fn aliased_env() -> Env {
+    let mut env = Env::new();
+    let link = env.dir.path().join("project-link");
+    alias_dir(&env.project, &link);
+    env.project = link;
+    assert_ne!(
+        velra_core::paths::canonical(&env.project).unwrap(),
+        env.project,
+        "the alias must resolve elsewhere, or this test tests nothing"
+    );
+    env
+}
+
+/// A restore run from the project, reported through an alias, is credited to
+/// the command. Before `Payload::cwd_real` the reducer compared the reported
+/// directory lexically with the canonical root, found them apart, and filed
+/// the revert as an unidentified change -- losing the rejected route's cause.
+#[test]
+fn a_restore_from_an_aliased_directory_is_attributed_to_the_command() {
+    let env = aliased_env();
+    env.write_file("a.rs", "a0\n");
+    env.write_file("b.rs", "b0\n");
+    prompt_hook(&env, "change both modules and keep the tests passing");
+    edit_hooks(&env, "t1", "a.rs", "a1\n");
+    edit_hooks(&env, "t2", "b.rs", "b1\n");
+    shell_hooks(
+        &env,
+        "Bash",
+        "t3",
+        "git restore b.rs && python -m pytest -q",
+        |env| {
+            env.write_file("b.rs", "b0\n");
+        },
+        Err("1 failed"),
+    );
+    let edits = edits_after(&env, 7);
+    assert_eq!(
+        edits[0],
+        ("a.rs".into(), "ACTIVE".into(), None),
+        "{edits:?}"
+    );
+    assert_eq!(edits[1].1, "DISCARDED", "{edits:?}");
+    let dead = dead_ends(&env);
+    assert_eq!(dead.len(), 1, "{dead:?}");
+    assert_eq!(dead[0].0, "b.rs", "{dead:?}");
+    assert_eq!(dead[0].2.as_deref(), Some("git restore b.rs"), "{dead:?}");
+
+    // The observation that made it possible is the hook's, taken when the
+    // command ran: the reported directory and what it resolved to.
+    let rows = env.drain_and_load_events(7);
+    let shell = rows
+        .iter()
+        .find(|r| r.hook_event == "PostToolUseFailure")
+        .expect("the shell event")
+        .json();
+    let real = velra_core::paths::canonical(&env.project).unwrap();
+    assert_eq!(
+        shell["cwd_real"].as_str(),
+        Some(velra_core::paths::normalize_abs(&real.to_string_lossy()).as_str()),
+        "{shell}"
+    );
+}
+
+/// The same through an absolute `cd` into the alias, in both dialects.
+#[test]
+fn a_restore_after_a_cd_into_an_aliased_directory_is_attributed() {
+    for (tool, sep) in [("Bash", " && "), ("PowerShell", " ; ")] {
+        let env = aliased_env();
+        env.write_file("a.rs", "a0\n");
+        prompt_hook(&env, "try the change in a.rs, then undo it");
+        edit_hooks(&env, "t1", "a.rs", "a1\n");
+        let project = env.project.to_string_lossy().into_owned();
+        let command = format!("cd \"{project}\"{sep}git restore a.rs");
+        shell_hooks(
+            &env,
+            tool,
+            "t2",
+            &command,
+            |env| {
+                env.write_file("a.rs", "a0\n");
+            },
+            Ok(""),
+        );
+        let edits = edits_after(&env, 5);
+        assert_eq!(edits[0].1, "DISCARDED", "{tool}: {edits:?}");
+        let dead = dead_ends(&env);
+        assert_eq!(dead.len(), 1, "{tool}: {dead:?}");
+        assert_eq!(
+            dead[0].2.as_deref(),
+            Some("git restore a.rs"),
+            "{tool}: {dead:?}"
+        );
+    }
+}
+
+/// An ordinary directory records nothing extra: `cwd_real` is written only
+/// when the two spellings differ.
+#[test]
+fn an_unaliased_directory_records_no_resolution() {
+    let mut env = Env::new();
+    env.project = velra_core::paths::canonical(&env.project).unwrap();
+    env.write_file("a.rs", "a0\n");
+    edit_hooks(&env, "t1", "a.rs", "a1\n");
+    shell_hooks(
+        &env,
+        "Bash",
+        "t2",
+        "git restore a.rs",
+        |env| {
+            env.write_file("a.rs", "a0\n");
+        },
+        Ok(""),
+    );
+    let rows = env.drain_and_load_events(4);
+    for r in rows.iter().filter(|r| r.label() == "Bash") {
+        assert!(r.json().get("cwd_real").is_none(), "{}", r.payload);
+    }
+    assert_eq!(dead_ends(&env).len(), 1);
 }

@@ -210,6 +210,7 @@ fn f5c_a_late_git_pre_row_does_not_resurrect_a_dead_end() {
         Payload {
             command: Some("git restore src/money.py".into()),
             cwd: Some(log.env.project.to_string_lossy().into_owned()),
+            cwd_real: log.env.cwd_real(),
             stdout_tail: Some(String::new()),
             git: Some(GitObservation {
                 restore: Some("git restore src/money.py".into()),

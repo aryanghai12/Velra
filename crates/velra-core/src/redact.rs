@@ -19,7 +19,20 @@ const DETECTORS: &[Detector] = &[
     Detector {
         kind: "private_key",
         literals: &["PRIVATE KEY"],
-        pattern: r"(?s)-----BEGIN [A-Z0-9 ]*PRIVATE KEY-----.*?(?:-----END [A-Z0-9 ]*PRIVATE KEY-----|\z)",
+        // `(?: BLOCK)?`: an armored PGP secret key, `-----BEGIN PGP PRIVATE
+        // KEY BLOCK-----`, which the bare form never matched.
+        pattern: r"(?s)-----BEGIN [A-Z0-9 ]*PRIVATE KEY(?: BLOCK)?-----.*?(?:-----END [A-Z0-9 ]*PRIVATE KEY(?: BLOCK)?-----|\z)",
+        group: None,
+    },
+    Detector {
+        // The end of a key whose `BEGIN` line is not in the text: output kept
+        // from its tail, a prompt examined past its scan bound. Every whole
+        // key is gone by now (the detector above runs first), so an `END`
+        // line left is an orphan, and the base64 lines directly above it are
+        // key material.
+        kind: "private_key",
+        literals: &["-----END"],
+        pattern: r"(?m)(?:^[ \t]*[A-Za-z0-9+/=]+[ \t]*\r?\n)*^[ \t]*[A-Za-z0-9+/=]*[ \t]*\r?\n?-----END [A-Z0-9 ]*PRIVATE KEY(?: BLOCK)?-----",
         group: None,
     },
     Detector {
@@ -89,6 +102,46 @@ const DETECTORS: &[Detector] = &[
         kind: "bearer_token",
         literals: &["bearer"],
         pattern: r"(?i)\bbearer\s+([A-Za-z0-9\-._~+/]{20,}=*)",
+        group: Some(1),
+    },
+    Detector {
+        // `Authorization: Basic <base64 user:password>` (and
+        // `Proxy-Authorization`). The generic rule needs `[:=]` straight
+        // after its key word, which `Authorization:` never gives it.
+        kind: "basic_auth",
+        literals: &["authorization"],
+        pattern: r#"(?i)authorization["']?\s*[:=]\s*["']?basic\s+([A-Za-z0-9+/]{8,}={0,2})"#,
+        group: Some(1),
+    },
+    Detector {
+        // A credential passed as a command-line flag's separate argument,
+        // `--password hunter2` / `--token=…`, which the generic rule (`[:=]`
+        // straight after the key word) misses when a space separates them.
+        // Flags that only name where a credential is (`--token-file`,
+        // `--password-stdin`) are not followed by a space or `=`.
+        kind: "cli_credential",
+        literals: &[
+            "-password",
+            "-passwd",
+            "-token",
+            "-secret",
+            "-api-key",
+            "-apikey",
+        ],
+        // The value must look like a credential rather than a word: it
+        // starts with, or holds, an uppercase letter, a digit or a symbol a
+        // credential uses, or it is a lowercase run of twelve or more. A
+        // prompt that asks to "add a `--password option`." or "implement the
+        // `--token flag`" is the user's task, and redacting its next word
+        // would rewrite it.
+        pattern: r#"(?i)(?:^|\s)--?(?:password|passwd|token|secret|api-?key|auth-token|access-token)(?:\s+|=)["']?(?-i:([A-Z0-9$%@#*&^~+=/\\_][^\s"']*|[a-z][^\s"']*[A-Z0-9$%@#*&^~+=/\\_][^\s"']*|[a-z]{12,}))"#,
+        group: Some(1),
+    },
+    Detector {
+        // `curl -u user:password` / `--user user:password`.
+        kind: "cli_credential",
+        literals: &["curl"],
+        pattern: r#"(?i)\bcurl\b[^\n|;&]*?\s(?:-u|--user)(?:\s+|=)["']?([^\s"':]+:[^\s"']+)"#,
         group: Some(1),
     },
     Detector {
@@ -228,6 +281,85 @@ mod tests {
             redact("API_KEY=abcdef123456 rest"),
             "API_KEY=[REDACTED:generic_secret] rest"
         );
+    }
+
+    /// Phase 9: forms the table did not cover. Each was stored verbatim.
+    #[test]
+    fn detects_the_forms_that_used_to_pass_through() {
+        let pgp = "-----BEGIN PGP PRIVATE KEY BLOCK-----\n\nlQOYBF4xyzSECRETMATERIAL\n=Ab12\n-----END PGP PRIVATE KEY BLOCK-----";
+        assert_eq!(redact(pgp), "[REDACTED:private_key]");
+        // The tail of a key whose BEGIN line was cut away.
+        let orphan = "tail of output\nQWxhZGRpbjpvcGVuIHNlc2FtZQ0123\nMIIEowIBAAKCAQEAsecretkeybody\n-----END RSA PRIVATE KEY-----\nexit 0";
+        let out = redact(orphan);
+        assert_eq!(
+            out, "tail of output\n[REDACTED:private_key]\nexit 0",
+            "{out}"
+        );
+        assert_eq!(
+            redact("  Zm9vYmFy\n  -----END OPENSSH PRIVATE KEY-----"),
+            "[REDACTED:private_key]"
+        );
+        assert_eq!(
+            redact("curl -H 'Authorization: Basic dXNlcjpodW50ZXIyaHVudGVyMg==' https://x"),
+            "curl -H 'Authorization: Basic [REDACTED:basic_auth]' https://x"
+        );
+        assert_eq!(
+            redact("Proxy-Authorization: basic YWRtaW46czNjcjN0"),
+            "Proxy-Authorization: basic [REDACTED:basic_auth]"
+        );
+        for (input, expected) in [
+            (
+                "mysqladmin --password hunter2 status",
+                "mysqladmin --password [REDACTED:cli_credential] status",
+            ),
+            (
+                "gh api --token 'abc123def' /user",
+                "gh api --token '[REDACTED:cli_credential]' /user",
+            ),
+            (
+                "tool -secret s3cr3t",
+                "tool -secret [REDACTED:cli_credential]",
+            ),
+            (
+                "deploy --api-key=k-12345",
+                "deploy --api-key=[REDACTED:cli_credential]",
+            ),
+            (
+                "curl -u admin:hunter2 https://h/api",
+                "curl -u [REDACTED:cli_credential] https://h/api",
+            ),
+            (
+                "curl -s https://h/api --user=ci:t0ps3cret -o out",
+                "curl -s https://h/api --user=[REDACTED:cli_credential] -o out",
+            ),
+        ] {
+            assert_eq!(redact(input), expected, "{input}");
+        }
+    }
+
+    /// The new detectors' neighbours that are not credentials.
+    #[test]
+    fn the_new_detectors_leave_their_neighbours_alone() {
+        for s in [
+            "docker login --password-stdin < pw.txt",
+            "gh auth login --with-token < token.txt",
+            "cargo publish --token-file ~/.cargo/tok",
+            "tool --password --verbose",
+            // A task that names a flag is the user's words, not a secret.
+            "Add a --password option to the CLI.",
+            "implement the --token flag in cli.py",
+            "the --secret sauce, (see --api-key option.)",
+            "document --token (optional) and --password flag-based auth",
+            "git push -u origin main",
+            "docker run -u 1000:1000 image",
+            "curl -u",
+            "Basic setup is described in the README",
+            "Authorization header is required",
+            "-----END CERTIFICATE-----",
+            "the key ends with -----END RSA PRIVATE KEY----- mid-sentence",
+        ] {
+            assert_eq!(redact(s), s, "{s}");
+        }
     }
 
     #[test]

@@ -1142,7 +1142,10 @@ fn recorded_mentions(ctx: &Ctx<'_>) -> Vec<serde_json::Value> {
 /// `PreToolUse` reported, when that event is in the ledger, else its own.
 /// A `cd` inside the command may have moved the directory the post event
 /// reports; pathspecs are relative to where the command began.
-fn command_cwd(ctx: &Ctx<'_>) -> Result<Option<String>> {
+///
+/// With it, what the hook found that directory resolves to, when that was
+/// spelled differently (`Payload::cwd_real`); both come from the same event.
+fn command_cwd(ctx: &Ctx<'_>) -> Result<(Option<String>, Option<String>)> {
     if let Some(id) = ctx.ev.tool_use_id.as_deref() {
         let pre: Option<String> = ctx
             .tx
@@ -1152,11 +1155,13 @@ fn command_cwd(ctx: &Ctx<'_>) -> Result<Option<String>> {
             )?
             .query_row(params![ctx.ev.session_id, id], |r| r.get(0))
             .optional()?;
-        if let Some(cwd) = pre.and_then(|p| Payload::from_json(&p).cwd) {
-            return Ok(Some(cwd));
+        if let Some(p) = pre.map(|p| Payload::from_json(&p)) {
+            if p.cwd.is_some() {
+                return Ok((p.cwd, p.cwd_real));
+            }
         }
     }
-    Ok(ctx.ev.payload.cwd.clone())
+    Ok((ctx.ev.payload.cwd.clone(), ctx.ev.payload.cwd_real.clone()))
 }
 
 fn apply_shell(ctx: &Ctx<'_>, failure: bool) -> Result<()> {
@@ -1246,16 +1251,20 @@ fn apply_shell(ctx: &Ctx<'_>, failure: bool) -> Result<()> {
     } else {
         project_root(ctx.tx, &ctx.ev.project_id)?.map(|r| r.to_string_lossy().into_owned())
     };
-    let cwd = if targets.is_empty() {
-        None
+    let (cwd, cwd_real) = if targets.is_empty() {
+        (None, None)
     } else {
         command_cwd(ctx)?
     };
+    let alias = cwd
+        .as_deref()
+        .zip(cwd_real.as_deref())
+        .map(|(spelled, real)| shell::DirAlias { spelled, real });
     for f in &git.files {
         let reached_by: Option<&str> = root.as_deref().and_then(|root| {
             targets
                 .iter()
-                .find(|t| shell::reaches(t, &f.path, cwd.as_deref(), root) == Some(true))
+                .find(|t| shell::reaches_via(t, &f.path, cwd.as_deref(), root, alias) == Some(true))
                 .map(|t| t.command.as_str())
         });
         if let Some(restore) = reached_by {

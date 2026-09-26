@@ -36,8 +36,12 @@ Options:
 
 **Conventions.** Human output goes to stdout, with `✓` for OK, `!` for a
 warning and `✗` for a failure. Colour is off when stdout is not a terminal
-or `NO_COLOR` is set. `--json` output is pretty-printed JSON on stdout. A
-usage error (unknown flag) exits **2**, with clap's message on stderr.
+or `NO_COLOR` is set. `--json` output is pretty-printed JSON on stdout, and
+stdout carries nothing else: a failure is `{"error": "<message>"}` with exit
+**1**, and a warning that does not stop the command (`Could not catch up the
+reducer: …`) goes to stderr. A usage error (unknown flag) exits **2**, with
+clap's message on stderr. A reader that closes stdout early (`velra doctor |
+head -1`) ends the output quietly; the command keeps its own exit status.
 
 State lives in `$VELRA_HOME` (default `~/.velra`). Commands that act on "this
 workspace" resolve it from the current directory: `$CLAUDE_PROJECT_DIR` if
@@ -62,8 +66,10 @@ Writes Velra's hook handlers into the user-level Claude Code settings file
 (`~/.claude/settings.json`, or `$CLAUDE_CONFIG_DIR/settings.json`; a symlinked
 file is followed). It detects the Claude Code version first and skips hooks
 that version does not support. It backs the file up to
-`~/.velra/backups/settings.json.<timestamp>.bak` before writing, and preserves
-comments, key order and formatting.
+`~/.velra/backups/settings.json.<timestamp>.bak` before writing (byte for
+byte as it was; no backup when there was no file), and preserves comments,
+key order and formatting. A Velra handler registered more than once is
+reduced to one. `--dry-run` writes nothing at all, `$VELRA_HOME` included.
 
 ```
 $ velra enable
@@ -162,7 +168,12 @@ works, Velra assumes the latest version it knows about.
 `last_event_age`, `live_continuations`, `latest_continuation` (`session`,
 `checkpoint`, `state`, `channel`, `attach_count`, `meaning`; `null` when there
 is none), `database_error` (`null`, or why the database will not open),
-`healthy`.
+`workspace_root`, `staged` (`state`: `empty`, `staged`, `claimed`,
+`claimed_interrupted` or `unreadable`, with the `capsule`'s
+`source_session_id`, `tokens`, `summary` and `deliver_on` where there is one,
+and a `meaning`), `legacy_staged`, `healthy`. A claim is not a delivery:
+`claimed` means a starting session took the capsule and it is not yet known
+to have been received.
 
 **Exit:** 0 when healthy (hooks registered, the recorded binary exists, and
 the database opens at this schema), 1 otherwise. This makes it usable in scripts.
@@ -241,6 +252,7 @@ below covers flags and outputs.
 | `velra restore --clear` | discards this workspace's staged capsule |
 | `--json` with `--list`, or without `--session` | the list as JSON |
 | `--json` with `--session` | the staging result as JSON |
+| `--json` with `--clear` | `{"cleared", "workspace_id", "workspace_root"}` |
 
 ### Picker
 
@@ -316,6 +328,8 @@ With `--dry-run --json` the same object has `"staged": false` and no
 | `✗ Could not stage the capsule: …` | the staging directory is not writable | 1 |
 | `✓ Discarded the staged capsule.` / `✓ Nothing was staged.` | `--clear` | 0 |
 
+With `--json`, each failure above is `{"error": "<message>"}` on stdout, same exit.
+
 Staging again replaces the previous capsule for the workspace atomically.
 There is only ever one.
 
@@ -347,11 +361,11 @@ anything.
 |---|---|
 | `velra inspect` | preview for this workspace's most recent session (falls back to the machine's most recent) |
 | `velra inspect --last` | preview for the most recently active session anywhere |
-| `velra inspect --session <id>` | preview for that session |
+| `velra inspect --session <id>` | preview for that session; exit 1 if the ledger never recorded it |
 | `velra inspect --section dead-ends\|failure\|files\|attempts` | untruncated detail behind one capsule section |
 | `velra inspect --checkpoint <id> [--section …]` | a frozen `/compact` checkpoint, byte for byte |
 | `velra inspect --trace <marker> [--trace …]` | where each marker was lost ([Debugging](TROUBLESHOOTING.md#tracing-a-lost-fact-velra-inspect---trace)) |
-| `--json` | the preview (`snapshot_json`), the checkpoint, or the traces as JSON |
+| `--json` | the preview (`snapshot_json`), the checkpoint, the traces, or `{"section", "detail"}` for `--section`, as JSON |
 
 Example, `--section dead-ends`:
 
