@@ -36,7 +36,9 @@ Options:
 
 **Conventions.** Human output goes to stdout, with `✓` for OK, `!` for a
 warning and `✗` for a failure. Colour is off when stdout is not a terminal
-or `NO_COLOR` is set. `--json` output is pretty-printed JSON on stdout, and
+or `NO_COLOR` is set. `--json` output is pretty-printed JSON on stdout, in
+ASCII (other characters are `\u` escapes, so a shell that decodes output with
+its console code page, as PowerShell does, reads the same values), and
 stdout carries nothing else: a failure is `{"error": "<message>"}` with exit
 **1**, and a warning that does not stop the command (`Could not catch up the
 reducer: …`) goes to stderr. A usage error (unknown flag) exits **2**, with
@@ -70,6 +72,12 @@ that version does not support. It backs the file up to
 byte as it was; no backup when there was no file), and preserves comments,
 key order and formatting. A Velra handler registered more than once is
 reduced to one. `--dry-run` writes nothing at all, `$VELRA_HOME` included.
+A UTF-8 byte order mark at the start of the file is kept. The file is
+replaced in one step (a temp file renamed over it), never rewritten in
+place; when Windows refuses the replacement because another program holds
+the file open, it is retried for up to a second, and when it still fails --
+or the file is read-only -- the message names the file and says it is
+unchanged.
 
 ```
 $ velra enable
@@ -161,7 +169,10 @@ proof that a model read it; Claude Code does not acknowledge hook output
 
 `Claude Code:` shows the detected version and how it was found: the `claude`
 CLI, the VS Code extension, or `VELRA_CLAUDE_VERSION`. When none of those
-works, Velra assumes the latest version it knows about.
+works, Velra assumes the latest version it knows about. The `claude` CLI is
+looked for only in the absolute directories on `PATH` (on Windows
+`claude.exe`, `claude.cmd` or `claude.bat`), never in the current directory,
+and is stopped if it has not answered within 3 seconds.
 
 `--json` fields: `enabled`, `handlers`, `expected_handlers`, `binary`,
 `binary_exists`, `claude_code`, `db_path`, `db_bytes`, `sessions`, `events`,

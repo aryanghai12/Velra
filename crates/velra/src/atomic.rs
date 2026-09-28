@@ -14,7 +14,8 @@ fn temp_path(path: &Path) -> PathBuf {
 }
 
 /// Writes `bytes` to `path` atomically, preserving the existing file's
-/// permissions when there is one.
+/// permissions when there is one. On failure `path` is as it was and the
+/// temp file is gone.
 pub fn write(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
     if let Some(dir) = path.parent() {
         if !dir.as_os_str().is_empty() && !dir.is_dir() {
@@ -22,7 +23,7 @@ pub fn write(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
         }
     }
     let tmp = temp_path(path);
-    {
+    let written = (|| {
         let mut opts = std::fs::OpenOptions::new();
         opts.write(true).create(true).truncate(true);
         #[cfg(unix)]
@@ -33,18 +34,17 @@ pub fn write(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
         let mut f = opts.open(&tmp)?;
         f.write_all(bytes)?;
         f.flush()?;
-        f.sync_all()?;
-    }
+        f.sync_all()
+    })();
     #[cfg(unix)]
-    if let Ok(meta) = std::fs::metadata(path) {
-        let _ = std::fs::set_permissions(&tmp, meta.permissions());
-    }
-    match std::fs::rename(&tmp, path) {
-        Ok(()) => {}
-        Err(e) => {
-            let _ = std::fs::remove_file(&tmp);
-            return Err(e);
+    if written.is_ok() {
+        if let Ok(meta) = std::fs::metadata(path) {
+            let _ = std::fs::set_permissions(&tmp, meta.permissions());
         }
+    }
+    if let Err(e) = written.and_then(|()| replace(&tmp, path)) {
+        let _ = std::fs::remove_file(&tmp);
+        return Err(e);
     }
     #[cfg(unix)]
     if let Some(dir) = path.parent() {
@@ -53,6 +53,46 @@ pub fn write(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
         }
     }
     Ok(())
+}
+
+/// How long a replacement another program is blocking is retried.
+#[cfg(windows)]
+const REPLACE_RETRY: std::time::Duration = std::time::Duration::from_secs(1);
+
+/// `rename(tmp, path)`, retried on Windows while another program holds
+/// `path` open without delete sharing -- an editor saving it, a virus
+/// scanner or the search indexer reading it. Windows refuses the rename then
+/// (access denied, a sharing or lock violation) where POSIX would not, and
+/// the holder usually lets go within milliseconds. A read-only file is
+/// refused the same way and is not retried: it will not change.
+fn replace(tmp: &Path, path: &Path) -> std::io::Result<()> {
+    #[cfg(windows)]
+    {
+        let deadline = std::time::Instant::now() + REPLACE_RETRY;
+        loop {
+            match std::fs::rename(tmp, path) {
+                Err(e) if is_held_open(&e, path) && std::time::Instant::now() < deadline => {
+                    std::thread::sleep(std::time::Duration::from_millis(20));
+                }
+                r => return r,
+            }
+        }
+    }
+    #[cfg(not(windows))]
+    std::fs::rename(tmp, path)
+}
+
+/// `ERROR_ACCESS_DENIED`, `ERROR_SHARING_VIOLATION` or `ERROR_LOCK_VIOLATION`
+/// on a file that is not read-only.
+#[cfg(windows)]
+fn is_held_open(e: &std::io::Error, path: &Path) -> bool {
+    matches!(e.raw_os_error(), Some(5 | 32 | 33)) && !is_read_only(path)
+}
+
+/// Whether `path` carries the read-only attribute (Windows) or has no write
+/// permission bit (POSIX).
+pub fn is_read_only(path: &Path) -> bool {
+    std::fs::metadata(path).is_ok_and(|m| m.permissions().readonly())
 }
 
 /// Writes a new file and fsyncs it (used for backups).

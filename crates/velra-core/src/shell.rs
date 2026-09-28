@@ -54,8 +54,13 @@ pub fn subcommand_ranges(cmd: &str) -> Vec<(usize, usize)> {
             b'\\' => {
                 // A backslash escapes the next byte in POSIX shells; it is a
                 // plain path separator in PowerShell. Only skip when it
-                // escapes a separator or quote.
-                if matches!(b.get(i + 1), Some(b'&' | b'|' | b';' | b'\'' | b'"')) {
+                // escapes a separator or quote -- or a newline, where it is a
+                // line continuation, not the end of the command. (Before a
+                // CRLF it escapes the CR, and the LF does end the command.)
+                if matches!(
+                    b.get(i + 1),
+                    Some(b'&' | b'|' | b';' | b'\'' | b'"' | b'\n')
+                ) {
                     i += 2;
                 } else {
                     i += 1;
@@ -112,12 +117,19 @@ pub fn tokenize(s: &str) -> Vec<String> {
                 while let Some(q) = chars.next() {
                     match q {
                         '"' => break,
+                        '\\' if chars.peek() == Some(&'\n') => {
+                            chars.next();
+                        }
                         '\\' if matches!(chars.peek(), Some('"' | '\\' | '$' | '`')) => {
                             cur.push(chars.next().unwrap_or('\\'));
                         }
                         _ => cur.push(q),
                     }
                 }
+            }
+            // A line continuation: the shell removes both characters.
+            '\\' if chars.peek() == Some(&'\n') => {
+                chars.next();
             }
             c if c.is_whitespace() => {
                 if in_word {
@@ -326,6 +338,14 @@ pub fn git_effects(cmd: &str, is_file: &dyn Fn(&str) -> bool) -> GitEffects {
     git_effects_in(cmd, Dialect::Posix, is_file)
 }
 
+/// Whether `cmd` could name git at all. Executable lookup ignores case on
+/// Windows and on a default macOS volume, so `GIT restore x` runs git there.
+fn mentions_git(cmd: &str) -> bool {
+    cmd.as_bytes()
+        .windows(3)
+        .any(|w| w.eq_ignore_ascii_case(b"git"))
+}
+
 /// [`git_effects`] for a command line written for `dialect`.
 ///
 /// `is_file` is asked about a `git checkout` argument joined to the directory
@@ -334,7 +354,7 @@ pub fn git_effects(cmd: &str, is_file: &dyn Fn(&str) -> bool) -> GitEffects {
 pub fn git_effects_in(cmd: &str, dialect: Dialect, is_file: &dyn Fn(&str) -> bool) -> GitEffects {
     let mut fx = GitEffects::default();
     // Fast reject: no "git" substring means no git subcommand.
-    if !cmd.contains("git") {
+    if !mentions_git(cmd) {
         return fx;
     }
     for call in git_calls(cmd, dialect) {
@@ -399,6 +419,16 @@ pub fn subcommand_ranges_in(cmd: &str, dialect: Dialect) -> Vec<(usize, usize)> 
             parts.push((from + lead, from + lead + trimmed.len()));
         }
     };
+    // An escape takes the next character with it; before a CRLF it takes
+    // both, a line continuation in PowerShell and cmd alike, so the LF does
+    // not end the command.
+    let escaped_len = |i: usize| {
+        if b.get(i + 1) == Some(&b'\r') && b.get(i + 2) == Some(&b'\n') {
+            3
+        } else {
+            2
+        }
+    };
     let (mut start, mut i) = (0usize, 0usize);
     let (mut single, mut double) = (false, false);
     while i < b.len() {
@@ -410,7 +440,7 @@ pub fn subcommand_ranges_in(cmd: &str, dialect: Dialect) -> Vec<(usize, usize)> 
         }
         if double {
             if c == escape && dialect == Dialect::PowerShell {
-                i = (i + 2).min(b.len());
+                i = (i + escaped_len(i)).min(b.len());
                 continue;
             }
             double = c != b'"';
@@ -419,7 +449,7 @@ pub fn subcommand_ranges_in(cmd: &str, dialect: Dialect) -> Vec<(usize, usize)> 
         }
         match c {
             _ if c == escape => {
-                i = (i + 2).min(b.len());
+                i = (i + escaped_len(i)).min(b.len());
                 continue;
             }
             b'\'' if dialect == Dialect::PowerShell => single = true,
@@ -475,9 +505,19 @@ pub fn tokenize_in(s: &str, dialect: Dialect) -> Vec<String> {
     let mut words = Vec::new();
     let mut cur = String::new();
     let mut in_word = false;
-    let mut chars = s.chars();
+    let mut chars = s.chars().peekable();
     while let Some(c) = chars.next() {
         match c {
+            // A line continuation separates words; it is not one.
+            _ if c == escape && matches!(chars.peek(), Some('\n' | '\r')) => {
+                if chars.next() == Some('\r') && chars.peek() == Some(&'\n') {
+                    chars.next();
+                }
+                if in_word {
+                    words.push(std::mem::take(&mut cur));
+                    in_word = false;
+                }
+            }
             '\'' if dialect == Dialect::PowerShell => {
                 in_word = true;
                 for q in chars.by_ref() {
@@ -687,9 +727,13 @@ fn nested_script(exe: &str, words: &[String]) -> Option<(String, Dialect)> {
             Some((words.get(i + 1)?.clone(), Dialect::Posix))
         }
         "cmd" => {
-            let i = words
-                .iter()
-                .position(|w| w.eq_ignore_ascii_case("/c") || w.eq_ignore_ascii_case("/k"))?;
+            // Git Bash converts a lone `/c` to a path, so `cmd //c` is how a
+            // POSIX line spells it there.
+            let i = words.iter().position(|w| {
+                ["/c", "/k", "//c", "//k"]
+                    .iter()
+                    .any(|f| w.eq_ignore_ascii_case(f))
+            })?;
             Some((rejoin(&words[i + 1..]), Dialect::Cmd))
         }
         "powershell" | "pwsh" => {
@@ -783,7 +827,7 @@ pub struct RestoreTarget {
 /// `git checkout <x>` whose `x` was a file when the hook ran is recognised
 /// then, and here every non-option argument is a candidate pathspec.
 pub fn restore_targets(cmd: &str, dialect: Dialect) -> Vec<RestoreTarget> {
-    if !cmd.contains("git") {
+    if !mentions_git(cmd) {
         return Vec::new();
     }
     git_calls(cmd, dialect)
@@ -839,7 +883,8 @@ fn reach_of(g: &GitInvocation) -> Reach {
         let expanded = |s: &String| s.contains(['$', '`', '%']) || s.starts_with('~');
         // Pathspec magic other than "the top of the tree".
         let magic = |s: &String| s.starts_with(':') && s != ":/" && s != ":";
-        if v.is_empty() {
+        // Git refuses an empty pathspec, and with it the whole call.
+        if v.is_empty() || v.iter().any(String::is_empty) {
             Reach::Nothing
         } else if v.iter().any(|s| expanded(s) || magic(s)) {
             Reach::Unknown
@@ -1559,5 +1604,133 @@ mod tests {
                 }
             }
         }
+    }
+
+    /// Line continuations and spellings each shell has of its own. Before:
+    /// a POSIX `\`+LF split the restore from its pathspec, so the restore
+    /// reached nothing; a PowerShell backtick or cmd caret before CRLF left an
+    /// empty pathspec that reached every file (an unrelated file was credited
+    /// as reverted); `GIT` and Git Bash's `cmd //c` were not seen at all.
+    #[test]
+    fn continuations_and_spellings_per_shell() {
+        const WROOT: &str = "C:/w/proj";
+        let win = |cmd: &str, d: Dialect, file: &str| {
+            let targets = restore_targets(cmd, d);
+            assert!(!targets.is_empty(), "{cmd:?} under {d:?}: no restore seen");
+            targets
+                .iter()
+                .map(|t| reaches(t, file, Some("C:\\w\\proj"), WROOT))
+                .find(|r| *r != Some(false))
+                .unwrap_or(Some(false))
+        };
+        for (cmd, d) in [
+            ("git restore \\\n  src/a.py", Dialect::Posix),
+            ("git restore \"\\\n\"src/a.py", Dialect::Posix),
+            ("git restore `\n  src/a.py", Dialect::PowerShell),
+            ("git restore `\r\n  src/a.py", Dialect::PowerShell),
+            ("git restore ^\r\n  src/a.py", Dialect::Cmd),
+            ("git restore ^\n  src/a.py", Dialect::Cmd),
+        ] {
+            assert_eq!(win(cmd, d, "src/a.py"), Some(true), "{cmd:?} {d:?}");
+            assert_eq!(win(cmd, d, "src/b.py"), Some(false), "{cmd:?} {d:?}");
+        }
+        assert_eq!(
+            tokenize("git restore \\\n  src/a.py"),
+            ["git", "restore", "src/a.py"]
+        );
+        assert_eq!(
+            tokenize_in("git restore `\r\n  src/a.py", Dialect::PowerShell),
+            ["git", "restore", "src/a.py"]
+        );
+        assert_eq!(
+            split_subcommands_in("git restore `\r\n  a.py\r\npytest", Dialect::PowerShell),
+            ["git restore `\r\n  a.py", "pytest"]
+        );
+        // In bash a `\` before CRLF escapes the CR, and the LF ends the
+        // command: git is handed a pathspec of "\r" and restores nothing.
+        assert_eq!(
+            win("git restore \\\r\n  src/a.py", Dialect::Posix, "src/a.py"),
+            Some(false)
+        );
+        // Git refuses an empty pathspec, and the whole call with it.
+        assert_eq!(
+            win("git restore \"\" src/a.py", Dialect::Posix, "src/b.py"),
+            Some(false)
+        );
+        assert_eq!(
+            win("git restore '' src/a.py", Dialect::PowerShell, "src/a.py"),
+            Some(false)
+        );
+        // Executable lookup ignores case on Windows.
+        assert_eq!(
+            win("GIT restore src/a.py", Dialect::Cmd, "src/a.py"),
+            Some(true)
+        );
+        assert_eq!(
+            win("Git restore src/a.py", Dialect::PowerShell, "src/a.py"),
+            Some(true)
+        );
+        assert!(
+            git_effects_in("Git.exe reset --hard", Dialect::PowerShell, &no_files)
+                .restore
+                .is_some()
+        );
+        // Git Bash spells `cmd /c` as `cmd //c`.
+        assert_eq!(
+            win(
+                "cmd //c \"cd sub && git restore a.py\"",
+                Dialect::Posix,
+                "sub/a.py"
+            ),
+            Some(true)
+        );
+        assert_eq!(
+            win(
+                "cmd.exe //C \"git restore src/a.py\"",
+                Dialect::Posix,
+                "src/a.py"
+            ),
+            Some(true)
+        );
+        // Each shell's own directory change, followed where it is spelled.
+        for (cmd, d) in [
+            (
+                r"Set-Location -LiteralPath 'C:\w\proj\sub'; git restore a.py",
+                Dialect::PowerShell,
+            ),
+            (r"cd /D C:\w\proj\sub && git restore a.py", Dialect::Cmd),
+            ("cd /c/w/proj/sub && git restore a.py", Dialect::Posix),
+            (r"cd 'C:\w\proj\sub' && git restore a.py", Dialect::Posix),
+            (
+                "pwsh -NoProfile -Command \"cd sub; git restore a.py\"",
+                Dialect::Posix,
+            ),
+            (
+                r"& 'C:\Program Files\Git\cmd\git.exe' -C sub restore a.py",
+                Dialect::PowerShell,
+            ),
+        ] {
+            assert_eq!(win(cmd, d, "sub/a.py"), Some(true), "{cmd:?} {d:?}");
+            assert_eq!(win(cmd, d, "a.py"), Some(false), "{cmd:?} {d:?}");
+        }
+        // Paths compare without regard to case on Windows only.
+        let folded = r"cd c:\W\PROJ\SUB; git restore A.py";
+        assert_eq!(
+            win(folded, Dialect::PowerShell, "sub/a.py"),
+            Some(cfg!(windows))
+        );
+        // Backslash pathspecs, as PowerShell and cmd users type them.
+        assert_eq!(
+            win(r"git restore .\src\a.py", Dialect::PowerShell, "src/a.py"),
+            Some(true)
+        );
+        assert_eq!(
+            win(r"git checkout -- src\a.py", Dialect::Cmd, "src/a.py"),
+            Some(true)
+        );
+        assert_eq!(
+            win(r"git restore src\a.py", Dialect::PowerShell, "src/b.py"),
+            Some(false)
+        );
     }
 }

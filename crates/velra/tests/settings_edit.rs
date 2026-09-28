@@ -654,11 +654,11 @@ fn malformed_settings_fail_safely_or_round_trip() {
 fn a_settings_file_that_cannot_be_written_is_left_intact() {
     let env = Env::new();
     write_settings(&env, NO_HOOKS_KEY);
-    let target = env.settings_path();
     // Windows refuses to replace a read-only file; POSIX checks the
     // directory, so that is what is made read-only there.
     #[cfg(windows)]
     let restore = {
+        let target = env.settings_path();
         let mut p = std::fs::metadata(&target).unwrap().permissions();
         p.set_readonly(true);
         std::fs::set_permissions(&target, p).unwrap();

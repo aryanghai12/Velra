@@ -120,7 +120,13 @@ impl HookInput<'_> {
 }
 
 /// Parses hook input; `None` when the JSON itself is unusable.
+///
+/// A leading UTF-8 byte order mark is ignored (RFC 8259 §8.1 allows it).
+/// Claude Code sends none, but a payload piped from a file written by a
+/// Windows tool carries one (`type payload.json | velra hook …`), and the
+/// event was dropped.
 pub fn parse(raw: &[u8]) -> Option<HookInput<'_>> {
+    let raw = raw.strip_prefix(b"\xef\xbb\xbf").unwrap_or(raw);
     serde_json::from_slice(raw).ok()
 }
 

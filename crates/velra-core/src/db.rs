@@ -3,7 +3,7 @@
 
 use rusqlite::{Connection, ErrorCode, OpenFlags, OptionalExtension};
 use std::path::{Path, PathBuf};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 /// Schema version stored in `PRAGMA user_version`.
 pub const SCHEMA_VERSION: i64 = 3;
@@ -308,7 +308,7 @@ impl Db {
         // Before `migrate` turns on WAL: SQLite derives the -wal and -shm modes
         // from the database file, so tightening it here makes them private too.
         make_private(path);
-        conn.busy_timeout(role.busy_timeout())?;
+        set_busy_budget(&conn, role.busy_timeout())?;
         conn.execute_batch(
             "PRAGMA synchronous = NORMAL; PRAGMA temp_store = MEMORY; PRAGMA foreign_keys = OFF; \
              PRAGMA journal_size_limit = 67108864;",
@@ -333,13 +333,71 @@ impl Db {
             path,
             OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX,
         )?;
-        conn.busy_timeout(Role::Cli.busy_timeout())?;
+        set_busy_budget(&conn, Role::Cli.busy_timeout())?;
         Ok(Db {
             conn,
             path: path.to_path_buf(),
             rotated_corrupt: None,
         })
     }
+}
+
+/// Waits on a lock for at most `budget` of elapsed time.
+///
+/// `busy_timeout` installs SQLite's own handler, which sleeps a schedule of
+/// short delays (1, 2, 5, 10 ms, …) and stops once the delays it *asked for*
+/// add up to the timeout. Windows rounds every sleep up to its timer tick
+/// (15.6 ms, measured: `measure_sqlite_sleep_against_its_busy_schedule`), so
+/// a 100 ms hook budget cost 171 ms of waiting, 50 ms cost 109 ms. This
+/// handler keeps the same schedule and counts the clock instead: it overruns
+/// by at most the one sleep in progress at the deadline.
+pub fn set_busy_budget(conn: &Connection, budget: Duration) -> rusqlite::Result<()> {
+    // A handler is a plain `fn`, so each budget in use has its own.
+    let handler: fn(i32) -> bool = match budget.as_millis() {
+        50 => busy::<50>,
+        100 => busy::<100>,
+        200 => busy::<200>,
+        1_000 => busy::<1_000>,
+        5_000 => busy::<5_000>,
+        _ => return conn.busy_timeout(budget),
+    };
+    conn.busy_handler(Some(handler))
+}
+
+fn busy<const MS: u64>(count: i32) -> bool {
+    busy_wait(count, Duration::from_millis(MS))
+}
+
+thread_local! {
+    /// When the wait in progress on this thread began. A busy handler runs
+    /// inside the call that met the lock, so a thread has one at a time.
+    static BUSY_SINCE: std::cell::Cell<Option<Instant>> = const { std::cell::Cell::new(None) };
+}
+
+/// SQLite's delay schedule (`sqliteDefaultBusyCallback`).
+const BUSY_STEPS_MS: [u64; 12] = [1, 2, 5, 10, 15, 20, 25, 25, 25, 50, 50, 100];
+
+/// `count` is how many times SQLite has already called the handler for this
+/// lock; 0 starts a new wait.
+fn busy_wait(count: i32, budget: Duration) -> bool {
+    let now = Instant::now();
+    let since = BUSY_SINCE.with(|c| {
+        let since = match c.get() {
+            Some(t) if count > 0 => t,
+            _ => now,
+        };
+        c.set(Some(since));
+        since
+    });
+    let left = budget.saturating_sub(now.duration_since(since));
+    if left.is_zero() {
+        return false;
+    }
+    let step = BUSY_STEPS_MS[usize::try_from(count)
+        .unwrap_or(0)
+        .min(BUSY_STEPS_MS.len() - 1)];
+    std::thread::sleep(left.min(Duration::from_millis(step)));
+    true
 }
 
 pub fn user_version(conn: &Connection) -> rusqlite::Result<i64> {
@@ -353,7 +411,7 @@ pub fn journal_mode(conn: &Connection) -> rusqlite::Result<String> {
 fn migrate(conn: &Connection, from: i64, role: Role) -> Result<()> {
     // Hooks may migrate only if they get the lock within 200 ms (§10.5).
     if role.is_hook() {
-        conn.busy_timeout(Duration::from_millis(200))?;
+        set_busy_budget(conn, Duration::from_millis(200))?;
     }
     if from == 0 {
         // Persistent; issued only when the database is created (§10.2).
@@ -382,7 +440,7 @@ fn migrate(conn: &Connection, from: i64, role: Role) -> Result<()> {
             return Err(e);
         }
     }
-    conn.busy_timeout(role.busy_timeout())?;
+    set_busy_budget(conn, role.busy_timeout())?;
     Ok(())
 }
 
@@ -420,6 +478,58 @@ pub fn cursor(conn: &Connection) -> rusqlite::Result<i64> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A role's lock budget is elapsed time. With SQLite's own handler it was
+    /// the sum of the sleeps requested: on Windows, where each is rounded up
+    /// to a 15.6 ms tick, the 50 ms pre-compact budget waited 109 ms and the
+    /// 100 ms hook budget 171 ms (measured). The median of five waits is
+    /// compared, so one slow wake-up on a loaded runner does not decide it.
+    #[test]
+    fn a_locked_database_is_waited_on_for_the_role_budget_and_no_longer() {
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path().join("v.db");
+        drop(Db::open(&p, Role::Cli).unwrap());
+        let holder = Db::open(&p, Role::Cli).unwrap();
+        holder.conn.execute_batch("BEGIN IMMEDIATE").unwrap();
+        for (role, budget_ms) in [(Role::PreCompact, 50u128), (Role::HookAppend, 100)] {
+            let db = Db::open(&p, role).unwrap();
+            let mut waits: Vec<u128> = (0..5)
+                .map(|_| {
+                    let started = Instant::now();
+                    let r = db.conn.execute_batch("BEGIN IMMEDIATE");
+                    let waited = started.elapsed().as_millis();
+                    assert!(r.is_err(), "the lock is held");
+                    waited
+                })
+                .collect();
+            waits.sort_unstable();
+            let median = waits[2];
+            assert!(median >= budget_ms - 5, "{role:?} gave up early: {waits:?}");
+            assert!(
+                median < budget_ms + 25,
+                "{role:?} waited past its {budget_ms} ms budget: {waits:?}"
+            );
+        }
+        holder.conn.execute_batch("ROLLBACK").unwrap();
+    }
+
+    /// A lock released during the wait is taken.
+    #[test]
+    fn a_lock_released_during_the_wait_is_taken() {
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path().join("v.db");
+        drop(Db::open(&p, Role::Cli).unwrap());
+        let holder = Db::open(&p, Role::Cli).unwrap();
+        holder.conn.execute_batch("BEGIN IMMEDIATE").unwrap();
+        let path = p.clone();
+        let waiter = std::thread::spawn(move || {
+            let db = Db::open(&path, Role::Reduce).unwrap();
+            db.conn.execute_batch("BEGIN IMMEDIATE; ROLLBACK")
+        });
+        std::thread::sleep(Duration::from_millis(100));
+        holder.conn.execute_batch("ROLLBACK").unwrap();
+        assert!(waiter.join().unwrap().is_ok());
+    }
 
     #[test]
     fn creates_schema_in_wal_mode_and_reopens() {

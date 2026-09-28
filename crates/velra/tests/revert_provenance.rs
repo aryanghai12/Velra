@@ -575,6 +575,71 @@ fn a_restore_inside_a_shell_wrapper_is_observed_and_attributed() {
     assert_eq!(dead[0].2.as_deref(), Some("git restore a.py"), "{dead:?}");
 }
 
+/// A restore written across two lines with a POSIX line continuation is one
+/// command. Before, the line was split at the newline: the restore's only
+/// pathspec was `\`, it reached nothing, and the revert it made was filed as
+/// "reverted by an unidentified change".
+#[test]
+fn a_restore_continued_onto_the_next_line_is_attributed() {
+    let env = Env::new();
+    env.write_file("src/a.py", "v0\n");
+    prompt_hook(&env, "try the change in src/a.py, then undo it");
+    edit_hooks(&env, "t1", "src/a.py", "v1\n");
+    shell_hooks(
+        &env,
+        "Bash",
+        "t2",
+        "git restore \\\n  src/a.py && python -m pytest -q",
+        |env| {
+            env.write_file("src/a.py", "v0\n");
+        },
+        Err("FAILED tests/test_a.py::test_a - assert 0\n1 failed"),
+    );
+    let edits = edits_after(&env, 5);
+    assert_eq!(
+        edits,
+        vec![(
+            "src/a.py".into(),
+            "DISCARDED".into(),
+            Some("git_command".into())
+        )]
+    );
+}
+
+/// A PowerShell backtick before a CRLF continues the line. Before, the CR
+/// was taken as escaped and the LF split the command: the restore was left
+/// with an empty pathspec, which matched every file, so `a.rs` -- put back by
+/// another subcommand -- was credited to git as well.
+#[test]
+fn a_powershell_continuation_does_not_credit_the_restore_with_every_file() {
+    let env = Env::new();
+    env.write_file("a.rs", "a0\n");
+    env.write_file("b.rs", "b0\n");
+    prompt_hook(&env, "change both modules and keep the tests passing");
+    edit_hooks(&env, "t1", "a.rs", "a1\n");
+    edit_hooks(&env, "t2", "b.rs", "b1\n");
+    shell_hooks(
+        &env,
+        "PowerShell",
+        "t3",
+        "Copy-Item backup\\a.rs a.rs ; git restore `\r\n  b.rs",
+        |env| {
+            env.write_file("a.rs", "a0\n");
+            env.write_file("b.rs", "b0\n");
+        },
+        Ok(""),
+    );
+    stop_hook(&env);
+    edits_after(&env, 8);
+    let mut dead = dead_ends(&env);
+    dead.sort();
+    assert_eq!(dead.len(), 2, "{dead:?}");
+    assert_eq!(dead[0].0, "a.rs");
+    assert_eq!(dead[0].1, "external", "a.rs is not the restore's: {dead:?}");
+    assert_eq!(dead[1].0, "b.rs");
+    assert_eq!(dead[1].1, "git_command", "{dead:?}");
+}
+
 /// A restore run in some other checkout cannot have changed this project's
 /// file, even when the file did change across the command.
 #[test]

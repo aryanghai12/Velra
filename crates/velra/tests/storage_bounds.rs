@@ -90,6 +90,51 @@ fn measure_locked_append_is_bounded_by_the_role_budget() {
     assert!(max < 400.0);
 }
 
+/// What SQLite's own busy handler sleeps for a 100 ms timeout -- its delay
+/// schedule (1, 2, 5, 10, 15, 20, 25, then what is left) -- requested one call
+/// at a time through `sqlite3_sleep`, and how long each call really took.
+/// The sum is what a locked append can cost, whatever the timeout says.
+#[test]
+#[ignore]
+fn measure_sqlite_sleep_against_its_busy_schedule() {
+    let schedule = [1, 2, 5, 10, 15, 20, 25, 22];
+    let mut rounds = Vec::new();
+    for _ in 0..5 {
+        let mut per_call = Vec::new();
+        let s = Instant::now();
+        for requested in schedule {
+            let c = Instant::now();
+            // SAFETY: sqlite3_sleep takes a millisecond count and has no
+            // other preconditions.
+            unsafe { rusqlite::ffi::sqlite3_sleep(requested) };
+            per_call.push(ms(c.elapsed()));
+        }
+        rounds.push(ms(s.elapsed()));
+        println!(
+            "requested {:?} (sum {} ms) took {:?} ms",
+            schedule,
+            schedule.iter().sum::<i32>(),
+            per_call
+                .iter()
+                .map(|m| m.round() as i64)
+                .collect::<Vec<_>>()
+        );
+    }
+    let one: Vec<f64> = (0..20)
+        .map(|_| {
+            let c = Instant::now();
+            unsafe { rusqlite::ffi::sqlite3_sleep(1) };
+            ms(c.elapsed())
+        })
+        .collect();
+    println!(
+        "sqlite3_sleep(1) x20: p50 {:.2} ms, max {:.2} ms; schedule total p50 {:.1} ms",
+        pct(one.clone(), 0.5),
+        pct(one, 1.0),
+        pct(rounds, 0.5)
+    );
+}
+
 #[test]
 #[ignore]
 fn measure_spool_append_and_replay() {

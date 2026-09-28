@@ -166,6 +166,11 @@ pub enum SettingsError {
     NotAnObject(PathBuf),
     Verify(String),
     Concurrent,
+    /// The edited file could not be put in place; the file is as it was.
+    Replace {
+        path: PathBuf,
+        source: std::io::Error,
+    },
     Io(std::io::Error),
 }
 
@@ -192,6 +197,20 @@ impl std::fmt::Display for SettingsError {
                 f,
                 "the settings file was modified concurrently; no changes made"
             ),
+            SettingsError::Replace { path, source } => {
+                let why = if crate::atomic::is_read_only(path) {
+                    " (the file is read-only)"
+                } else if cfg!(windows) && matches!(source.raw_os_error(), Some(5 | 32 | 33)) {
+                    " (another program has it open)"
+                } else {
+                    ""
+                };
+                write!(
+                    f,
+                    "Could not replace {}: {source}{why}. The file is unchanged.",
+                    path.display()
+                )
+            }
             SettingsError::Io(e) => write!(f, "{e}"),
         }
     }
@@ -1015,6 +1034,20 @@ pub struct Outcome {
     pub target: PathBuf,
 }
 
+/// A UTF-8 byte order mark. Windows PowerShell 5 (`Out-File -Encoding utf8`,
+/// `Set-Content -Encoding UTF8`) and older Notepad write one; JSON parsers,
+/// ours included, reject it as an unexpected token at line 1, column 1.
+const BOM: &str = "\u{feff}";
+
+/// `text` without a leading byte order mark, and the mark, so that an edit
+/// can put back exactly what it read.
+pub fn split_bom(text: &str) -> (&str, &str) {
+    match text.strip_prefix(BOM) {
+        Some(rest) => (BOM, rest),
+        None => ("", text),
+    }
+}
+
 fn read_or_empty(path: &Path) -> std::io::Result<(String, bool)> {
     match std::fs::read_to_string(path) {
         Ok(t) => Ok((t, false)),
@@ -1076,6 +1109,7 @@ fn write_change(
     on_disk: Option<&str>,
     base: &str,
     updated: &str,
+    bom: &str,
 ) -> Result<Option<PathBuf>> {
     verify_semantics(base, updated)?;
     let backup_path = match on_disk {
@@ -1088,7 +1122,12 @@ fn write_change(
             return Err(SettingsError::Concurrent);
         }
     }
-    crate::atomic::write(target, updated.as_bytes())?;
+    crate::atomic::write(target, format!("{bom}{updated}").as_bytes()).map_err(|source| {
+        SettingsError::Replace {
+            path: target.to_path_buf(),
+            source,
+        }
+    })?;
     Ok(backup_path)
 }
 
@@ -1103,10 +1142,11 @@ pub fn enable(
     let target = resolve_target(settings);
     for attempt in 0..3 {
         let (original, missing) = read_or_empty(&target)?;
-        let base = if missing || original.trim().is_empty() {
+        let (bom, body) = split_bom(&original);
+        let base = if missing || body.trim().is_empty() {
             "{}\n".to_string()
         } else {
-            original.clone()
+            body.to_string()
         };
         let (updated, changes) = apply_enable(&base, bin, features, &target)?;
         let mut outcome = Outcome {
@@ -1126,7 +1166,7 @@ pub fn enable(
             return Ok(outcome);
         }
         let on_disk = (!missing).then_some(original.as_str());
-        match write_change(&target, home, on_disk, &base, &updated) {
+        match write_change(&target, home, on_disk, &base, &updated, bom) {
             Ok(path) => {
                 outcome.backup = path;
                 return Ok(outcome);
@@ -1154,22 +1194,23 @@ pub fn disable(
                 ..Default::default()
             });
         }
-        let (updated, changes) = apply_disable(&original, remove_hooks_key, &target)?;
+        let (bom, body) = split_bom(&original);
+        let (updated, changes) = apply_disable(body, remove_hooks_key, &target)?;
         let mut outcome = Outcome {
-            changed: updated != original,
+            changed: updated != body,
             changes,
-            hooks_existed_before: has_hooks_key(&original),
+            hooks_existed_before: has_hooks_key(body),
             target: target.clone(),
             ..Default::default()
         };
         if dry_run {
-            outcome.diff = Some(diff(&original, &updated, &target));
+            outcome.diff = Some(diff(body, &updated, &target));
             return Ok(outcome);
         }
         if !outcome.changed {
             return Ok(outcome);
         }
-        match write_change(&target, home, Some(&original), &original, &updated) {
+        match write_change(&target, home, Some(&original), body, &updated, bom) {
             Ok(path) => {
                 outcome.backup = path;
                 return Ok(outcome);
@@ -1186,6 +1227,7 @@ pub type InstalledHandler = (String, Vec<String>, Option<String>);
 
 /// Velra handlers currently registered in a settings file.
 pub fn installed_handlers(text: &str) -> Vec<InstalledHandler> {
+    let text = split_bom(text).1;
     let Ok(result) = parse_to_ast(text, &CollectOptions::default(), &parse_options()) else {
         return Vec::new();
     };
@@ -1240,8 +1282,15 @@ mod tests {
         let (updated, _) = apply_enable(read_earlier, "/bin/velra", &features, &target).unwrap();
         // Another writer lands between the read and the write.
         std::fs::write(&target, "{\"model\": \"b\"}\n").unwrap();
-        let err =
-            write_change(&target, &home, Some(read_earlier), read_earlier, &updated).unwrap_err();
+        let err = write_change(
+            &target,
+            &home,
+            Some(read_earlier),
+            read_earlier,
+            &updated,
+            "",
+        )
+        .unwrap_err();
         assert!(matches!(err, SettingsError::Concurrent), "{err}");
         assert_eq!(
             std::fs::read_to_string(&target).unwrap(),

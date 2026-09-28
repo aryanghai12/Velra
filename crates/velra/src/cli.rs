@@ -58,16 +58,95 @@ macro_rules! print {
     };
 }
 
+/// A `--json` document: pretty-printed, and ASCII only -- every other
+/// character is written as a `\u` escape. The values are the same; what
+/// changes is that no shell can misread them. PowerShell decodes a program's
+/// output with the console code page (437 on a default US install), so a
+/// workspace root `proj é 日本` reached `ConvertFrom-Json` as other text
+/// (reproduced under PowerShell 7.6 and 5.1).
+fn json_text<T: serde::Serialize + ?Sized>(value: &T) -> serde_json::Result<String> {
+    let mut out = Vec::new();
+    let formatter = AsciiPretty(serde_json::ser::PrettyFormatter::new());
+    value.serialize(&mut serde_json::Serializer::with_formatter(
+        &mut out, formatter,
+    ))?;
+    Ok(String::from_utf8_lossy(&out).into_owned())
+}
+
+/// [`serde_json::ser::PrettyFormatter`] with non-ASCII string content
+/// escaped.
+struct AsciiPretty<'a>(serde_json::ser::PrettyFormatter<'a>);
+
+impl serde_json::ser::Formatter for AsciiPretty<'_> {
+    fn write_string_fragment<W: ?Sized + std::io::Write>(
+        &mut self,
+        w: &mut W,
+        fragment: &str,
+    ) -> std::io::Result<()> {
+        let mut rest = fragment;
+        while let Some(at) = rest.find(|c: char| !c.is_ascii()) {
+            w.write_all(&rest.as_bytes()[..at])?;
+            let c = rest[at..].chars().next().unwrap_or_default();
+            for unit in c.encode_utf16(&mut [0; 2]) {
+                write!(w, "\\u{unit:04x}")?;
+            }
+            rest = &rest[at + c.len_utf8()..];
+        }
+        w.write_all(rest.as_bytes())
+    }
+
+    fn begin_array<W: ?Sized + std::io::Write>(&mut self, w: &mut W) -> std::io::Result<()> {
+        self.0.begin_array(w)
+    }
+
+    fn end_array<W: ?Sized + std::io::Write>(&mut self, w: &mut W) -> std::io::Result<()> {
+        self.0.end_array(w)
+    }
+
+    fn begin_array_value<W: ?Sized + std::io::Write>(
+        &mut self,
+        w: &mut W,
+        first: bool,
+    ) -> std::io::Result<()> {
+        self.0.begin_array_value(w, first)
+    }
+
+    fn end_array_value<W: ?Sized + std::io::Write>(&mut self, w: &mut W) -> std::io::Result<()> {
+        self.0.end_array_value(w)
+    }
+
+    fn begin_object<W: ?Sized + std::io::Write>(&mut self, w: &mut W) -> std::io::Result<()> {
+        self.0.begin_object(w)
+    }
+
+    fn end_object<W: ?Sized + std::io::Write>(&mut self, w: &mut W) -> std::io::Result<()> {
+        self.0.end_object(w)
+    }
+
+    fn begin_object_key<W: ?Sized + std::io::Write>(
+        &mut self,
+        w: &mut W,
+        first: bool,
+    ) -> std::io::Result<()> {
+        self.0.begin_object_key(w, first)
+    }
+
+    fn begin_object_value<W: ?Sized + std::io::Write>(&mut self, w: &mut W) -> std::io::Result<()> {
+        self.0.begin_object_value(w)
+    }
+
+    fn end_object_value<W: ?Sized + std::io::Write>(&mut self, w: &mut W) -> std::io::Result<()> {
+        self.0.end_object_value(w)
+    }
+}
+
 /// A failure that ends the command, exit 1. The human line goes to stdout
 /// (`docs/CLI.md`); with `--json` the document stdout carries is
 /// `{"error": "<message>"}`, so a JSON reader never gets a line of prose.
 fn fail(json: bool, message: impl std::fmt::Display) -> i32 {
     if json {
         let value = serde_json::json!({ "error": message.to_string() });
-        println!(
-            "{}",
-            serde_json::to_string_pretty(&value).unwrap_or_default()
-        );
+        println!("{}", json_text(&value).unwrap_or_default());
     } else {
         println!("{} {message}", fail_mark());
     }
@@ -559,7 +638,11 @@ struct Installed {
 
 fn read_installed() -> Installed {
     let path = settings::settings_path().map(|p| settings::resolve_target(&p));
-    let text = path.as_ref().and_then(|p| std::fs::read_to_string(p).ok());
+    // Without its byte order mark, which `enable` keeps but no parser takes.
+    let text = path
+        .as_ref()
+        .and_then(|p| std::fs::read_to_string(p).ok())
+        .map(|t| settings::split_bom(&t).1.to_string());
     let handlers = text
         .as_deref()
         .map(settings::installed_handlers)
@@ -714,10 +797,7 @@ fn cmd_status(json: bool) -> i32 {
             "legacy_staged": legacy,
             "healthy": healthy,
         });
-        println!(
-            "{}",
-            serde_json::to_string_pretty(&value).unwrap_or_default()
-        );
+        println!("{}", json_text(&value).unwrap_or_default());
         return i32::from(!healthy);
     }
 
@@ -861,10 +941,7 @@ fn cmd_inspect(
     let print_section = |section: Section, text: String| {
         if json {
             let value = serde_json::json!({ "section": section.name(), "detail": text });
-            println!(
-                "{}",
-                serde_json::to_string_pretty(&value).unwrap_or_default()
-            );
+            println!("{}", json_text(&value).unwrap_or_default());
         } else {
             println!("{text}");
         }
@@ -891,8 +968,7 @@ fn cmd_inspect(
         if json {
             println!(
                 "{}",
-                serde_json::to_string_pretty(&inspect::checkpoint_json(&stored))
-                    .unwrap_or_default()
+                json_text(&inspect::checkpoint_json(&stored)).unwrap_or_default()
             );
         } else {
             println!("{}", stored.capsule);
@@ -938,7 +1014,7 @@ fn cmd_inspect(
             Ok(traces) => {
                 if json {
                     let all: Vec<serde_json::Value> = traces.iter().map(|t| t.to_json()).collect();
-                    println!("{}", serde_json::to_string_pretty(&all).unwrap_or_default());
+                    println!("{}", json_text(&all).unwrap_or_default());
                 } else {
                     for t in &traces {
                         println!("{}", t.report());
@@ -964,7 +1040,7 @@ fn cmd_inspect(
     if json {
         println!(
             "{}",
-            serde_json::to_string_pretty(&inspect::snapshot_json(
+            json_text(&inspect::snapshot_json(
                 &snapshot,
                 &rendered.text,
                 rendered.tokens
@@ -1042,10 +1118,7 @@ fn cmd_restore(session: Option<String>, list: bool, dry_run: bool, clear: bool, 
                 "workspace_id": workspace_id,
                 "workspace_root": workspace_root,
             });
-            println!(
-                "{}",
-                serde_json::to_string_pretty(&value).unwrap_or_default()
-            );
+            println!("{}", json_text(&value).unwrap_or_default());
             return 0;
         }
         println!(
@@ -1096,7 +1169,7 @@ fn cmd_restore(session: Option<String>, list: bool, dry_run: bool, clear: bool, 
                 .collect();
             println!(
                 "{}",
-                serde_json::to_string_pretty(&serde_json::json!({
+                json_text(&serde_json::json!({
                     "workspace_id": workspace_id,
                     "workspace_root": workspace_root,
                     "sessions": rows,
@@ -1180,7 +1253,7 @@ fn cmd_restore(session: Option<String>, list: bool, dry_run: bool, clear: bool, 
         if json {
             println!(
                 "{}",
-                serde_json::to_string_pretty(&serde_json::json!({
+                json_text(&serde_json::json!({
                     "workspace_id": staged.workspace_id,
                     "source_session_id": staged.source_session_id,
                     "source_checkpoint_id": staged.source_checkpoint_id,
@@ -1211,7 +1284,7 @@ fn cmd_restore(session: Option<String>, list: bool, dry_run: bool, clear: bool, 
     if json {
         println!(
             "{}",
-            serde_json::to_string_pretty(&serde_json::json!({
+            json_text(&serde_json::json!({
                 "workspace_id": staged.workspace_id,
                 "source_session_id": staged.source_session_id,
                 "source_checkpoint_id": staged.source_checkpoint_id,
@@ -1437,10 +1510,7 @@ fn cmd_doctor(json: bool) -> i32 {
             "checks": checks.iter().map(|c| serde_json::json!({"level": c.level(), "message": c.message()})).collect::<Vec<_>>(),
             "healthy": !failed,
         });
-        println!(
-            "{}",
-            serde_json::to_string_pretty(&value).unwrap_or_default()
-        );
+        println!("{}", json_text(&value).unwrap_or_default());
     } else {
         for c in &checks {
             c.print();
