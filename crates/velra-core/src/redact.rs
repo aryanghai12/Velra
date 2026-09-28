@@ -7,6 +7,14 @@ use regex::{Captures, Regex};
 use std::borrow::Cow;
 use std::sync::OnceLock;
 
+/// A token with a distinctive prefix (`ghp_`, `AKIA`, `sk-`, `eyJ`, …) is
+/// matched after a word break *or* after an escape that ends in a word
+/// character: `%3D` in URL-encoded text, `=` in JSON, a literal `\n` in
+/// escaped output. A leading `\b` alone missed all three, and the whole
+/// token was stored (reproduced, D140). The escape is kept; the token is
+/// group 1. The word breaks are ASCII (`(?-u:\b)`): with Unicode's, a token
+/// right after Japanese or Chinese text, which puts no space before it, or
+/// right before an accented letter, was not a token.
 struct Detector {
     kind: &'static str,
     literals: &'static [&'static str],
@@ -40,8 +48,10 @@ const DETECTORS: &[Detector] = &[
         literals: &[
             "AKIA", "ASIA", "AGPA", "AIDA", "AROA", "AIPA", "ANPA", "ANVA", "ABIA", "ACCA",
         ],
-        pattern: r"\b(?:AKIA|ASIA|AGPA|AIDA|AROA|AIPA|ANPA|ANVA|ABIA|ACCA)[0-9A-Z]{16}\b",
-        group: None,
+        // Each prefixed token may follow a word break or an escape (see
+        // `glued`): `%3DAKIA…` in a URL, `=AKIA…` in JSON.
+        pattern: r"(?:(?-u:\b)|%[0-9A-Fa-f]{2}|\\[nrt]|\\u[0-9A-Fa-f]{4})((?:AKIA|ASIA|AGPA|AIDA|AROA|AIPA|ANPA|ANVA|ABIA|ACCA)[0-9A-Z]{16})(?:[^0-9A-Z]|$)",
+        group: Some(1),
     },
     Detector {
         kind: "aws_secret_key",
@@ -59,43 +69,45 @@ const DETECTORS: &[Detector] = &[
     Detector {
         kind: "github_token",
         literals: &["ghp_", "gho_", "ghu_", "ghs_", "ghr_", "github_pat_"],
-        pattern: r"\b(?:gh[pousr]_[A-Za-z0-9]{36,255}|github_pat_[A-Za-z0-9_]{22,255})",
-        group: None,
+        pattern: r"(?:(?-u:\b)|%[0-9A-Fa-f]{2}|\\[nrt]|\\u[0-9A-Fa-f]{4})(gh[pousr]_[A-Za-z0-9]{36,255}|github_pat_[A-Za-z0-9_]{22,255})",
+        group: Some(1),
     },
     Detector {
         kind: "api_key",
         literals: &["sk-"],
-        pattern: r"\bsk-(?:ant-|proj-)?[A-Za-z0-9_\-]{20,}",
-        group: None,
+        pattern: r"(?:(?-u:\b)|%[0-9A-Fa-f]{2}|\\[nrt]|\\u[0-9A-Fa-f]{4})(sk-(?:ant-|proj-)?[A-Za-z0-9_\-]{20,})",
+        group: Some(1),
     },
     Detector {
         kind: "slack_token",
         literals: &["xox"],
-        pattern: r"\bxox[abprs]-[A-Za-z0-9-]{10,}",
-        group: None,
+        pattern: r"(?:(?-u:\b)|%[0-9A-Fa-f]{2}|\\[nrt]|\\u[0-9A-Fa-f]{4})(xox[abprs]-[A-Za-z0-9-]{10,})",
+        group: Some(1),
     },
     Detector {
         kind: "google_api_key",
         literals: &["AIza"],
-        pattern: r"\bAIza[0-9A-Za-z_\-]{35}",
-        group: None,
+        pattern: r"(?:(?-u:\b)|%[0-9A-Fa-f]{2}|\\[nrt]|\\u[0-9A-Fa-f]{4})(AIza[0-9A-Za-z_\-]{35})",
+        group: Some(1),
     },
     Detector {
         kind: "stripe_key",
         literals: &["_live_", "_test_"],
-        pattern: r"\b(?:sk|rk|pk)_(?:live|test)_[0-9A-Za-z]{16,}",
-        group: None,
+        pattern: r"(?:(?-u:\b)|%[0-9A-Fa-f]{2}|\\[nrt]|\\u[0-9A-Fa-f]{4})((?:sk|rk|pk)_(?:live|test)_[0-9A-Za-z]{16,})",
+        group: Some(1),
     },
     Detector {
         kind: "jwt",
         literals: &["eyJ"],
-        pattern: r"\beyJ[A-Za-z0-9_-]{8,}\.eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}",
-        group: None,
+        pattern: r"(?:(?-u:\b)|%[0-9A-Fa-f]{2}|\\[nrt]|\\u[0-9A-Fa-f]{4})(eyJ[A-Za-z0-9_-]{8,}\.eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,})",
+        group: Some(1),
     },
     Detector {
         kind: "url_credentials",
         literals: &["://"],
-        pattern: r#"\b[a-zA-Z][a-zA-Z0-9+.\-]{1,20}://([^\s/:@'"]+:[^\s/@'"]+)@"#,
+        // No leading `\b`: `next%3Dhttps://u:p@…` has a word character right
+        // before the scheme. Only the credentials are replaced either way.
+        pattern: r#"[a-zA-Z][a-zA-Z0-9+.\-]{1,20}://([^\s/:@'"]+:[^\s/@'"]+)@"#,
         group: Some(1),
     },
     Detector {
@@ -134,7 +146,13 @@ const DETECTORS: &[Detector] = &[
         // prompt that asks to "add a `--password option`." or "implement the
         // `--token flag`" is the user's task, and redacting its next word
         // would rewrite it.
-        pattern: r#"(?i)(?:^|\s)--?(?:password|passwd|token|secret|api-?key|auth-token|access-token)(?:\s+|=)["']?(?-i:([A-Z0-9$%@#*&^~+=/\\_][^\s"']*|[a-z][^\s"']*[A-Z0-9$%@#*&^~+=/\\_][^\s"']*|[a-z]{12,}))"#,
+        //
+        // The flag may also stand in quotes, in an argument list or after an
+        // escape -- PowerShell's `"--token" "X"`, JSON's `["--token", "X"]`
+        // (an MCP server's `args`), `tool\n--token X` in escaped output --
+        // which a leading `\s` and a `\s+|=` separator never matched
+        // (Phase 11, D140). The value rule is what keeps prose untouched.
+        pattern: r#"(?i)(?:^|[^A-Za-z0-9_]|\\[nrt]|%[0-9A-Fa-f]{2})--?(?:password|passwd|token|secret|api-?key|auth-token|access-token)["']?(?:\s*,\s*|\s+|=)["']?(?-i:([A-Z0-9$%@#*&^~+=/\\_][^\s"']*|[a-z][^\s"']*[A-Z0-9$%@#*&^~+=/\\_][^\s"']*|[a-z]{12,}))"#,
         group: Some(1),
     },
     Detector {

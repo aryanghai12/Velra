@@ -1,6 +1,7 @@
 //! SQLite storage: connection roles, schema, forward-only migrations and
 //! corruption recovery (§10).
 
+use rusqlite::config::DbConfig;
 use rusqlite::{Connection, ErrorCode, OpenFlags, OptionalExtension};
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
@@ -286,10 +287,25 @@ fn make_private(_path: &Path) {}
 impl Db {
     /// Opens (creating and migrating if needed) with the role's settings.
     /// A corrupt file is renamed to `velra.db.corrupt-{ts}` and recreated.
+    ///
+    /// Many hooks can meet the same corrupt file at once. Rotation is done
+    /// by one of them at a time, under [`rotation_lock`], and only when the
+    /// file is still corrupt once the lock is held: a process that saw the
+    /// old file used to rename whatever was at the path by the time it got
+    /// there -- the fresh database another had just created and written to
+    /// (reproduced on Linux, DECISIONS D137).
     pub fn open(path: &Path, role: Role) -> Result<Db> {
         match Self::open_once(path, role) {
             Err(DbError::Sqlite(e)) if is_corrupt(&e) => {
+                let _lock = rotation_lock(path, role.busy_timeout())?;
+                match Self::open_once(path, role) {
+                    Err(DbError::Sqlite(e)) if is_corrupt(&e) => {}
+                    // Rotated and recreated by another process meanwhile.
+                    other => return other,
+                }
                 let rotated = rotate_corrupt(path)?;
+                // Still under the lock, so a process that saw the old file
+                // finds this one when it looks again.
                 let mut db = Self::open_once(path, role)?;
                 db.rotated_corrupt = Some(rotated);
                 Ok(db)
@@ -298,13 +314,39 @@ impl Db {
         }
     }
 
+    /// [`open_once_at`], again when the file at `path` was replaced while it
+    /// was being opened.
     fn open_once(path: &Path, role: Role) -> Result<Db> {
+        for _ in 0..3 {
+            if let Some(db) = Self::open_once_at(path, role)? {
+                return Ok(db);
+            }
+        }
+        Err(DbError::Busy)
+    }
+
+    /// Opens `path`, or `None` when the file there changed between the
+    /// open and the first read (POSIX only).
+    ///
+    /// SQLite pairs a database with its `-wal` by *name*. A hook that opened
+    /// `velra.db` just before another rotated it aside kept a descriptor to
+    /// the old file, found the new database's `-wal` beside the path, read a
+    /// valid page 1 from it -- and on closing checkpointed that journal into
+    /// the old file and reset it, leaving the new database empty; the next
+    /// hook rotated that too (reproduced on Linux, D137). So the first read
+    /// is taken with checkpoint-on-close off, the path is checked to still
+    /// be the file that was opened, and nothing is written before it is.
+    /// Windows refuses to rename an open database, so the case cannot arise
+    /// there.
+    fn open_once_at(path: &Path, role: Role) -> Result<Option<Db>> {
+        let before = file_id(path);
         let conn = Connection::open_with_flags(
             path,
             OpenFlags::SQLITE_OPEN_READ_WRITE
                 | OpenFlags::SQLITE_OPEN_CREATE
                 | OpenFlags::SQLITE_OPEN_NO_MUTEX,
         )?;
+        conn.set_db_config(DbConfig::SQLITE_DBCONFIG_NO_CKPT_ON_CLOSE, true)?;
         // Before `migrate` turns on WAL: SQLite derives the -wal and -shm modes
         // from the database file, so tightening it here makes them private too.
         make_private(path);
@@ -314,17 +356,23 @@ impl Db {
              PRAGMA journal_size_limit = 67108864;",
         )?;
         let version = user_version(&conn)?;
+        // A path that was empty when looked at cannot have held the old file
+        // since: a rotated file never returns to it.
+        if before.is_some() && file_id(path) != before {
+            return Ok(None);
+        }
+        conn.set_db_config(DbConfig::SQLITE_DBCONFIG_NO_CKPT_ON_CLOSE, false)?;
         if version > SCHEMA_VERSION {
             return Err(DbError::NewerSchema(version));
         }
         if version < SCHEMA_VERSION {
             migrate(&conn, version, role)?;
         }
-        Ok(Db {
+        Ok(Some(Db {
             conn,
             path: path.to_path_buf(),
             rotated_corrupt: None,
-        })
+        }))
     }
 
     /// Read-only open for diagnostics; never creates or migrates.
@@ -444,13 +492,61 @@ fn migrate(conn: &Connection, from: i64, role: Role) -> Result<()> {
     Ok(())
 }
 
+/// Which file `path` names now: device and inode on POSIX. `None` when there
+/// is none -- and always on Windows, which does not let an open database be
+/// renamed.
+#[cfg(unix)]
+fn file_id(path: &Path) -> Option<(u64, u64)> {
+    use std::os::unix::fs::MetadataExt;
+    std::fs::metadata(path).ok().map(|m| (m.dev(), m.ino()))
+}
+
+#[cfg(not(unix))]
+fn file_id(_path: &Path) -> Option<(u64, u64)> {
+    None
+}
+
+/// The lock that serializes rotating a corrupt database: an OS lock on
+/// `<db>.rotate-lock`, which the system releases when its holder exits, so
+/// a hook killed mid-rotation leaves nothing to clean up. The file itself is
+/// never deleted: unlinking a lock file others may be opening lets two of
+/// them lock two different files.
+///
+/// Waits up to `budget`, the role's lock budget; `Busy` after that, which a
+/// hook treats like any other busy database (it spools).
+fn rotation_lock(path: &Path, budget: Duration) -> Result<std::fs::File> {
+    let mut name = path.as_os_str().to_owned();
+    name.push(".rotate-lock");
+    let file = std::fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create(true)
+        .truncate(false)
+        .open(PathBuf::from(name))?;
+    let deadline = Instant::now() + budget;
+    loop {
+        match file.try_lock() {
+            Ok(()) => return Ok(file),
+            Err(std::fs::TryLockError::WouldBlock) if Instant::now() < deadline => {
+                std::thread::sleep(Duration::from_millis(5));
+            }
+            Err(std::fs::TryLockError::WouldBlock) => return Err(DbError::Busy),
+            Err(std::fs::TryLockError::Error(e)) => return Err(DbError::Io(e)),
+        }
+    }
+}
+
 /// Renames a corrupt database (and its WAL/SHM files) aside.
+///
+/// The WAL and SHM go first. Once the main file is gone, the next open
+/// creates a fresh database -- and its own `-wal` -- at the same path; moving
+/// the side files after that took the new database's journal with the old
+/// one, and left the live file malformed (reproduced on Linux, D137).
 pub fn rotate_corrupt(path: &Path) -> Result<PathBuf> {
     let ts = crate::time::now_ms();
     let mut target = path.as_os_str().to_owned();
     target.push(format!(".corrupt-{ts}"));
     let target = PathBuf::from(target);
-    std::fs::rename(path, &target)?;
     for suffix in ["-wal", "-shm"] {
         let mut side = path.as_os_str().to_owned();
         side.push(suffix);
@@ -461,6 +557,7 @@ pub fn rotate_corrupt(path: &Path) -> Result<PathBuf> {
             let _ = std::fs::rename(&side, PathBuf::from(t));
         }
     }
+    std::fs::rename(path, &target)?;
     Ok(target)
 }
 

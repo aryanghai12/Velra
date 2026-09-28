@@ -1070,7 +1070,10 @@ fn backup(home: &Path, target: &Path, bytes: &[u8]) -> std::io::Result<PathBuf> 
         path = dir.join(format!("{base}.{stamp}-{n}.bak"));
         n += 1;
     }
-    crate::atomic::write_synced(&path, bytes)?;
+    // Replaced atomically like the file it backs up: written in place, a
+    // run killed mid-write left a truncated `.bak` that looked like any
+    // other, and a backup is what someone restores from (D144).
+    crate::atomic::write(&path, bytes)?;
     prune_backups(&dir, &base, 10);
     Ok(path)
 }
@@ -1116,18 +1119,32 @@ fn write_change(
         Some(original) => Some(backup(home, target, original.as_bytes())?),
         None => None,
     };
-    if let Some(original) = on_disk {
-        let current = std::fs::read_to_string(target).map_err(SettingsError::Io)?;
-        if current != original {
-            return Err(SettingsError::Concurrent);
-        }
+    // Checked with the new file already written and synced, just before it
+    // replaces the old one (D143). A file that was not there must still not
+    // be: one created meanwhile is someone else's.
+    let mut read_error = None;
+    let unchanged = || match on_disk {
+        Some(original) => match std::fs::read_to_string(target) {
+            Ok(current) => Ok(current == original),
+            Err(e) => {
+                let kind = e.kind();
+                read_error = Some(e);
+                Err(std::io::Error::from(kind))
+            }
+        },
+        None => Ok(!target.exists()),
+    };
+    let replaced = crate::atomic::write_if(target, format!("{bom}{updated}").as_bytes(), unchanged);
+    if let Some(e) = read_error {
+        return Err(SettingsError::Io(e));
     }
-    crate::atomic::write(target, format!("{bom}{updated}").as_bytes()).map_err(|source| {
-        SettingsError::Replace {
-            path: target.to_path_buf(),
-            source,
-        }
+    let replaced = replaced.map_err(|source| SettingsError::Replace {
+        path: target.to_path_buf(),
+        source,
     })?;
+    if !replaced {
+        return Err(SettingsError::Concurrent);
+    }
     Ok(backup_path)
 }
 
@@ -1307,6 +1324,58 @@ mod tests {
             std::fs::read_to_string(backups[0].path()).unwrap(),
             read_earlier
         );
+    }
+
+    /// Phase 11 (D143): another program saves the file after Velra has
+    /// written and synced its replacement but before it renames it into
+    /// place. The check ran before the temp file was written, so that save
+    /// was replaced by an edit of the older text. It is now the last thing
+    /// before the rename; the save is seen, the edit is recomputed from it,
+    /// and both survive.
+    #[test]
+    fn a_save_landing_while_the_replacement_is_written_is_kept() {
+        let dir = tempfile::tempdir().unwrap();
+        let home = dir.path().join("home");
+        let target = dir.path().join("settings.json");
+        std::fs::write(&target, "{\n  \"model\": \"a\"\n}\n").unwrap();
+        let features = Features::for_version(crate::compat::Version::parse("2.1.268"));
+        let saved = target.clone();
+        crate::atomic::BEFORE_CHECK.with(|h| {
+            *h.borrow_mut() = Some(Box::new(move || {
+                std::fs::write(&saved, "{\n  \"model\": \"a\",\n  \"theme\": \"dark\"\n}\n")
+                    .unwrap();
+            }));
+        });
+        let outcome = enable(&target, &home, "/bin/velra", &features, false).unwrap();
+        assert!(outcome.changed);
+        let text = std::fs::read_to_string(&target).unwrap();
+        assert!(
+            text.contains("\"theme\": \"dark\""),
+            "the other save was lost:\n{text}"
+        );
+        assert!(text.contains("\"hook\""), "{text}");
+        // And a file that did not exist when it was read, created meanwhile,
+        // is someone else's: it is not replaced.
+        let fresh = dir.path().join("new-settings.json");
+        let created = fresh.clone();
+        let (updated, _) = apply_enable("{}\n", "/bin/velra", &features, &fresh).unwrap();
+        crate::atomic::BEFORE_CHECK.with(|h| {
+            *h.borrow_mut() = Some(Box::new(move || {
+                std::fs::write(&created, "{\"model\": \"theirs\"}").unwrap();
+            }));
+        });
+        let err = write_change(&fresh, &home, None, "{}\n", &updated, "").unwrap_err();
+        assert!(matches!(err, SettingsError::Concurrent), "{err}");
+        assert_eq!(
+            std::fs::read_to_string(&fresh).unwrap(),
+            "{\"model\": \"theirs\"}"
+        );
+        let leftovers: Vec<_> = std::fs::read_dir(dir.path())
+            .unwrap()
+            .flatten()
+            .filter(|e| e.file_name().to_string_lossy().contains("velra-tmp"))
+            .collect();
+        assert!(leftovers.is_empty(), "{leftovers:?}");
     }
 
     /// Every shipped registration filters git commands inside the binary

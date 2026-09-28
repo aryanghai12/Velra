@@ -34,6 +34,7 @@ Velra's state lives in **`$VELRA_HOME`**: by default `~/.velra`, or
 | `disabled` | if this file exists, every hook exits immediately | yours: the kill switch |
 | `bin/`, `cache/` | installer binary, npm launcher download cache | by uninstall |
 | `velra.db.corrupt-*` | a database Velra could not open, moved aside before starting fresh | after you have looked |
+| `velra.db.rotate-lock` | an empty file locked while one process moves a corrupt database aside, so two never do | yes, while no hook is running |
 
 The one file outside `$VELRA_HOME` that Velra edits is your user-level
 Claude Code settings file ([Hook registration](#hook-registration)).

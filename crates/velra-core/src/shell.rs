@@ -131,6 +131,19 @@ pub fn tokenize(s: &str) -> Vec<String> {
             '\\' if chars.peek() == Some(&'\n') => {
                 chars.next();
             }
+            // An escaped space, quote or operator is that character, in the
+            // word: `src/a\ b.rs` is one file. Split at the space, `b.rs`
+            // became a pathspec of its own, and a change to that other file
+            // was credited to the restore (D142). Before anything else the
+            // backslash is kept, so a Windows path in a Bash line reads as
+            // written.
+            '\\' if chars.peek().is_some_and(|n| {
+                (n.is_whitespace() && *n != '\n') || "'\"&|;<>()$`\\".contains(*n)
+            }) =>
+            {
+                in_word = true;
+                cur.push(chars.next().unwrap_or('\\'));
+            }
             c if c.is_whitespace() => {
                 if in_word {
                     words.push(std::mem::take(&mut cur));

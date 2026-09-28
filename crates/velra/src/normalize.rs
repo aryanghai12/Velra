@@ -287,6 +287,9 @@ impl ToolInput {
 }
 
 /// `- {first changed old line}\n+ {first changed new line}`, each ≤ 160 chars.
+///
+/// Each line is redacted before it is cut: a token cut short matches no
+/// detector, and the part that fit was stored (reproduced, D139).
 pub fn diff_excerpt(old: &str, new: &str) -> Option<String> {
     let mut o = old.lines();
     let mut n = new.lines();
@@ -299,14 +302,20 @@ pub fn diff_excerpt(old: &str, new: &str) -> Option<String> {
                 let mut out = String::new();
                 if let Some(minus) = a.map(str::trim).filter(|s| !s.is_empty()) {
                     out.push_str("- ");
-                    out.push_str(&text::truncate_chars(minus, limits::EXCERPT_LINE_CHARS));
+                    out.push_str(&text::truncate_chars(
+                        &redact::redact(minus),
+                        limits::EXCERPT_LINE_CHARS,
+                    ));
                 }
                 if let Some(plus) = b.map(str::trim).filter(|s| !s.is_empty()) {
                     if !out.is_empty() {
                         out.push('\n');
                     }
                     out.push_str("+ ");
-                    out.push_str(&text::truncate_chars(plus, limits::EXCERPT_LINE_CHARS));
+                    out.push_str(&text::truncate_chars(
+                        &redact::redact(plus),
+                        limits::EXCERPT_LINE_CHARS,
+                    ));
                 }
                 return (!out.is_empty()).then_some(out);
             }
@@ -367,6 +376,10 @@ pub fn redact_capped(s: &str, max_bytes: usize) -> String {
 /// seen whole (an RSA-4096 PEM body is about 3.2 KB).
 const TAIL_CONTEXT: usize = 4096;
 
+/// Characters that end a token in structured output (JSON, shell) and that
+/// no detector's token body contains (`velra_core::redact`).
+const TOKEN_DELIMITERS: &str = "\"',;{}[]()<>|&";
+
 /// Keeps the tail of long output: cut with a margin, redact, then cut again
 /// so a secret spanning the first cut is still removed.
 ///
@@ -389,6 +402,15 @@ pub fn redact_tail(s: &str, max_bytes: usize) -> String {
                 context
                     .char_indices()
                     .find(|(_, c)| c.is_whitespace())
+                    .map(|(i, c)| i + c.len_utf8())
+            })
+            // No whitespace at all -- minified JSON, one line of a dump: a
+            // delimiter no token body holds. Cutting at the byte offset
+            // kept 36 characters of a GitHub token there (D141).
+            .or_else(|| {
+                context
+                    .char_indices()
+                    .find(|(_, c)| TOKEN_DELIMITERS.contains(*c))
                     .map(|(i, c)| i + c.len_utf8())
             })
             // One unbroken run longer than the margin: keep the old cut.
@@ -594,6 +616,31 @@ mod tests {
                         "pad {pad}: {out}"
                     );
                 }
+            }
+        }
+    }
+
+    /// Phase 11: output with no whitespace at all near the cut -- minified
+    /// JSON, one line of a secrets dump. The window's first cut had nowhere
+    /// to move to and stayed at its byte offset, inside a token; redacting
+    /// the other tokens in the line shortened the window, and the second cut
+    /// kept the fragment.
+    #[test]
+    fn a_secret_cut_inside_an_unbroken_line_leaves_no_fragment() {
+        let max = 2048;
+        let token = |i: usize| format!("ghp_{i:04}C7e42F292c6912E7710c838347Ae178B");
+        let dump: String = (0..400)
+            .map(|i| format!("\"k{i}\":\"{}\",", token(i)))
+            .collect();
+        let step = 7;
+        for pad in (0..TAIL_CONTEXT + max).step_by(step) {
+            let s = format!("{{{dump}\"pad\":\"{}\"}}", "y".repeat(pad));
+            let out = redact_tail(&s, max);
+            assert!(out.len() <= max);
+            // Every token ends in the same 32 characters, and what a cut
+            // leaves of one is its end.
+            if let Some(f) = fragment_of(&out, &token(0)[8..]) {
+                panic!("pad {pad}: fragment {f:?} of a token kept:\n{out}");
             }
         }
     }

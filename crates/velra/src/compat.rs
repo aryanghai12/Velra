@@ -162,9 +162,11 @@ impl Detection {
 /// behind: `detect` runs from `enable`, `status` and `doctor`, and a hung
 /// `claude --version` used to outlive them.
 ///
-/// Killing reaches the child only. When the child is `cmd.exe` running a
-/// `.cmd` shim, a process the shim started keeps running until it ends by
-/// itself; it is no longer waited for.
+/// On Windows the child's descendants are ended with it ([`end_descendants`]):
+/// an npm `.cmd` shim is `cmd.exe` running `node`, and killing `cmd.exe`
+/// alone left `node` running -- holding `velra`'s own stdout, which Windows
+/// hands down to every child, so whoever read `velra status` waited for it
+/// (measured: the process exited at 3.1 s, its output ended at 30.5 s; D138).
 fn run_with_timeout(mut cmd: Command, timeout: Duration) -> Option<String> {
     use std::io::Read;
     let mut child = cmd
@@ -186,6 +188,7 @@ fn run_with_timeout(mut cmd: Command, timeout: Duration) -> Option<String> {
             Ok(Some(status)) => break status,
             Ok(None) if Instant::now() < deadline => std::thread::sleep(Duration::from_millis(10)),
             _ => {
+                end_descendants(&child);
                 let _ = child.kill();
                 let _ = child.wait();
                 return None;
@@ -201,6 +204,42 @@ fn run_with_timeout(mut cmd: Command, timeout: Duration) -> Option<String> {
         .max(Duration::from_millis(100));
     String::from_utf8(rx.recv_timeout(left).ok()?).ok()
 }
+
+/// Ends every process `child` started, while `child` is still alive to name
+/// them: `taskkill /T /F`, run from the system directory by its full path
+/// (never looked up, D129), and itself given two seconds. Without
+/// `SystemRoot` nothing is run.
+///
+/// A descendant whose parent has already exited is not reached: a shim that
+/// returns at once and leaves a background process behind still leaves it.
+#[cfg(windows)]
+fn end_descendants(child: &std::process::Child) {
+    let Some(root) = std::env::var_os("SystemRoot") else {
+        return;
+    };
+    let exe = Path::new(&root).join("System32").join("taskkill.exe");
+    let Ok(mut taskkill) = Command::new(exe)
+        .args(["/T", "/F", "/PID", &child.id().to_string()])
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn()
+    else {
+        return;
+    };
+    let deadline = Instant::now() + Duration::from_secs(2);
+    while Instant::now() < deadline {
+        match taskkill.try_wait() {
+            Ok(None) => std::thread::sleep(Duration::from_millis(10)),
+            _ => return,
+        }
+    }
+    let _ = taskkill.kill();
+    let _ = taskkill.wait();
+}
+
+#[cfg(not(windows))]
+fn end_descendants(_child: &std::process::Child) {}
 
 /// The `claude` a shell would run, looked up in the absolute `PATH` entries
 /// only.

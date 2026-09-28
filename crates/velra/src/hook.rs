@@ -61,24 +61,61 @@ fn emit(json: &str) -> bool {
     true
 }
 
-/// The event currently being persisted. The watchdog spools it on the way
+/// The events currently being persisted. The watchdog spools them on the way
 /// out, so a deadline that fires mid-write still loses nothing (§10.3).
-static PENDING: Mutex<Option<(PathBuf, NewEvent)>> = Mutex::new(None);
+///
+/// A handler arms its event before it opens the database, not after: the
+/// open can wait out a lock, and a deadline there left nothing to spool --
+/// 20 of 200 events in a storm of hooks, lost without a trace (D145).
+static PENDING: Mutex<Vec<(PathBuf, NewEvent)>> = Mutex::new(Vec::new());
 
 fn arm_pending(dir: PathBuf, ev: &NewEvent) {
-    *PENDING.lock().unwrap_or_else(|e| e.into_inner()) = Some((dir, ev.clone()));
+    *PENDING.lock().unwrap_or_else(|e| e.into_inner()) = vec![(dir, ev.clone())];
+}
+
+/// Arms `ev` beside what is already armed.
+fn arm_also(dir: PathBuf, ev: &NewEvent) {
+    PENDING
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .push((dir, ev.clone()));
 }
 
 fn disarm_pending() {
-    *PENDING.lock().unwrap_or_else(|e| e.into_inner()) = None;
+    PENDING.lock().unwrap_or_else(|e| e.into_inner()).clear();
 }
 
-/// Writes any armed event to the spool. Duplicates are harmless: ingestion
-/// deduplicates on `dedupe_key`.
-fn flush_pending() {
-    let taken = PENDING.lock().unwrap_or_else(|e| e.into_inner()).take();
-    if let Some((dir, ev)) = taken {
-        let _ = spool::write(&dir, &ev);
+/// Writes any armed events to the spool, returning whether there were any.
+/// Duplicates are harmless: ingestion deduplicates on `dedupe_key`.
+fn flush_pending() -> bool {
+    let taken = std::mem::take(&mut *PENDING.lock().unwrap_or_else(|e| e.into_inner()));
+    for (dir, ev) in &taken {
+        let _ = spool::write(dir, ev);
+    }
+    !taken.is_empty()
+}
+
+/// How far a hook has got, for the watchdog's report when it leaves with
+/// nothing armed: an event it never got to record is lost, and that is
+/// written to `errors.log` rather than passing in silence (D145).
+static STAGE: std::sync::atomic::AtomicU8 = std::sync::atomic::AtomicU8::new(0);
+const STAGE_STARTED: u8 = 0;
+const STAGE_READ: u8 = 1;
+const STAGE_PARSED: u8 = 2;
+const STAGE_CONTEXT: u8 = 3;
+const STAGE_DONE: u8 = 4;
+
+fn stage(s: u8) {
+    STAGE.store(s, std::sync::atomic::Ordering::SeqCst);
+}
+
+fn stage_name(s: u8) -> &'static str {
+    match s {
+        STAGE_STARTED => "reading its input",
+        STAGE_READ => "parsing its input",
+        STAGE_PARSED => "resolving the workspace",
+        STAGE_CONTEXT => "the handler, before its event was armed",
+        _ => "finishing",
     }
 }
 
@@ -90,7 +127,7 @@ fn flush_pending() {
 /// `PENDING` (DECISIONS D114). The wait it adds is one commit.
 static DELIVERING: Mutex<()> = Mutex::new(());
 
-fn start_watchdog(ms: u64) {
+fn start_watchdog(ms: u64, home: Option<PathBuf>, label: String) {
     let _ = std::thread::Builder::new()
         .name("velra-watchdog".into())
         .spawn(move || {
@@ -99,7 +136,20 @@ fn start_watchdog(ms: u64) {
             // any in-flight write, then leave without further work.
             let _delivering = DELIVERING.lock().unwrap_or_else(|e| e.into_inner());
             let _guard = EMITTED.lock().unwrap_or_else(|e| e.into_inner());
-            flush_pending();
+            let spooled = flush_pending();
+            let at = STAGE.load(std::sync::atomic::Ordering::SeqCst);
+            if !spooled && at != STAGE_DONE && label != "reduce" {
+                log::error(
+                    home.as_deref(),
+                    &label,
+                    None,
+                    format!(
+                        "deadline ({ms} ms) reached in {} with no event armed: whatever this \
+                         hook would have recorded is lost",
+                        stage_name(at)
+                    ),
+                );
+            }
             let _ = std::io::stdout().flush();
             std::process::exit(0);
         });
@@ -182,15 +232,20 @@ pub fn run(command: &str, subcommand: Option<String>, ts_ms: i64) {
         format!("hook {sub}")
     };
     silence_panics(home.clone(), label.clone());
-    start_watchdog(watchdog_ms(if command == "reduce" {
-        WATCHDOG_REDUCE_MS
-    } else {
-        WATCHDOG_SYNC_MS
-    }));
+    start_watchdog(
+        watchdog_ms(if command == "reduce" {
+            WATCHDOG_REDUCE_MS
+        } else {
+            WATCHDOG_SYNC_MS
+        }),
+        home.clone(),
+        label.clone(),
+    );
     let started = Instant::now();
     let outcome = std::panic::catch_unwind(AssertUnwindSafe(|| {
         dispatch(&sub, ts_ms, home.as_deref(), &started)
     }));
+    stage(STAGE_DONE);
     // A panic between arming and persisting still leaves the event spooled.
     flush_pending();
     if let Ok(Err(e)) = outcome {
@@ -251,6 +306,7 @@ fn dispatch(sub: &str, ts_ms: i64, home: Option<&Path>, started: &Instant) -> Re
         MAX_STDIN
     };
     let (raw, total) = read_stdin_capped(cap);
+    stage(STAGE_READ);
     mark("stdin", started);
     if sub == "reduce" {
         return run_reduce(home, ts_ms);
@@ -259,6 +315,7 @@ fn dispatch(sub: &str, ts_ms: i64, home: Option<&Path>, started: &Instant) -> Re
         return user_prompt_oversize(home, ts_ms, &raw, total);
     }
     let parsed = normalize::parse(&raw);
+    stage(STAGE_PARSED);
     mark("parse", started);
     let malformed = parsed.is_none();
     let input = parsed.unwrap_or_default();
@@ -275,6 +332,7 @@ fn dispatch(sub: &str, ts_ms: i64, home: Option<&Path>, started: &Instant) -> Re
         return Ok(()); // read-only home: fail open
     }
     let ctx = Ctx::new(home, sub, ts_ms, input, session_id, malformed);
+    stage(STAGE_CONTEXT);
     mark("context", started);
     if malformed {
         let payload = Payload::default();
@@ -437,6 +495,14 @@ impl<'a> Ctx<'a> {
 
     /// Opens the database, or `None` when the caller should spool instead.
     fn open_db(&self, role: Role) -> Option<Db> {
+        // An open that waits out a lock, for tests of a deadline there.
+        #[cfg(feature = "fault-injection")]
+        if let Some(ms) = std::env::var("VELRA_TEST_STALL_OPEN_DB_MS")
+            .ok()
+            .and_then(|v| v.parse::<u64>().ok())
+        {
+            std::thread::sleep(Duration::from_millis(ms));
+        }
         let at = Instant::now();
         let opened = Db::open(&home::db_path(self.home), role);
         mark("db-open", &at);
@@ -995,6 +1061,9 @@ fn pre_tool_use(ctx: &Ctx<'_>) -> Result<(), String> {
         cwd_real: ctx.cwd_real(),
         ..Default::default()
     };
+    // Armed without its file hashes, which need the database: a deadline
+    // while it opens still keeps the command (D145).
+    arm_pending(home::spool_dir(ctx.home), &ctx.new_event(payload.clone()));
     match ctx.open_db(Role::HookAppend) {
         Some(mut db) => {
             let files = hash_session_files(&db.conn, &ctx.session_id, &ctx.root);
@@ -1056,8 +1125,15 @@ fn post_tool_use(ctx: &Ctx<'_>, failure: bool) -> Result<(), String> {
             payload.limit = ti.limit;
         }
     } else if tool == "Grep" || tool == "Glob" {
+        // Redacted whole, then cut: cut first, a token straddling the cap
+        // matched no detector and the part of it that fit was stored (D139).
         payload.pattern = ti.pattern.as_deref().map(|p| {
-            normalize::redact_capped(&text::truncate_chars(p, limits::PATTERN_CHARS), 1024)
+            let redacted = velra_core::redact::redact(p);
+            text::prefix_bytes(
+                &text::truncate_chars(&redacted, limits::PATTERN_CHARS),
+                1024,
+            )
+            .to_string()
         });
         payload.path = ti.path.clone().or_else(|| ti.file_path.clone());
     } else if tools::is_shell(&tool) {
@@ -1103,6 +1179,9 @@ fn post_tool_use(ctx: &Ctx<'_>, failure: bool) -> Result<(), String> {
     } else {
         Role::HookDelivery
     };
+    // Armed before the open, which can wait out a lock (D145); a git
+    // command's file hashes, which need the database, are added after.
+    arm_pending(home::spool_dir(ctx.home), &ctx.new_event(payload.clone()));
     let Some(mut db) = ctx.open_db(role) else {
         ctx.spool(&ctx.new_event(payload));
         return Ok(());
@@ -1175,12 +1254,13 @@ fn stop(ctx: &Ctx<'_>) -> Result<(), String> {
     // found under this event's time, so present content posed as the state
     // the turn ended in. Without a database there is no list of files to
     // scan, and the event says no observation was made (`turn_scan: None`).
+    // Until the scan is done -- from before the database is opened (D145) --
+    // a deadline spools the event without one.
+    arm_pending(home::spool_dir(ctx.home), &ctx.new_event(payload.clone()));
     let Some(mut db) = ctx.open_db(Role::HookAppend) else {
         ctx.spool(&ctx.new_event(payload));
         return Ok(());
     };
-    // Until the scan is done, a deadline spools the event without one.
-    arm_pending(home::spool_dir(ctx.home), &ctx.new_event(payload.clone()));
     let deadline = Instant::now() + Duration::from_millis(STOP_SCAN_BUDGET_MS);
     payload.turn_scan = Some(hash_session_files_until(
         &db.conn,
@@ -1238,6 +1318,10 @@ fn post_compact(ctx: &Ctx<'_>) -> Result<(), String> {
 }
 
 fn spool_checkpoint_request(ctx: &Ctx<'_>, trigger: &str) {
+    ctx.spool(&checkpoint_request_event(ctx, trigger));
+}
+
+fn checkpoint_request_event(ctx: &Ctx<'_>, trigger: &str) -> NewEvent {
     let mut ev = ctx.new_event(Payload {
         trigger: Some(trigger.to_string()),
         partial: Some(true),
@@ -1252,7 +1336,7 @@ fn spool_checkpoint_request(ctx: &Ctx<'_>, trigger: &str) {
         ctx.ts_ms,
         ctx.agent_id.as_deref(),
     );
-    ctx.spool(&ev);
+    ev
 }
 
 fn pre_compact(ctx: &Ctx<'_>) -> Result<(), String> {
@@ -1268,12 +1352,20 @@ fn pre_compact(ctx: &Ctx<'_>) -> Result<(), String> {
         ..Default::default()
     };
     let ev = ctx.new_event(payload);
+    // Both armed before the open (D145): a deadline anywhere before the
+    // checkpoint is committed leaves a request the reducer turns into one.
+    // One that lands after it is settled by the checkpoint and ignored.
+    let request = checkpoint_request_event(ctx, &trigger_text);
+    let spool_dir = home::spool_dir(ctx.home);
+    arm_pending(spool_dir.clone(), &ev);
+    arm_also(spool_dir.clone(), &request);
     let Some(mut db) = ctx.open_db(Role::PreCompact) else {
         ctx.spool(&ev);
         spool_checkpoint_request(ctx, &trigger_text);
         return Ok(());
     };
     ctx.append_with(&mut db, &ev);
+    arm_pending(spool_dir, &request);
 
     // Bounded reducer pass; anything left unreduced makes the checkpoint partial.
     let deadline = Instant::now() + Duration::from_millis(PRECOMPACT_REDUCE_MS);
@@ -1309,6 +1401,7 @@ fn pre_compact(ctx: &Ctx<'_>) -> Result<(), String> {
     match checkpoint::create_in_tx(&tx, &request, &render) {
         Ok(Some(info)) => {
             if tx.commit().is_ok() {
+                disarm_pending();
                 let msg = serde_json::json!({
                     "systemMessage": format!("\u{26a1} Velra checkpoint saved: {}", info.summary),
                 });
@@ -1320,6 +1413,7 @@ fn pre_compact(ctx: &Ctx<'_>) -> Result<(), String> {
         // Nothing worth saving (§15.2 step 4): no checkpoint, empty stdout.
         Ok(None) => {
             let _ = tx.commit();
+            disarm_pending();
         }
         Err(e) => {
             drop(tx);

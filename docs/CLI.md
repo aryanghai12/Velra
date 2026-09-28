@@ -74,7 +74,13 @@ key order and formatting. A Velra handler registered more than once is
 reduced to one. `--dry-run` writes nothing at all, `$VELRA_HOME` included.
 A UTF-8 byte order mark at the start of the file is kept. The file is
 replaced in one step (a temp file renamed over it), never rewritten in
-place; when Windows refuses the replacement because another program holds
+place. Whether another program changed the file since it was read is
+checked with the new content already written, immediately before the
+rename, and a file that did not exist and was created meanwhile is not
+replaced either; the edit is then recomputed from what is there (up to
+three times). A temp file left by a run that was killed is removed by the
+next run once it is a minute old, and the backup is written the same way.
+When Windows refuses the replacement because another program holds
 the file open, it is retried for up to a second, and when it still fails --
 or the file is read-only -- the message names the file and says it is
 unchanged.
@@ -172,7 +178,9 @@ CLI, the VS Code extension, or `VELRA_CLAUDE_VERSION`. When none of those
 works, Velra assumes the latest version it knows about. The `claude` CLI is
 looked for only in the absolute directories on `PATH` (on Windows
 `claude.exe`, `claude.cmd` or `claude.bat`), never in the current directory,
-and is stopped if it has not answered within 3 seconds.
+and is stopped if it has not answered within 3 seconds -- on Windows with
+every process it started, so an npm shim's `node` does not keep running or
+hold `velra`'s own output open.
 
 `--json` fields: `enabled`, `handlers`, `expected_handlers`, `binary`,
 `binary_exists`, `claude_code`, `db_path`, `db_bytes`, `sessions`, `events`,

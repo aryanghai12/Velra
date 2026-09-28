@@ -206,9 +206,19 @@ session fails:
 - stderr is never written; stdout is empty or exactly one JSON object, guarded
   by a once-lock so a watchdog can never interleave a partial write;
 - a watchdog abandons work after 250 ms (sync hooks) or 1 s (reducer), and an
-  in-flight event goes to the spool, so nothing recorded is lost;
+  in-flight event goes to the spool. A handler arms its event before it opens
+  the database, so a deadline there (the open can wait out a lock) still
+  spools it; a deadline earlier than that -- reading or parsing the input --
+  loses the event, and says so in `logs/errors.log` instead of passing in
+  silence;
 - a locked database spools the event; a corrupt one is moved aside
-  (`velra.db.corrupt-<ts>`) and recreated;
+  (`velra.db.corrupt-<ts>`) and recreated -- by one process at a time,
+  under an OS lock on `velra.db.rotate-lock`, and only if it is still
+  corrupt once that lock is held, so a database another hook has just
+  recreated is never moved aside with it. On POSIX each open also checks,
+  before it writes anything, that the path is still the file it opened:
+  SQLite finds a database's `-wal` by name, and a hook still holding the
+  old file could otherwise checkpoint the new database's journal into it;
 - `VELRA_DISABLE=1` or `~/.velra/disabled` makes every hook return
   immediately.
 
