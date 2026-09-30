@@ -38,6 +38,7 @@ fn main() {
         trigger: Trigger::Manual,
         partial: false,
         preview: true,
+        restore: false,
         tz_offset_secs: 0,
     };
     let snap = snapshot::build(&db.conn, &session, &meta).expect("snapshot");

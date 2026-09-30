@@ -1074,6 +1074,7 @@ mod reducer_props {
                 trigger: Trigger::Manual,
                 partial: false,
                 preview: false,
+                restore: false,
                 tz_offset_secs: 0,
             };
             let snap = velra_core::snapshot::build(conn, &s, &meta).unwrap();

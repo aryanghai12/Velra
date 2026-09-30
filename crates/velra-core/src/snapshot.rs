@@ -24,6 +24,10 @@ pub struct SnapshotMeta {
     pub trigger: Trigger,
     pub partial: bool,
     pub preview: bool,
+    /// Built by `velra restore` for another session to read: the capsule then
+    /// says it is another session's record and names that session
+    /// (`crate::restore::snapshot_meta`, D147).
+    pub restore: bool,
     pub tz_offset_secs: i32,
 }
 
@@ -966,6 +970,7 @@ pub fn build(
         trigger: meta.trigger,
         partial: meta.partial,
         preview: meta.preview,
+        restore: meta.restore,
         session_id: sid.to_string(),
         project_id,
         epoch,

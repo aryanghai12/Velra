@@ -342,7 +342,16 @@ pub struct NewEvent {
     pub project: Option<ProjectInfo>,
 }
 
-/// `blake3(hook_event|session_id|tool_use_id|prompt_id|ts_ms|agent_id)[0..32]`.
+/// `blake3(hook_event|session_id|tool_use_id|prompt_id|ts_ms|agent_id)[0..32]`,
+/// with `ts_ms` left out when there is a `tool_use_id` (D148).
+///
+/// Claude Code gives each tool call its own `tool_use_id`, so with the hook
+/// event it already names one observation. The clock is the hook's own: Velra
+/// registered twice for one event (user and project settings under different
+/// binary paths, which Claude Code does not deduplicate -- D110) runs twice,
+/// a few milliseconds apart, and with `ts_ms` in the key stored one tool call
+/// as two -- two commands, two edits, a file "edited 2x". An event with no id
+/// (a session start, a stop, a prompt) has only its clock to tell it apart.
 pub fn dedupe_key(
     hook_event: &str,
     session_id: &str,
@@ -351,8 +360,13 @@ pub fn dedupe_key(
     ts_ms: i64,
     agent_id: Option<&str>,
 ) -> String {
+    let ts = if tool_use_id.is_some() {
+        String::new()
+    } else {
+        ts_ms.to_string()
+    };
     let material = format!(
-        "{hook_event}|{session_id}|{}|{}|{ts_ms}|{}",
+        "{hook_event}|{session_id}|{}|{}|{ts}|{}",
         tool_use_id.unwrap_or(""),
         prompt_id.unwrap_or(""),
         agent_id.unwrap_or("")
@@ -394,11 +408,34 @@ mod tests {
         );
     }
 
+    /// A key names one observation: the same tool call's hook event is one
+    /// key whenever the hook ran (D148); anything else about it, or an event
+    /// with no id at another time, is another.
     #[test]
     fn dedupe_is_stable() {
         let a = dedupe_key("PostToolUse", "s", Some("t"), None, 5, None);
         assert_eq!(a.len(), 32);
         assert_eq!(a, dedupe_key("PostToolUse", "s", Some("t"), None, 5, None));
-        assert_ne!(a, dedupe_key("PostToolUse", "s", Some("t"), None, 6, None));
+        assert_eq!(
+            a,
+            dedupe_key("PostToolUse", "s", Some("t"), None, 6, None),
+            "one tool call, whichever millisecond its hook ran in"
+        );
+        for other in [
+            dedupe_key("PreToolUse", "s", Some("t"), None, 5, None),
+            dedupe_key("PostToolUseFailure", "s", Some("t"), None, 5, None),
+            dedupe_key("PostToolUse", "s2", Some("t"), None, 5, None),
+            dedupe_key("PostToolUse", "s", Some("t2"), None, 5, None),
+            dedupe_key("PostToolUse", "s", Some("t"), None, 5, Some("agent")),
+        ] {
+            assert_ne!(a, other);
+        }
+        let stop = dedupe_key("Stop", "s", None, None, 5, None);
+        assert_ne!(stop, dedupe_key("Stop", "s", None, None, 6, None));
+        let prompt = dedupe_key("UserPromptSubmit", "s", None, Some("p"), 5, None);
+        assert_ne!(
+            prompt,
+            dedupe_key("UserPromptSubmit", "s", None, Some("p"), 6, None)
+        );
     }
 }

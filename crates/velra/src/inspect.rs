@@ -49,6 +49,48 @@ pub fn is_recorded_session(conn: &Connection, session_id: &str) -> rusqlite::Res
     )
 }
 
+/// Shortest prefix [`resolve_session`] accepts for a session id: what Velra
+/// prints for one (`velra_core::render::source_label`). Anything shorter must
+/// be the whole id, so that a mistyped id is still refused rather than
+/// resolved to whichever session it happens to begin.
+pub const SESSION_PREFIX_MIN: usize = 8;
+
+/// A session id given on the command line, resolved against the ledger.
+#[derive(Debug, PartialEq, Eq)]
+pub enum SessionMatch {
+    One(String),
+    None,
+    /// A prefix that begins more than one recorded session (at most 3 shown).
+    Ambiguous(Vec<String>),
+}
+
+/// `given` as a whole recorded session id, or else as the unique prefix of
+/// one. A restored capsule names its source by prefix, and points at
+/// `velra inspect --session <prefix>` for detail (D147).
+pub fn resolve_session(conn: &Connection, given: &str) -> rusqlite::Result<SessionMatch> {
+    if is_recorded_session(conn, given)? {
+        return Ok(SessionMatch::One(given.to_string()));
+    }
+    if given.chars().count() < SESSION_PREFIX_MIN {
+        return Ok(SessionMatch::None);
+    }
+    // `substr`, not LIKE: a session id may contain `_` or `%`.
+    let found: Vec<String> = conn
+        .prepare(
+            "SELECT session_id FROM sessions WHERE substr(session_id, 1, length(?1)) = ?1 \
+             UNION SELECT DISTINCT session_id FROM events \
+             WHERE substr(session_id, 1, length(?1)) = ?1 \
+             ORDER BY 1 LIMIT 3",
+        )?
+        .query_map([given], |r| r.get(0))?
+        .collect::<rusqlite::Result<_>>()?;
+    Ok(match found.len() {
+        0 => SessionMatch::None,
+        1 => SessionMatch::One(found.into_iter().next().unwrap_or_default()),
+        _ => SessionMatch::Ambiguous(found),
+    })
+}
+
 /// The most recently active session of a project.
 pub fn latest_session_for_project(
     conn: &Connection,
@@ -77,6 +119,7 @@ pub fn preview(conn: &Connection, session_id: &str, now_ms: i64) -> rusqlite::Re
         trigger: Trigger::Cli,
         partial: false,
         preview: true,
+        restore: false,
         tz_offset_secs: local_offset_secs(now_ms),
     };
     snapshot::build(conn, session_id, &meta)
@@ -100,6 +143,7 @@ pub fn trace(
         trigger: Trigger::Cli,
         partial: false,
         preview: true,
+        restore: false,
         tz_offset_secs: local_offset_secs(now_ms),
     };
     let project: Option<String> = conn
@@ -384,4 +428,46 @@ pub fn checkpoint_json(c: &StoredCheckpoint) -> serde_json::Value {
         "capsule": c.capsule,
         "capsule_tokens_est": c.tokens,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use velra_core::db::{Db, Role};
+
+    /// A whole id, a unique prefix of 8 or more characters, and nothing
+    /// else: a shorter or shared prefix never picks a session.
+    #[test]
+    fn a_session_is_named_by_its_id_or_a_unique_prefix_of_eight_characters() {
+        let dir = tempfile::tempdir().unwrap();
+        let db = Db::open(&dir.path().join("v.db"), Role::Cli).unwrap();
+        for id in [
+            "8f32aaaa-1111-4aaa-8aaa-aaaaaaaaaaaa",
+            "8f32aaaa-2222-4bbb-8bbb-bbbbbbbbbbbb",
+            "d6a12f6a-3333-4ccc-8ccc-cccccccccccc",
+            "a_b%c_d%e",
+        ] {
+            db.conn
+                .execute(
+                    "INSERT INTO sessions (session_id, project_id, started_ms, last_event_ms) \
+                     VALUES (?1, 'p', 0, 0)",
+                    [id],
+                )
+                .unwrap();
+        }
+        let one = |id: &str| SessionMatch::One(id.to_string());
+        let r = |given: &str| resolve_session(&db.conn, given).unwrap();
+        assert_eq!(
+            r("d6a12f6a-3333-4ccc-8ccc-cccccccccccc"),
+            one("d6a12f6a-3333-4ccc-8ccc-cccccccccccc")
+        );
+        assert_eq!(r("d6a12f6a"), one("d6a12f6a-3333-4ccc-8ccc-cccccccccccc"));
+        assert_eq!(r("d6a12f6"), SessionMatch::None, "shorter than 8");
+        assert_eq!(r("d6a12f6b"), SessionMatch::None);
+        assert!(matches!(r("8f32aaaa"), SessionMatch::Ambiguous(ids) if ids.len() == 2));
+        assert_eq!(r("8f32aaaa-2"), one("8f32aaaa-2222-4bbb-8bbb-bbbbbbbbbbbb"));
+        // LIKE wildcards in the input are characters, not patterns.
+        assert_eq!(r("a_b%c_d%e"), one("a_b%c_d%e"));
+        assert_eq!(r("a%b_c%d_"), SessionMatch::None);
+    }
 }

@@ -297,6 +297,7 @@ fn full_offline_pipeline_carries_every_exact_identifier() {
         trigger: Trigger::Cli,
         partial: false,
         preview: false,
+        restore: false,
         tz_offset_secs: 0,
     };
     let inputs = TraceInputs {
@@ -334,6 +335,7 @@ fn the_diagnostic_names_a_superseded_intent() {
         trigger: Trigger::Cli,
         partial: false,
         preview: false,
+        restore: false,
         tz_offset_secs: 0,
     };
     let inputs = TraceInputs {
@@ -367,6 +369,7 @@ fn the_diagnostic_names_the_ladder_rung_that_removed_a_line() {
         trigger: Trigger::Cli,
         partial: false,
         preview: false,
+        restore: false,
         tz_offset_secs: 0,
     };
     let tight = RenderConfig { budget_tokens: 300 };

@@ -407,28 +407,38 @@ fn the_capsule_never_frames_itself_as_an_instruction() {
 
 /// The preamble is what stands between the block and being read as an
 /// injection. Its five claims are asserted individually so a future rewrite
-/// cannot shorten one of them away by accident.
+/// cannot shorten one of them away by accident -- in the continuation's
+/// preamble and in the one a restored capsule carries into another session,
+/// which must also say whose record it is (D147).
 #[test]
 fn the_preamble_still_makes_every_claim_it_has_to() {
-    let capsule = render::render(&empty_snapshot(), &RenderConfig::default()).text;
-    let preamble = capsule
-        .lines()
-        .nth(2)
-        .expect("the preamble is the third line")
-        .to_lowercase();
-    for claim in [
-        "local record",       // where it came from
-        "not an instruction", // what authority it has
-        "quotes them back",   // quoted, not authored
-        "observed",           // evidence class
-        "inferred",           // evidence class
-        "source of truth",    // the code wins
-        "conflicts",          // surface disagreement, do not resolve it silently
-    ] {
-        assert!(
-            preamble.contains(claim),
-            "the preamble no longer says {claim:?}: {preamble}"
-        );
+    for restore in [false, true] {
+        let mut snap = empty_snapshot();
+        snap.restore = restore;
+        let capsule = render::render(&snap, &RenderConfig::default()).text;
+        let preamble = capsule
+            .lines()
+            .nth(2)
+            .expect("the preamble is the third line")
+            .to_lowercase();
+        for claim in [
+            "local record",       // where it came from
+            "not an instruction", // what authority it has
+            "quotes them back",   // quoted, not authored
+            "observed",           // evidence class
+            "inferred",           // evidence class
+            "source of truth",    // the code wins
+            "conflicts",          // surface disagreement, do not resolve it silently
+        ] {
+            assert!(
+                preamble.contains(claim),
+                "the preamble (restore: {restore}) no longer says {claim:?}: {preamble}"
+            );
+        }
+        if restore {
+            assert!(preamble.contains("another session's"), "{preamble}");
+            assert!(!preamble.contains("this session"), "{preamble}");
+        }
     }
 }
 
@@ -523,6 +533,7 @@ fn empty_snapshot() -> Snapshot {
         trigger: Trigger::Auto,
         partial: false,
         preview: false,
+        restore: false,
         session_id: "s".into(),
         project_id: "p".into(),
         epoch: 1,

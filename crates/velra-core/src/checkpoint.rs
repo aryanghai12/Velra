@@ -51,6 +51,7 @@ pub fn create_in_tx(
         trigger: req.trigger,
         partial: req.partial,
         preview: false,
+        restore: false,
         tz_offset_secs: crate::time::local_offset_secs(req.created_ms),
     };
     let snap = snapshot::build(tx, req.session_id, &meta)?;

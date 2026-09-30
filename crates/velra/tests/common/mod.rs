@@ -766,6 +766,7 @@ impl Log {
             trigger: Trigger::Manual,
             partial: false,
             preview: false,
+            restore: false,
             tz_offset_secs: 0,
         };
         velra_core::snapshot::build(&self.db.conn, &self.env.session.clone(), &meta)

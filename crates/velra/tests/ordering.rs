@@ -1164,6 +1164,7 @@ fn trace_reports_occurrence_lateness_and_unreduced_events_truthfully() {
         trigger: velra_core::model::Trigger::Manual,
         partial: false,
         preview: true,
+        restore: false,
         tz_offset_secs: 0,
     };
     let cfg = velra_core::render::RenderConfig::default();

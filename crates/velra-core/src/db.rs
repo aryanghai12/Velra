@@ -437,15 +437,72 @@ fn busy_wait(count: i32, budget: Duration) -> bool {
         c.set(Some(since));
         since
     });
+    let sleep = busy_step(count, since, now, budget);
+    #[cfg(test)]
+    busy_trace::record(count, since, now, sleep);
+    match sleep {
+        Some(d) => {
+            std::thread::sleep(d);
+            true
+        }
+        None => false,
+    }
+}
+
+/// What the handler decides on its `count`th call of a wait that began at
+/// `since`, called at `now`: how long to sleep before SQLite retries, or
+/// `None` to give up.
+///
+/// Every decision is taken against the clock, so this never asks for a sleep
+/// that ends past the deadline, and gives up at the first call on or after
+/// it. How late the OS then wakes the thread is not decided here: on a loaded
+/// or virtualised runner a sleep can end tens of milliseconds after it was
+/// asked to, and that lateness is the whole of any overrun (D146).
+fn busy_step(count: i32, since: Instant, now: Instant, budget: Duration) -> Option<Duration> {
     let left = budget.saturating_sub(now.duration_since(since));
     if left.is_zero() {
-        return false;
+        return None;
     }
     let step = BUSY_STEPS_MS[usize::try_from(count)
         .unwrap_or(0)
         .min(BUSY_STEPS_MS.len() - 1)];
-    std::thread::sleep(left.min(Duration::from_millis(step)));
-    true
+    Some(left.min(Duration::from_millis(step)))
+}
+
+/// Every busy-handler call on this thread, as decided, for the tests that
+/// hold the handler to its budget against the real clock.
+#[cfg(test)]
+mod busy_trace {
+    use std::cell::RefCell;
+    use std::time::{Duration, Instant};
+
+    #[derive(Debug, Clone, Copy)]
+    pub struct Call {
+        pub count: i32,
+        pub since: Instant,
+        pub at: Instant,
+        pub sleep: Option<Duration>,
+    }
+
+    thread_local! {
+        static CALLS: RefCell<Vec<Call>> = const { RefCell::new(Vec::new()) };
+    }
+
+    pub fn record(count: i32, since: Instant, at: Instant, sleep: Option<Duration>) {
+        CALLS.with(|c| {
+            c.borrow_mut().push(Call {
+                count,
+                since,
+                at,
+                sleep,
+            })
+        });
+    }
+
+    /// The calls recorded since the last `take`.
+    pub fn take() -> Vec<Call> {
+        CALLS.with(|c| std::mem::take(&mut *c.borrow_mut()))
+    }
 }
 
 pub fn user_version(conn: &Connection) -> rusqlite::Result<i64> {
@@ -576,11 +633,109 @@ pub fn cursor(conn: &Connection) -> rusqlite::Result<i64> {
 mod tests {
     use super::*;
 
-    /// A role's lock budget is elapsed time. With SQLite's own handler it was
-    /// the sum of the sleeps requested: on Windows, where each is rounded up
-    /// to a 15.6 ms tick, the 50 ms pre-compact budget waited 109 ms and the
-    /// 100 ms hook budget 171 ms (measured). The median of five waits is
-    /// compared, so one slow wake-up on a loaded runner does not decide it.
+    /// Runs the handler's rules for one wait on a simulated clock, where the
+    /// `i`th sleep asked for `d` really lasts `wake(i, d)`. Returns how long
+    /// the wait took and how late the sleep that crossed the deadline woke.
+    fn simulate(
+        budget: Duration,
+        wake: impl Fn(usize, Duration) -> Duration,
+    ) -> (Duration, Duration) {
+        let since = Instant::now();
+        let (mut now, mut count, mut last_late) = (since, 0i32, Duration::ZERO);
+        while let Some(d) = busy_step(count, since, now, budget) {
+            assert!(
+                now + d <= since + budget,
+                "call {count} asked to sleep past the deadline"
+            );
+            let slept = wake(count as usize, d);
+            assert!(slept >= d, "a simulated sleep never ends early");
+            last_late = slept - d;
+            now += slept;
+            count += 1;
+            assert!(count < 10_000, "the wait ends");
+        }
+        (now - since, last_late)
+    }
+
+    /// The handler's rules, independent of any real clock: it gives up at
+    /// the first call on or after the deadline, never before, and never asks
+    /// to sleep past it -- so the only overrun is how late the OS woke the
+    /// thread from its last sleep. Before D133 the budget was the sum of the
+    /// sleeps *requested*, which a 15.625 ms timer tick turned into 171 ms.
+    #[test]
+    fn the_busy_budget_is_kept_against_the_clock_however_late_sleeps_wake() {
+        let ms = Duration::from_millis;
+        for budget in [ms(50), ms(100), ms(200), ms(1_000), ms(5_000)] {
+            // Exact sleeps: SQLite's schedule, cut off at the deadline.
+            let (took, _) = simulate(budget, |_, d| d);
+            assert_eq!(took, budget);
+
+            // Windows: every sleep rounded up to a 15.625 ms tick.
+            let tick = Duration::from_micros(15_625);
+            let (took, late) = simulate(budget, |_, d| {
+                let ticks = d.as_nanos().div_ceil(tick.as_nanos()).max(1);
+                tick * u32::try_from(ticks).unwrap()
+            });
+            assert!(took >= budget && took - budget <= late && late < tick);
+
+            // A loaded or virtualised runner: any sleep can wake very late.
+            for bad in 0..12 {
+                for extra in [ms(3), ms(40), ms(250)] {
+                    let (took, late) =
+                        simulate(budget, |i, d| if i == bad { d + extra } else { d });
+                    assert!(took >= budget, "{budget:?}: gave up early");
+                    assert!(
+                        took - budget <= late,
+                        "{budget:?}, sleep {bad} +{extra:?}: overran by {:?}, woke {late:?} late",
+                        took - budget
+                    );
+                }
+            }
+        }
+        let schedule: Vec<u64> = {
+            let since = Instant::now();
+            let (mut now, mut out) = (since, Vec::new());
+            while let Some(d) = busy_step(out.len() as i32, since, now, ms(100)) {
+                out.push(d.as_millis() as u64);
+                now += d;
+            }
+            out
+        };
+        assert_eq!(schedule, [1, 2, 5, 10, 15, 20, 25, 22], "SQLite's schedule");
+    }
+
+    /// A call with `count` 0 starts a new wait; any other continues the one
+    /// in progress on this thread.
+    #[test]
+    fn each_statement_starts_its_own_wait() {
+        busy_trace::take();
+        let budget = Duration::from_secs(10);
+        for count in [0, 1, 0, 1] {
+            assert!(busy_wait(count, budget));
+        }
+        let calls = busy_trace::take();
+        assert_eq!(calls.len(), 4);
+        assert_eq!(calls[0].since, calls[0].at);
+        assert_eq!(calls[1].since, calls[0].at, "count 1 continues the wait");
+        assert_eq!(calls[2].since, calls[2].at, "count 0 starts a new one");
+        assert!(calls[2].since > calls[0].since);
+        assert_eq!(calls[3].since, calls[2].at);
+    }
+
+    /// A role's lock budget is elapsed time, held against the real clock and
+    /// real SQLite. With SQLite's own handler it was the sum of the sleeps
+    /// requested: on Windows, where each is rounded up to a 15.6 ms tick, the
+    /// 50 ms pre-compact budget waited 109 ms and the 100 ms hook budget
+    /// 171 ms (measured, D133).
+    ///
+    /// Every wait is checked against the handler's own record of it: one
+    /// wait per statement, no call gives up before the deadline, none asks to
+    /// sleep past it, and the first call on or after it gives up. What is left
+    /// of the elapsed time once the budget and the OS's lateness in waking the
+    /// thread from its last sleep are taken away is SQLite's own work around
+    /// the wait, and that is bounded. The lateness itself is not: a macOS CI
+    /// runner overran the old `budget + 25 ms` bound on the median of five
+    /// waits (D146), and no code in this process decides it.
     #[test]
     fn a_locked_database_is_waited_on_for_the_role_budget_and_no_longer() {
         let dir = tempfile::tempdir().unwrap();
@@ -588,26 +743,121 @@ mod tests {
         drop(Db::open(&p, Role::Cli).unwrap());
         let holder = Db::open(&p, Role::Cli).unwrap();
         holder.conn.execute_batch("BEGIN IMMEDIATE").unwrap();
-        for (role, budget_ms) in [(Role::PreCompact, 50u128), (Role::HookAppend, 100)] {
+        for (role, budget_ms) in [(Role::PreCompact, 50u64), (Role::HookAppend, 100)] {
+            let budget = Duration::from_millis(budget_ms);
             let db = Db::open(&p, role).unwrap();
-            let mut waits: Vec<u128> = (0..5)
-                .map(|_| {
-                    let started = Instant::now();
-                    let r = db.conn.execute_batch("BEGIN IMMEDIATE");
-                    let waited = started.elapsed().as_millis();
-                    assert!(r.is_err(), "the lock is held");
-                    waited
-                })
-                .collect();
-            waits.sort_unstable();
-            let median = waits[2];
-            assert!(median >= budget_ms - 5, "{role:?} gave up early: {waits:?}");
+            let mut own: Vec<Duration> = Vec::new();
+            let mut report: Vec<String> = Vec::new();
+            for _ in 0..5 {
+                busy_trace::take();
+                let started = Instant::now();
+                let r = db.conn.execute_batch("BEGIN IMMEDIATE");
+                let waited = started.elapsed();
+                let calls = busy_trace::take();
+                assert!(r.is_err(), "the lock is held");
+                assert!(calls.len() >= 2, "{role:?}: the handler waited: {calls:?}");
+                let (first, last) = (calls[0], calls[calls.len() - 1]);
+                let deadline = first.since + budget;
+                for (i, c) in calls.iter().enumerate() {
+                    assert_eq!(c.count, i as i32, "{role:?}: one wait: {calls:?}");
+                    assert_eq!(c.since, first.at, "{role:?}: one wait: {calls:?}");
+                }
+                assert!(
+                    calls[..calls.len() - 1].iter().all(|c| c.sleep.is_some()),
+                    "{role:?} gave up before its deadline: {calls:?}"
+                );
+                assert!(last.sleep.is_none(), "{role:?}: the last call gives up");
+                assert!(last.at >= deadline, "{role:?} gave up early: {calls:?}");
+                for c in &calls {
+                    if let Some(d) = c.sleep {
+                        assert!(
+                            c.at + d <= deadline,
+                            "{role:?} asked to sleep past its deadline: {calls:?}"
+                        );
+                    }
+                }
+                assert!(waited >= budget, "{role:?} returned early: {waited:?}");
+                // Everything past the last wake-up the handler asked for.
+                let prev = calls[calls.len() - 2];
+                let asked = prev.at + prev.sleep.unwrap();
+                let late = last.at.saturating_duration_since(asked);
+                own.push(waited.saturating_sub(budget + late));
+                report.push(format!(
+                    "waited {:.1} ms, last wake-up {:.1} ms late, {} calls",
+                    waited.as_secs_f64() * 1e3,
+                    late.as_secs_f64() * 1e3,
+                    calls.len()
+                ));
+            }
+            own.sort_unstable();
             assert!(
-                median < budget_ms + 25,
-                "{role:?} waited past its {budget_ms} ms budget: {waits:?}"
+                own[2] < Duration::from_millis(25),
+                "{role:?} waited past its {budget_ms} ms budget by more than the OS \
+                 accounts for: {report:#?}"
             );
         }
         holder.conn.execute_batch("ROLLBACK").unwrap();
+    }
+
+    /// Measurement, not a check: for `VELRA_MEASURE_WAITS` waits (default 40)
+    /// on a held write lock under the 100 ms hook budget, how long each took,
+    /// how late the OS woke the thread from the handler's last sleep, and what
+    /// is left. Run it on a starved CPU to see which part grows.
+    #[test]
+    #[ignore]
+    fn measure_busy_waits_against_the_clock() {
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path().join("v.db");
+        drop(Db::open(&p, Role::Cli).unwrap());
+        let holder = Db::open(&p, Role::Cli).unwrap();
+        holder.conn.execute_batch("BEGIN IMMEDIATE").unwrap();
+        let db = Db::open(&p, Role::HookAppend).unwrap();
+        let n: usize = std::env::var("VELRA_MEASURE_WAITS")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(40);
+        let ms = |d: Duration| d.as_secs_f64() * 1e3;
+        let (mut waited, mut late, mut own) = (Vec::new(), Vec::new(), Vec::new());
+        for _ in 0..n {
+            busy_trace::take();
+            let started = Instant::now();
+            assert!(db.conn.execute_batch("BEGIN IMMEDIATE").is_err());
+            let w = started.elapsed();
+            let calls = busy_trace::take();
+            let prev = calls[calls.len() - 2];
+            let l = calls[calls.len() - 1]
+                .at
+                .saturating_duration_since(prev.at + prev.sleep.unwrap());
+            waited.push(ms(w));
+            late.push(ms(l));
+            own.push(ms(w.saturating_sub(Duration::from_millis(100) + l)));
+        }
+        holder.conn.execute_batch("ROLLBACK").unwrap();
+        let summary = |mut v: Vec<f64>| {
+            v.sort_by(f64::total_cmp);
+            format!(
+                "p50 {:.1} p90 {:.1} max {:.1}",
+                v[v.len() / 2],
+                v[v.len() * 9 / 10],
+                v[v.len() - 1]
+            )
+        };
+        let medians_over: usize = waited
+            .chunks(5)
+            .filter(|c| {
+                let mut c = c.to_vec();
+                c.sort_by(f64::total_cmp);
+                c[c.len() / 2] >= 125.0
+            })
+            .count();
+        println!(
+            "{n} waits, budget 100 ms: waited {}; last wake-up late {}; own {}; \
+             5-wait groups whose median is >= 125 ms (the old bound): {medians_over} of {}",
+            summary(waited),
+            summary(late),
+            summary(own),
+            n / 5
+        );
     }
 
     /// A lock released during the wait is taken.

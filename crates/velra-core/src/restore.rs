@@ -256,6 +256,7 @@ pub fn snapshot_meta(
         trigger: Trigger::Cli,
         partial: false,
         preview: false,
+        restore: true,
         tz_offset_secs,
     }
 }

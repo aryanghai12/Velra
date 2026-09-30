@@ -159,6 +159,7 @@ fn meta(checkpoint: &str, created_ms: i64) -> SnapshotMeta {
         trigger: Trigger::Cli,
         partial: false,
         preview: checkpoint == "preview",
+        restore: false,
         tz_offset_secs: 0,
     }
 }

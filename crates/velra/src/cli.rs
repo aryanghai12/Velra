@@ -984,9 +984,22 @@ fn cmd_inspect(
         // A session the ledger never saw has nothing to preview. Rendering
         // one anyway printed an empty record, exit 0 -- a typo read as "this
         // session has no state".
-        Some(s) => match inspect::is_recorded_session(&db.conn, &s) {
-            Ok(true) => Some(s),
-            Ok(false) => return fail(json, format!("No session {s} is recorded.")),
+        // A unique prefix is accepted too: it is how a restored capsule
+        // names the session it came from.
+        Some(s) => match inspect::resolve_session(&db.conn, &s) {
+            Ok(inspect::SessionMatch::One(id)) => Some(id),
+            Ok(inspect::SessionMatch::None) => {
+                return fail(json, format!("No session {s} is recorded."))
+            }
+            Ok(inspect::SessionMatch::Ambiguous(ids)) => {
+                return fail(
+                    json,
+                    format!(
+                        "Session {s} is ambiguous; it begins {}. Give more of the id.",
+                        ids.join(", ")
+                    ),
+                )
+            }
             Err(e) => return fail(json, e),
         },
         None if last => inspect::latest_session(&db.conn).ok().flatten(),
