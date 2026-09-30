@@ -29,6 +29,7 @@ python bench/harness/selftest.py
 python bench/tokenburn/run.py --selftest
 python bench/tokenburn/run.py --preflight
 cargo build --release -p velra && python scripts/smoke.py
+python bench/tokenburn/run.py --dry-run --results-root <new dir>   # needs a clean tree and a release build of HEAD
 ```
 
 Run both feature sets. `--features fault-injection` (the only feature, so
@@ -80,6 +81,7 @@ through `crates/velra/tests/common/`.
 | `python bench/harness/selftest.py` | the archived harness's pipeline on scripted outcomes |
 | `python bench/tokenburn/run.py --selftest` | the Token-Burn scoring pipeline on 23 scripted cases |
 | `python bench/tokenburn/run.py --preflight` | memory-isolation and source-handoff validation, without a Claude process |
+| `python bench/tokenburn/run.py --dry-run --results-root <dir>` | the benchmark's readiness gate: fixtures, ground truth, leak scans, the ladder, telemetry rules, the restore/delivery smoke (`bench/tokenburn/smoke.py`), the preflight and provenance (a clean tree, a release binary built at `HEAD`). Ends `READY FOR LIVE EVALUATION` or names each blocker |
 | `python scripts/smoke.py` | enable, a task with a failing test and a reverted edit, `PreCompact`, delivery at `SessionStart(compact)`, `status`, `doctor`, `disable`, and a byte-identical settings file, against the release binary in a temporary directory |
 
 ## Ignored tests and measurements

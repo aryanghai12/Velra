@@ -134,6 +134,12 @@ afterwards.
   line continuations, a byte order mark in settings or hook input, and
   non-ASCII paths are handled (D129–D132, D135, D138).
 
+- The Token-Burn readiness gate's own restore/delivery smoke
+  (`bench/tokenburn/smoke.py`) still read the staged file name used before
+  D105, so the gate blocked and its "gone once claimed" check passed without
+  testing anything. It now reads the record `velra restore` reports and the
+  workspace's `capsule.<gen>.json` records.
+
 ### Security
 
 - Redaction covers armored PGP private keys, orphaned private-key tails,

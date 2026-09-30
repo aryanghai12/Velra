@@ -18,7 +18,7 @@ The workflow, modelled exactly
             |
     `velra restore`            stages the capsule
             |
-    capsule staged             $VELRA_HOME/staged/<workspace>/staged_capsule
+    capsule staged             $VELRA_HOME/staged/<workspace>/capsule.<gen>.json
             |
     new destination session    a different session id
             |
@@ -229,8 +229,13 @@ class Harness:
         subprocess.run([str(self.binary), "reduce"], cwd=str(self.workspace),
                        env=self.env(), input="", capture_output=True, text=True)
 
-    def staged_file(self, workspace_id: str) -> pathlib.Path:
-        return self.home / "staged" / workspace_id / "staged_capsule"
+    def staged_dir(self, workspace_id: str) -> pathlib.Path:
+        return self.home / "staged" / workspace_id
+
+    def staged_records(self, workspace_id: str) -> list[pathlib.Path]:
+        """The workspace's staged records, one immutable file per stage
+        (`capsule.<gen>.json`, D105). Claims (`.claimed`) are not records."""
+        return sorted(self.staged_dir(workspace_id).glob("capsule.*.json"))
 
 
 # --------------------------------------------------------------------------
@@ -283,9 +288,13 @@ def run(binary: pathlib.Path, root: pathlib.Path) -> dict:
            isinstance(tokens, int) and 0 < tokens <= ceiling,
            f"{tokens} tokens, ceiling {ceiling}")
 
-    staged_path = harness.staged_file(workspace_id)
+    # The record the product says it wrote, which must be this workspace's.
+    staged_path = pathlib.Path(staged_record.get("staged_path") or "")
+    record("the staged record is in this workspace's staging directory",
+           staged_path.parent.resolve() == harness.staged_dir(workspace_id).resolve()
+           and staged_path.exists(), str(staged_path))
     on_disk = None
-    if staged_path.exists():
+    if staged_path.is_file():
         try:
             on_disk = json.loads(staged_path.read_text(encoding="utf-8"))
         except (json.JSONDecodeError, OSError):
@@ -331,8 +340,10 @@ def run(binary: pathlib.Path, root: pathlib.Path) -> dict:
     third = harness.session_start(THIRD_DEST, "startup")
     record("nor does a third",
            capsule_of(third) is None, f"exit={third['exit']}")
+    remaining = harness.staged_records(workspace_id)
     record("the staged capsule is gone once claimed",
-           not staged_path.exists(), str(staged_path))
+           not staged_path.exists() and not remaining,
+           ", ".join(p.name for p in remaining) or "no staged record left")
 
     # -- the wrong source -------------------------------------------------
     restaged = harness.cli("restore", "--session", SOURCE_SESSION, "--json")
@@ -344,8 +355,11 @@ def run(binary: pathlib.Path, root: pathlib.Path) -> dict:
         record(f"SessionStart({source}) does not consume a startup capsule",
                capsule_of(call) is None,
                f"exit={call['exit']}, stdout={call['stdout'][:80]!r}")
+    restaged_path = pathlib.Path((restaged.get("parsed") or {}).get("staged_path") or "")
     record("the capsule is still staged after every wrong source",
-           staged_path.exists(), str(staged_path))
+           restaged_path.is_file()
+           and harness.staged_records(workspace_id) == [restaged_path],
+           ", ".join(p.name for p in harness.staged_records(workspace_id)))
 
     final = harness.session_start("smoke-dest-0009", "startup")
     record("and startup still gets it afterwards",
