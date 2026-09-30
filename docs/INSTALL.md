@@ -20,7 +20,7 @@ your `PATH`, then register its hooks with Claude Code (`velra enable`).
 | | |
 |---|---|
 | **Claude Code** | Any version with hooks. `SessionStart`, which restore delivery depends on, arrived in 1.0.62. Velra detects the installed version and registers only the hooks it supports ([compatibility](CONFIGURATION.md#claude-code-version-compatibility)). The v0.1.2 benchmark ran on **2.1.280**. |
-| **Operating system** | Windows 10/11 (x64, ARM64), macOS (Apple silicon, Intel), Linux (x64, aarch64). CI builds and tests every change on Windows, macOS and Linux. The live benchmark ran on Windows 11 x64 only. |
+| **Operating system** | Windows 10/11 (x64, ARM64), macOS (Apple silicon, Intel), Linux (x64, aarch64). CI runs the test suite on Windows x64, Linux x64 and macOS arm64; the other targets are built, not tested. The live benchmark ran on Windows 11 x64 only. Current per-platform status: [Guarantees → Platform support](GUARANTEES.md#platform-support). |
 | **Prebuilt install** | Nothing else: no compiler, no Rust, no Node (unless you use the npm launcher). |
 | **Building from source** | Rust **1.98** or newer, plus a C compiler for the bundled SQLite ([below](#build-from-source)). |
 
@@ -48,7 +48,7 @@ velra --version
 The installers, the npm launcher and `cargo binstall` all fetch a **published
 GitHub release**. The installers default to the latest one.
 
-> **Release status (2026-09-23):** this repository is at **0.1.2**. The
+> **Release status (2026-09-30):** this repository is at **0.1.2**. The
 > latest *published* release on GitHub Releases, npm and crates.io is
 > **0.1.1**, which predates `velra restore`. Until 0.1.2 is published, get
 > 0.1.2 by [building from source](#build-from-source). Once it is published,
@@ -227,26 +227,26 @@ velra status
 velra doctor
 ```
 
-`velra status` (exit 0 when healthy):
+`velra status` (exit 0 when healthy; paths shortened):
 
 ```
 ✓ Enabled (13 hook handlers registered)
   Claude Code: 2.1.280
-  Binary:      /home/you/.velra/bin/velra
-  Database:    /home/you/.velra/velra.db (244 KiB)
+  Binary:      ~/Videos/Velra/target/release/velra.exe
+  Database:    ~/.velra/velra.db (232 KiB)
   Tracking:    3 session(s), 78 event(s)
-  Last event:  1h ago
+  Last event:  7d ago
   Continuations: none live
 ```
 
 `velra doctor` exits non-zero if any check fails:
 
 ```
-✓ settings parse: /home/you/.claude/settings.json
-✓ binary: /home/you/.velra/bin/velra
+✓ settings parse: ~/.claude/settings.json
+✓ binary: ~/Videos/Velra/target/release/velra.exe
 ✓ 13 hook handlers registered across 10 events
-✓ database: WAL, schema v2
-✓ last hook event 1h ago
+✓ database: WAL, schema v3
+✓ last hook event 7d ago
 ✓ no recent errors
 ```
 
@@ -258,7 +258,14 @@ see [Troubleshooting](TROUBLESHOOTING.md).
 
 Re-run the install method you used (with `VELRA_VERSION` to pick a release),
 then run `velra enable` once so the registered path and hook set match the
-new binary. Upgrades keep your database, since the schema migrates in place.
+new binary. Upgrades keep your database: the schema migrates forward in
+place, in one transaction that is rolled back whole if it cannot complete.
+
+Upgrading from 0.1.1 migrates the database from schema v2 to v3 (it adds
+the `constraints` table). Migrations are forward-only, so going back is
+not supported: 0.1.1 refuses a database with a newer schema, its hooks
+record nothing into it, and it logs `newer than this binary` to
+`logs/errors.log`. Reinstall 0.1.2 or later to use the database again.
 
 ## Uninstall
 

@@ -54,7 +54,7 @@ for what only a live session can show.
 | 2 | Prompt (≥ 20 chars): "fix the failing add test without changing the test file". | — | |
 | 3 | Let Claude edit `calc.py` and run `pytest` (it fails at least once). | — | |
 | 4 | Ask Claude to revert with `git restore calc.py`, then try a different edit. | — | |
-| 5 | In another terminal: `velra inspect`. | Capsule shows ROOT_TASK_OBJECTIVE, ACTIVE_FAILURE, one DEAD_ENDS entry (`reverted via \`git restore calc.py\``), and WORKING_FILES. | |
+| 5 | In another terminal: `velra inspect`. | Capsule shows `[FIRST_MESSAGE]` with the objective, `[TEST_STATUS]` with the failing `test_calc.py::test_add`, and a `[REVERTED_EDITS]` entry for `calc.py` (`` last reverted via `git restore calc.py` ``). | |
 | 6 | Run `/compact` in Claude Code. | Compaction completes normally. Note which messages surfaced: "⚡ Velra checkpoint saved" (PreCompact `systemMessage` is discarded by Claude Code on current versions) and "⚡ Velra restored: … (N tokens)" on the next SessionStart. | |
 | 7 | Ask: "what should we try next?" | The answer does **not** re-propose the reverted change, and refers to the recorded failure. | |
 | 8 | `velra inspect --checkpoint <id from step 6> --section dead-ends`. | Full, untruncated dead-end detail. | |
@@ -74,10 +74,10 @@ Run `velra enable` again first if step 12 disabled it.
 | 15 | `velra restore --list`, then `velra restore` and pick that session. | The session is listed `state: yes`; `✓ Staged … from session <id>`; ≤ 1,000 estimated tokens. | |
 | 16 | `velra status`. | A `Staged:` line naming that session, `delivered on SessionStart(startup)`. | |
 | 17 | Start `claude --resume`, pick the old session, then exit. Run `velra status`. | The capsule is **still staged** (resume does not consume it). | |
-| 18 | Start a brand-new `claude` in the repo. Ask "what were we doing?". | "⚡ Velra restored: … from session <id>" surfaces; the answer names the task, the reverted attempt and the constraint without re-reading everything. `velra status` no longer shows `Staged:`. | |
+| 18 | Start a brand-new `claude` in the repo. Ask "what were we doing?". | "⚡ Velra restored: … from session <id>" surfaces; the capsule says it is another session's record and ends with `velra inspect --session <8 characters> --section <name>`; the answer names the task, the reverted attempt and the constraint without re-reading everything. `velra status` no longer shows `Staged:`. | |
 | 19 | Start another new `claude`. | No capsule this time (one-shot). | |
 | 20 | `velra restore --session <id> --dry-run`, then `velra inspect --session <id> --trace calc.py`. | The capsule prints without staging; the trace reports each layer and `first_loss`. | |
-| 21 | `velra restore --session <id>`, then `velra restore --clear`. | `✓ Discarded the staged capsule.` | |
+| 21 | `velra restore --session <id>`, then `velra restore --clear`. | `✓ Discarded the staged capsule for <workspace root>.` | |
 
 ## Verification commands
 
@@ -96,5 +96,5 @@ git -C /tmp/velra-e2e status --porcelain
 
 - [ ] Every step above passed on the recorded Claude Code version.
 - [ ] `velra doctor` is clean on a fresh install.
-- [ ] Zero-to-"⚡ Velra restored" took two commands and one `/compact`.
+- [ ] From a fresh install, leaving a session and continuing in a new one took `velra enable`, `velra restore` and a new `claude`.
 - [ ] Restore steps 14–21 passed: staged once, survived `--resume`, delivered once to a new session.

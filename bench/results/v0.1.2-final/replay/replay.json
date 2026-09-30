@@ -1,0 +1,404 @@
+{
+  "what": "final-build replay of the frozen v0.1.2 requalification source ledgers",
+  "evidence": "bench/results/v0.1.2-requal",
+  "binary": {
+    "version": "velra 0.1.2 (77328b098, x86_64-pc-windows-gnu)",
+    "sha256": "98873ebb94c4d2b4db51341d4a2b5e74d2d3465b0e71909b7c8402546e55fae8"
+  },
+  "git_head": "77328b098244975a8d4ef7d186f4b6923f6d3c65",
+  "working_tree": {
+    "clean": false,
+    "uncommitted_product_paths": [
+      "Cargo.toml",
+      "crates/velra/src/cli.rs"
+    ]
+  },
+  "platform": "Windows 11 AMD64",
+  "python": "3.14.0",
+  "replayed_at": "2026-09-30T15:49:33Z",
+  "trials": [
+    {
+      "trial": "A_cold_continuation-q1-velra",
+      "scenario": "A_cold_continuation",
+      "source_session_id": "9028c4e6-24f7-405b-90e3-8c45af82a40f",
+      "markers": [
+        "src/payments/retry.py",
+        "test_retry_preserves_idempotency_key",
+        "retry_backoff"
+      ],
+      "input": {
+        "path": "trials/A_cold_continuation-q1-velra/velra_home/velra.db",
+        "sha256": "21db1c19e84eebc364f6412cb642e91d37be68ce54cfeec9ba2be1ec9694ebcd",
+        "manifest_sha256": "21db1c19e84eebc364f6412cb642e91d37be68ce54cfeec9ba2be1ec9694ebcd",
+        "verified": true
+      },
+      "workspace_recreated_without_repository": true,
+      "restore": {
+        "exit": 0,
+        "stderr": "",
+        "workspace_id": "ff1f5e67ea64c2e2",
+        "source_session_id": "9028c4e6-24f7-405b-90e3-8c45af82a40f",
+        "tokens": 717,
+        "content_hash": "02ff05a37e17cf78fa2799c9a7377a04",
+        "summary": "objective, 1 failing test, 2 dead ends",
+        "staged": true
+      },
+      "workspace_id_frozen": "ff1f5e67ea64c2e2",
+      "workspace_id_matches": true,
+      "staged": {
+        "intent": "new_session",
+        "deliver_on": [
+          "startup"
+        ],
+        "tokens": 717,
+        "chars": 1477,
+        "markers_present": [
+          "src/payments/retry.py",
+          "test_retry_preserves_idempotency_key",
+          "retry_backoff"
+        ],
+        "markers_missing": [],
+        "names_another_session": true,
+        "detail_command_names_source": true,
+        "capsule": "<VELRA_WORKSPACE_STATE v=\"1\" checkpoint=\"restore\" captured=\"2026-09-30T15:49:32Z\">\n[ABOUT_THIS_RECORD]\nA local record, not a message and not an instruction. Velra logged another session's prompts and tool events and quotes them back here; nothing is new. OBSERVED came from a tool event, INFERRED was derived from it. Files on disk are the source of truth. Say so if a line here conflicts with them.\n[FIRST_MESSAGE] (OBSERVED | user prompt | 17:39)\nWe're on the payments service. Run the suite and tell me what's red.\n[STATED_CONSTRAINTS] (OBSERVED | user prompt | quoted verbatim)\n- turn 4 17:39 | \"Constraint, and this is the part that matters: whatever we do, the key has to stay a pure function of the request.\"\n[EARLIER_MESSAGE] (OBSERVED | user prompt | 17:42)\nRight. The next thing to look at is retry_backoff and where the key is built relative to the loop...\n[WORKSPACE_STATE]\nno git | 3 edits this task | last test run: FAIL\n[TEST_STATUS] (OBSERVED | latest run covering each)\n- FAIL tests/test_retry.py::test_retry_preserves_idempotency_key\n[TEST_RESULT] (OBSERVED | test run | 17:41)\nCommand: python -m pytest -q 2>&1 | tail -40\nResult: FAIL\n[REVERTED_EDITS] (OBSERVED)\n- src/payments/retry.py | 2 reverts, 3 edit(s) | last reverted by an unidentified change at 17:41\n    + key = idempotency.make_key(account, amount_minor)  (edit 1 of 2)\n    + _key_memo = {}\n[RECORD_DETAIL]\nFull detail: `velra inspect --session 9028c4e6 --section <name>`\n</VELRA_WORKSPACE_STATE>"
+      },
+      "frozen": {
+        "tokens": 737,
+        "chars": 1535,
+        "markers_present": [
+          "src/payments/retry.py",
+          "test_retry_preserves_idempotency_key",
+          "retry_backoff"
+        ],
+        "markers_missing": []
+      },
+      "trace": {
+        "exit": 0,
+        "first_loss": {
+          "src/payments/retry.py": "none",
+          "test_retry_preserves_idempotency_key": "none",
+          "retry_backoff": "none"
+        },
+        "stderr": ""
+      },
+      "delivery": {
+        "exit": 0,
+        "stderr_empty": true,
+        "stdout_objects": 1,
+        "additional_context_equals_staged": true,
+        "markers_present": [
+          "src/payments/retry.py",
+          "test_retry_preserves_idempotency_key",
+          "retry_backoff"
+        ],
+        "markers_missing": [],
+        "system_message": "⚡ Velra restored: objective, 1 failing test, 2 dead ends — from session 9028c4e6 (717 tokens)",
+        "system_message_names_source": true
+      },
+      "second_startup": {
+        "exit": 0,
+        "stderr_empty": true,
+        "delivered": false
+      },
+      "determinism": {
+        "second_restore_exit": 0,
+        "identical_apart_from_captured_timestamp": true,
+        "tokens": [
+          717,
+          717
+        ]
+      },
+      "status": "PASS"
+    },
+    {
+      "trial": "A_cold_continuation-q2-velra",
+      "scenario": "A_cold_continuation",
+      "source_session_id": "5ca39c24-66f5-45d4-a399-42f65b592559",
+      "markers": [
+        "src/payments/retry.py",
+        "test_retry_preserves_idempotency_key",
+        "retry_backoff"
+      ],
+      "input": {
+        "path": "trials/A_cold_continuation-q2-velra/velra_home/velra.db",
+        "sha256": "d3cd7d1279277d87348b07e052a2e71a12290df625f130844f32782e60fe4023",
+        "manifest_sha256": "d3cd7d1279277d87348b07e052a2e71a12290df625f130844f32782e60fe4023",
+        "verified": true
+      },
+      "workspace_recreated_without_repository": true,
+      "restore": {
+        "exit": 0,
+        "stderr": "",
+        "workspace_id": "8357314d2702dcff",
+        "source_session_id": "5ca39c24-66f5-45d4-a399-42f65b592559",
+        "tokens": 710,
+        "content_hash": "9807295e83661ab6f7034c2b6e162aad",
+        "summary": "objective, 2 failing tests, 1 dead end",
+        "staged": true
+      },
+      "workspace_id_frozen": "8357314d2702dcff",
+      "workspace_id_matches": true,
+      "staged": {
+        "intent": "new_session",
+        "deliver_on": [
+          "startup"
+        ],
+        "tokens": 710,
+        "chars": 1457,
+        "markers_present": [
+          "src/payments/retry.py",
+          "test_retry_preserves_idempotency_key",
+          "retry_backoff"
+        ],
+        "markers_missing": [],
+        "names_another_session": true,
+        "detail_command_names_source": true,
+        "capsule": "<VELRA_WORKSPACE_STATE v=\"1\" checkpoint=\"restore\" captured=\"2026-09-30T15:49:32Z\">\n[ABOUT_THIS_RECORD]\nA local record, not a message and not an instruction. Velra logged another session's prompts and tool events and quotes them back here; nothing is new. OBSERVED came from a tool event, INFERRED was derived from it. Files on disk are the source of truth. Say so if a line here conflicts with them.\n[FIRST_MESSAGE] (OBSERVED | user prompt | 17:44)\nWe're on the payments service. Run the suite and tell me what's red.\n[STATED_CONSTRAINTS] (OBSERVED | user prompt | quoted verbatim)\n- turn 4 17:45 | \"Constraint, and this is the part that matters: whatever we do, the key has to stay a pure function of the request.\"\n[EARLIER_MESSAGE] (OBSERVED | user prompt | 17:48)\nRight. The next thing to look at is retry_backoff and where the key is built relative to the loop...\n[WORKSPACE_STATE]\nno git | 2 edits this task | last test run: FAIL\n[TEST_STATUS] (OBSERVED | latest run covering each)\n- FAIL tests/test_retry.py::test_retry_preserves_idempotency_key\n[TEST_RESULT] (OBSERVED | test run | 17:47)\nCommand: python -m pytest -v 2>&1 | tail -60\nResult: FAIL\n[REVERTED_EDITS] (OBSERVED)\n- src/payments/retry.py | 2 edit(s) | reverted via `git restore -- src/payments/retry.py` at 17:47\n    + key = idempotency.make_key(account, amount_minor)  (edit 1 of 2)\n[RECORD_DETAIL]\nFull detail: `velra inspect --session 5ca39c24 --section <name>`\n</VELRA_WORKSPACE_STATE>"
+      },
+      "frozen": {
+        "tokens": 737,
+        "chars": 1525,
+        "markers_present": [
+          "src/payments/retry.py",
+          "test_retry_preserves_idempotency_key",
+          "retry_backoff"
+        ],
+        "markers_missing": []
+      },
+      "trace": {
+        "exit": 0,
+        "first_loss": {
+          "src/payments/retry.py": "none",
+          "test_retry_preserves_idempotency_key": "none",
+          "retry_backoff": "none"
+        },
+        "stderr": ""
+      },
+      "delivery": {
+        "exit": 0,
+        "stderr_empty": true,
+        "stdout_objects": 1,
+        "additional_context_equals_staged": true,
+        "markers_present": [
+          "src/payments/retry.py",
+          "test_retry_preserves_idempotency_key",
+          "retry_backoff"
+        ],
+        "markers_missing": [],
+        "system_message": "⚡ Velra restored: objective, 2 failing tests, 1 dead end — from session 5ca39c24 (710 tokens)",
+        "system_message_names_source": true
+      },
+      "second_startup": {
+        "exit": 0,
+        "stderr_empty": true,
+        "delivered": false
+      },
+      "determinism": {
+        "second_restore_exit": 0,
+        "identical_apart_from_captured_timestamp": true,
+        "tokens": [
+          710,
+          710
+        ]
+      },
+      "status": "PASS"
+    },
+    {
+      "trial": "B_clear_survival-q1-velra",
+      "scenario": "B_clear_survival",
+      "source_session_id": "87901fc6-65ee-4265-8c7c-513b5d8ae43d",
+      "markers": [
+        "src/payments/reconcile.py",
+        "test_march_window_totals",
+        "booking",
+        "in_window"
+      ],
+      "input": {
+        "path": "trials/B_clear_survival-q1-velra/velra_home/velra.db",
+        "sha256": "1dffabc33af02b74c52d197ae707856b77d9d63e69a1b720ceaff11b222e8d95",
+        "manifest_sha256": "1dffabc33af02b74c52d197ae707856b77d9d63e69a1b720ceaff11b222e8d95",
+        "verified": true
+      },
+      "workspace_recreated_without_repository": true,
+      "restore": {
+        "exit": 0,
+        "stderr": "",
+        "workspace_id": "9c1256b5690e9531",
+        "source_session_id": "87901fc6-65ee-4265-8c7c-513b5d8ae43d",
+        "tokens": 711,
+        "content_hash": "357c852cc9bde077c0cf2636a9f45ba2",
+        "summary": "objective, 1 failing test, 2 dead ends",
+        "staged": true
+      },
+      "workspace_id_frozen": "9c1256b5690e9531",
+      "workspace_id_matches": true,
+      "staged": {
+        "intent": "new_session",
+        "deliver_on": [
+          "startup"
+        ],
+        "tokens": 711,
+        "chars": 1483,
+        "markers_present": [
+          "src/payments/reconcile.py",
+          "test_march_window_totals",
+          "booking",
+          "in_window"
+        ],
+        "markers_missing": [],
+        "names_another_session": true,
+        "detail_command_names_source": true,
+        "capsule": "<VELRA_WORKSPACE_STATE v=\"1\" checkpoint=\"restore\" captured=\"2026-09-30T15:49:33Z\">\n[ABOUT_THIS_RECORD]\nA local record, not a message and not an instruction. Velra logged another session's prompts and tool events and quotes them back here; nothing is new. OBSERVED came from a tool event, INFERRED was derived from it. Files on disk are the source of truth. Say so if a line here conflicts with them.\n[FIRST_MESSAGE] (OBSERVED | user prompt | 17:59)\nPayments again. Run the suite; I want the reconcile failure this time, not the other two.\n[STATED_CONSTRAINTS] (OBSERVED | user prompt | quoted verbatim)\n- turn 4 18:00 | \"Here's the thing you can't get from the code: the upstream feed backdates.\"\n- turn 4 18:00 | \"A window has to close on the booking date, never the value date.\"\n[LATEST_MESSAGE] (OBSERVED | user prompt | 18:02)\nNext step is in_window in reconcile.py. Don't change it yet.\n[WORKSPACE_STATE]\nno git | 3 edits this task | last test run: FAIL\n[TEST_STATUS] (OBSERVED | latest run covering each)\n- FAIL tests/test_reconcile.py::test_march_window_totals\n[TEST_RESULT] (OBSERVED | test run | 18:01)\nCommand: python -m pytest tests/ -v 2>&1 | tail -60\nResult: FAIL\n[REVERTED_EDITS] (OBSERVED)\n- src/payments/reconcile.py | 2 reverts, 3 edit(s) | last reverted by an unidentified change at 18:01\n    + stamp = row[\"booking_date\"]  (edit 1 of 2)\n    + import datetime\n[RECORD_DETAIL]\nFull detail: `velra inspect --session 87901fc6 --section <name>`\n</VELRA_WORKSPACE_STATE>"
+      },
+      "frozen": {
+        "tokens": 680,
+        "chars": 1423,
+        "markers_present": [
+          "src/payments/reconcile.py",
+          "test_march_window_totals",
+          "booking",
+          "in_window"
+        ],
+        "markers_missing": []
+      },
+      "trace": {
+        "exit": 0,
+        "first_loss": {
+          "src/payments/reconcile.py": "none",
+          "test_march_window_totals": "none",
+          "booking": "none",
+          "in_window": "none"
+        },
+        "stderr": ""
+      },
+      "delivery": {
+        "exit": 0,
+        "stderr_empty": true,
+        "stdout_objects": 1,
+        "additional_context_equals_staged": true,
+        "markers_present": [
+          "src/payments/reconcile.py",
+          "test_march_window_totals",
+          "booking",
+          "in_window"
+        ],
+        "markers_missing": [],
+        "system_message": "⚡ Velra restored: objective, 1 failing test, 2 dead ends — from session 87901fc6 (711 tokens)",
+        "system_message_names_source": true
+      },
+      "second_startup": {
+        "exit": 0,
+        "stderr_empty": true,
+        "delivered": false
+      },
+      "determinism": {
+        "second_restore_exit": 0,
+        "identical_apart_from_captured_timestamp": true,
+        "tokens": [
+          711,
+          711
+        ]
+      },
+      "status": "PASS"
+    },
+    {
+      "trial": "B_clear_survival-q2-velra",
+      "scenario": "B_clear_survival",
+      "source_session_id": "44458106-4af0-4251-b7de-29b4a016897e",
+      "markers": [
+        "src/payments/reconcile.py",
+        "test_march_window_totals",
+        "booking",
+        "in_window"
+      ],
+      "input": {
+        "path": "trials/B_clear_survival-q2-velra/velra_home/velra.db",
+        "sha256": "5b84b44c96aeb7871075635e19fdcf39b4cb92c017f0675657160c445e59f130",
+        "manifest_sha256": "5b84b44c96aeb7871075635e19fdcf39b4cb92c017f0675657160c445e59f130",
+        "verified": true
+      },
+      "workspace_recreated_without_repository": true,
+      "restore": {
+        "exit": 0,
+        "stderr": "",
+        "workspace_id": "00281ebb830665f0",
+        "source_session_id": "44458106-4af0-4251-b7de-29b4a016897e",
+        "tokens": 721,
+        "content_hash": "58f0a4cb88b0976438b89e53f18521b7",
+        "summary": "objective, 1 failing test, 3 dead ends",
+        "staged": true
+      },
+      "workspace_id_frozen": "00281ebb830665f0",
+      "workspace_id_matches": true,
+      "staged": {
+        "intent": "new_session",
+        "deliver_on": [
+          "startup"
+        ],
+        "tokens": 721,
+        "chars": 1497,
+        "markers_present": [
+          "src/payments/reconcile.py",
+          "test_march_window_totals",
+          "booking",
+          "in_window"
+        ],
+        "markers_missing": [],
+        "names_another_session": true,
+        "detail_command_names_source": true,
+        "capsule": "<VELRA_WORKSPACE_STATE v=\"1\" checkpoint=\"restore\" captured=\"2026-09-30T15:49:33Z\">\n[ABOUT_THIS_RECORD]\nA local record, not a message and not an instruction. Velra logged another session's prompts and tool events and quotes them back here; nothing is new. OBSERVED came from a tool event, INFERRED was derived from it. Files on disk are the source of truth. Say so if a line here conflicts with them.\n[FIRST_MESSAGE] (OBSERVED | user prompt | 18:03)\nPayments again. Run the suite; I want the reconcile failure this time, not the other two.\n[STATED_CONSTRAINTS] (OBSERVED | user prompt | quoted verbatim)\n- turn 4 18:03 | \"Here's the thing you can't get from the code: the upstream feed backdates.\"\n- turn 4 18:03 | \"A window has to close on the booking date, never the value date.\"\n[LATEST_MESSAGE] (OBSERVED | user prompt | 18:05)\nNext step is in_window in reconcile.py. Don't change it yet.\n[WORKSPACE_STATE]\nno git | 5 edits this task | last test run: FAIL\n[TEST_STATUS] (OBSERVED | latest run covering each)\n- FAIL tests/test_reconcile.py::test_march_window_totals\n[TEST_RESULT] (OBSERVED | test run | 18:04)\nCommand: python -m pytest -v 2>&1 | tail -40\nResult: FAIL\n[REVERTED_EDITS] (OBSERVED)\n- src/payments/reconcile.py | 3 reverts, 5 edit(s) | last reverted via `git restore src/payments/reconcile.py` at 18:04\n    + \"\"\"Whether a row belongs to the window [start, end].  (edit 1 of 2)\n[RECORD_DETAIL]\nFull detail: `velra inspect --session 44458106 --section <name>`\n</VELRA_WORKSPACE_STATE>"
+      },
+      "frozen": {
+        "tokens": 693,
+        "chars": 1443,
+        "markers_present": [
+          "src/payments/reconcile.py",
+          "test_march_window_totals",
+          "booking",
+          "in_window"
+        ],
+        "markers_missing": []
+      },
+      "trace": {
+        "exit": 0,
+        "first_loss": {
+          "src/payments/reconcile.py": "none",
+          "test_march_window_totals": "none",
+          "booking": "none",
+          "in_window": "none"
+        },
+        "stderr": ""
+      },
+      "delivery": {
+        "exit": 0,
+        "stderr_empty": true,
+        "stdout_objects": 1,
+        "additional_context_equals_staged": true,
+        "markers_present": [
+          "src/payments/reconcile.py",
+          "test_march_window_totals",
+          "booking",
+          "in_window"
+        ],
+        "markers_missing": [],
+        "system_message": "⚡ Velra restored: objective, 1 failing test, 3 dead ends — from session 44458106 (721 tokens)",
+        "system_message_names_source": true
+      },
+      "second_startup": {
+        "exit": 0,
+        "stderr_empty": true,
+        "delivered": false
+      },
+      "determinism": {
+        "second_restore_exit": 0,
+        "identical_apart_from_captured_timestamp": true,
+        "tokens": [
+          721,
+          721
+        ]
+      },
+      "status": "PASS"
+    }
+  ],
+  "overall": "PASS"
+}

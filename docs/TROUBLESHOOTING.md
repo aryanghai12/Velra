@@ -47,7 +47,7 @@ database. To throw away a staged capsule, use `velra restore --clear`.
 | `! No previous sessions found for this workspace.` | you are in a different workspace from the one the session ran in (another directory, a different git root, or a `CLAUDE_PROJECT_DIR` that differs) | `velra restore --list --json` and compare `workspace_root` with where the session ran | the project root you expect | `cd` into that project. If Claude Code ran with `CLAUDE_PROJECT_DIR` set, set the same value before `velra restore` |
 | `! Velra has no task state for any of this workspace's N session(s) yet.` | the sessions predate `velra enable`, or recorded nothing | `velra restore --list` | some rows `state: yes` | work one session with Velra enabled first |
 | `✗ session <id> has no task state to restore` | the session was `/clear`ed after its work: a restore renders the *current* epoch, which is empty | `velra inspect --session <id>` | a non-empty capsule | stage **before** `/clear` ([Restoring across `/clear`](RESTORE.md#restoring-across-clear)); or pick another session |
-| `✗ no session <id> recorded for this workspace` | typo, an abbreviated id (`8790…e43d` is display only), or a session from another workspace | `velra restore --list --json` | the full id in `session_id` | pass the full id, from the right directory |
+| `✗ no session <id> recorded for this workspace` | typo, an abbreviated id (`8790…e43d`, or the 8-character prefix a capsule prints, is not accepted by `restore`), or a session from another workspace | `velra restore --list --json` | the full id in `session_id` | pass the full id, from the right directory. (`velra inspect --session` does accept a unique prefix of 8 or more characters) |
 | **Restore succeeded but the new session did not receive the state** | (1) the next session was not a new one: `--resume`, `--continue` and `/clear` never consume a restore capsule; (2) it started in a different workspace; (3) hooks did not run in that session; (4) the capsule expired (7 days) | `velra status` in the project | if the `Staged:` line is **still there**, nothing consumed it: causes 1–3. If it is gone and nothing arrived: check `errors.log` for `staged capsule not delivered: …` | start a plain new session (`claude`) from inside the project; for (3) see [Hooks](#hooks) |
 | The picked session is the wrong one / an old one got restored | the picker lists newest first by last activity, and labels are first prompts, which can repeat | `velra restore --list` (full ids via `--json`); `velra restore --dry-run --session <id>` to preview | the preview shows the work you expect | `velra restore --session <correct id>`. It replaces the staged capsule |
 | Several sessions look identical | the same opening prompt used more than once | `velra restore --list --json` (`last_activity_ms`), then `--dry-run --session <id>` for each | — | choose by preview, not label |
@@ -116,42 +116,59 @@ phrase you typed, through every layer a capsule is built from. It reports
 | `restore` | the rendered text after redaction, as `velra restore` stages it | redacted (it matched a secret pattern) |
 | `capsule` | the capsule currently staged for this workspace from this session | the staged file is older or different: **restage** |
 
+Real output of the release binary on the Benchmark B source session of
+the v0.1.2 live benchmark, with a capsule staged from it (transcript paths
+shortened):
+
 ```
-$ velra inspect --session 87901fc6-65ee-4265-8c7c-513b5d8ae43d --trace in_window --trace retry_backoff --trace feed.py
+$ velra inspect --session 87901fc6 --trace in_window --trace retry_backoff --trace feed.py
 MARKER: in_window
-source_event:     PRESENT  [18 transcript line(s) in …/87901fc6-….jsonl]
-normalized_state: PRESENT  [2 event(s): events:39,events:64]
+source_event:     PRESENT  [18 transcript line(s) in ~/.claude/projects/…/87901fc6-65ee-4265-8c7c-513b5d8ae43d.jsonl]
+normalized_state: PRESENT  [2 event(s): events:39 (occurred 2026-09-23T12:31:02Z),events:64 (occurred 2026-09-23T12:32:20Z)]
 ledger:           PRESENT  [intents:16 (LATEST, epoch 1)]
-snapshot:         PRESENT  [latest (intents:16)]
-renderer:         PRESENT  [22 ladder rung(s) applied; at full detail: PRESENT]
-restore:          PRESENT  [the renderer's text after redaction, as `velra restore` stages it]
-capsule:          N/A  [nothing staged for this workspace from this session]
+snapshot:         PRESENT  [latest (intents:16); built 2026-09-30T16:05:49Z from events reduced through events:78]
+renderer:         PRESENT  [7 ladder rung(s) applied; at full detail: PRESENT]
+restore:          PRESENT  [rendered as `velra restore` stages it (checkpoint="restore"), after redaction]
+capsule:          PRESENT  [the capsule currently staged for this workspace]
 first_loss:       none
 
 MARKER: retry_backoff
-source_event:     PRESENT  [1 transcript line(s) in …/87901fc6-….jsonl]
+source_event:     PRESENT  [1 transcript line(s) in ~/.claude/projects/…/87901fc6-65ee-4265-8c7c-513b5d8ae43d.jsonl]
 normalized_state: ABSENT  [0 event(s)]
-…
+ledger:           ABSENT
+snapshot:         ABSENT  [built 2026-09-30T16:05:49Z from events reduced through events:78]
+renderer:         ABSENT  [7 ladder rung(s) applied; at full detail: ABSENT]
+restore:          ABSENT  [rendered as `velra restore` stages it (checkpoint="restore"), after redaction]
+capsule:          ABSENT  [the capsule currently staged for this workspace]
 first_loss:       normalized_state
 reason:           not captured: no hook payload Velra stored contains it (assistant prose and reasoning are not hooked)
 
 MARKER: feed.py
-…
-snapshot:         PRESENT  [working_files]
-renderer:         ABSENT  [22 ladder rung(s) applied; at full detail: PRESENT]
-first_loss:       renderer
-reason:           budgeted out: removed by ladder rung `working_files 8->4` (target 740 estimated tokens)
+source_event:     PRESENT  [7 transcript line(s) in ~/.claude/projects/…/87901fc6-65ee-4265-8c7c-513b5d8ae43d.jsonl]
+normalized_state: PRESENT  [3 event(s): events:3 (occurred 2026-09-23T12:29:39Z),events:15 (occurred 2026-09-23T12:29:59Z),events:16 (occurred 2026-09-23T12:30:01Z)]
+ledger:           PRESENT  [intents:3 (LATEST, epoch 1, superseded); file_stats:src/payments/feed.py]
+snapshot:         ABSENT  [built 2026-09-30T16:05:49Z from events reduced through events:78]
+renderer:         ABSENT  [7 ladder rung(s) applied; at full detail: ABSENT]
+restore:          ABSENT  [rendered as `velra restore` stages it (checkpoint="restore"), after redaction]
+capsule:          ABSENT  [the capsule currently staged for this workspace]
+first_loss:       snapshot
+reason:           intents:3 (LATEST, epoch 1, superseded) -> superseded: intents:3 (LATEST) was replaced by intents:4, and the snapshot carries only the live LATEST message plus, when the latest names no code, the most recent earlier message that does; file_stats:src/payments/feed.py -> unavailable: the file no longer exists on disk
 ```
 
 How to read that:
 
-- `in_window` made it all the way. `capsule: N/A` only means nothing is
-  staged right now from this session.
-- `retry_backoff` appears in the transcript but only in the assistant's
+- `in_window` made it all the way into the staged capsule.
+- `retry_backoff` appears in the transcript, but only in the assistant's
   words, so Velra never captured it. The remedy is for it to appear in a
   prompt or a tool call. No setting changes this.
-- `feed.py` was selected but cut at render time by a named rung. A larger
-  `budget_tokens` would keep it, and `--section files` shows it now.
+- `feed.py` was captured and is in the ledger, but the snapshot did not
+  select it: the prompt that named it was superseded by a later one, and
+  (here, because the benchmark's fixture directory no longer exists) the
+  file is gone from disk. `--section files` shows file activity in full.
+- When the renderer is the first loss, the reason names the rung that
+  removed the line, in the form "budgeted out: removed by ladder rung
+  `<rung>` (target <n> estimated tokens)". A larger `budget_tokens` would
+  keep it.
 
 Reasons are computed from the rows and the ladder, never guessed. When no
 specific reason applies, the report says `other`. Use `--json` for a

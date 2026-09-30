@@ -5,9 +5,11 @@ archive that is kept working and kept out of the scorecard.
 
 | | What it answers | Runner | Results |
 |---|---|---|---|
-| **v0.1.2 Token-Burn** | Does leaving a large conversation behind and restoring a bounded capsule into a fresh session cost less input — and still do the work correctly? | `bench/tokenburn/run.py` | `--results-root <PATH>`. **Current evidence: [`results/v0.1.2-requal/`](results/v0.1.2-requal/)** (preregistration 1.1.0), written up in [`docs/BENCHMARK.md`](../docs/BENCHMARK.md). Invalidated 1.0.0 run: `results/v0.1.2/tokenburn/` |
+| **v0.1.2 Token-Burn** | Does leaving a large conversation behind and restoring a bounded capsule into a fresh session cost less input — and still do the work correctly? | `bench/tokenburn/run.py` | `--results-root <PATH>`. **Current live evidence: [`results/v0.1.2-requal/`](results/v0.1.2-requal/)** (preregistration 1.1.0, build `51b96cb`). Invalidated 1.0.0 run: `results/v0.1.2/tokenburn/` |
+| **v0.1.2 release-build checks** | Does the release binary still stage and deliver every declared marker from the live run's recorded source state? What does a hook cost? | `bench/tokenburn/replay.py`, `bench/legacy/run.sh`, `bench/legacy/spawn_floor.py` | [`results/v0.1.2-final/`](results/v0.1.2-final/), offline, not preregistered |
 | **archive** (v0.1, v0.1.1, v0.1.2-hardened) | Historical. Did the capsule change what the agent did *after compaction*? | `bench/legacy/` | `bench/results/` |
 
+All current evidence is written up in [`docs/BENCHMARK.md`](../docs/BENCHMARK.md).
 The archive is described in [`legacy/README.md`](legacy/README.md). Nothing in
 it contributes to the Token-Burn scorecard: separate trials root, separate
 pre-registration, and a test that fails the build if a Token-Burn module so
@@ -179,8 +181,11 @@ not.
 
 ```
 bench/
-  tokenburn/          the v0.1.2 Token-Burn benchmark  (see __init__.py)
-  legacy/             S1/S2/S3 and their runners, archived and still working
+  tokenburn/          the v0.1.2 Token-Burn benchmark  (see __init__.py);
+                      replay.py replays frozen source ledgers through a binary
+  legacy/             S1/S2/S3 and their runners, archived and still working;
+                      run.sh (hook latency budgets) and spawn_floor.py are
+                      still current tools
     scenarios/  fixture/  run_*.py
   harness/            shared: claude_binary, provenance, measure_tokens,
                       verify_env, plus the archive's own analysis modules
@@ -212,8 +217,8 @@ python bench/tokenburn/smoke.py            # restore → SessionStart, offline
 ## Reading the results
 
 Do not trust a verdict on its own. Every number is recomputable from the raw
-captures. Frozen roots (`results/v0.1.2/`, `results/v0.1.2-requal/`) refuse to
-be written, so copy one to a new directory first; the raw captures are not in
+captures. Frozen roots (`results/v0.1.2/`, `results/v0.1.2-requal/`,
+`results/v0.1.2-final/`) refuse to be written, so copy one to a new directory first; the raw captures are not in
 git, and `raw_captures.sha256.json` lists what they must hash to:
 
 ```bash

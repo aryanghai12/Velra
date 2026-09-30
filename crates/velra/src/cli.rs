@@ -176,7 +176,7 @@ pub const VERSION: &str = concat!(
 #[command(
     name = "velra",
     version = VERSION,
-    about = "Local-first session continuity for Claude Code: clear the context, keep the state.",
+    about = "Local-first, deterministic continuation for Claude Code: clear the context, keep the state, continue working.",
     max_term_width = 100
 )]
 struct Cli {
@@ -209,7 +209,7 @@ enum Command {
         #[arg(long)]
         json: bool,
     },
-    /// Show what would survive a /compact right now.
+    /// Preview the capsule Velra would render for a session right now.
     Inspect {
         /// Session to inspect (defaults to this project's most recent).
         #[arg(long)]
@@ -522,7 +522,7 @@ fn cmd_enable(dry_run: bool) -> i32 {
             }
             println!();
             println!("Nothing else required. Keep coding normally.");
-            println!("Tip: run `velra inspect` any time to see what would survive a /compact.");
+            println!("Tip: `velra restore` carries a session's state into your next one; `velra inspect` previews it.");
             0
         }
         Err(e) => {

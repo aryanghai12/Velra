@@ -1,26 +1,31 @@
 # Contributing to Velra
 
-Thanks for helping. Velra sits inside other people's Claude Code sessions, so
-the bar is less about features and more about never getting in the way and
+Thanks for helping. Velra runs inside other people's Claude Code sessions,
+so the bar is less about features than about never getting in the way and
 never overstating what it does.
 
 ## Ground rules
 
 1. **Never block or disturb Claude Code.** Hook code always exits 0, never
-   writes to stderr, and writes to stdout either nothing or exactly one JSON
-   object. A change that can violate this is a top-severity bug, however
-   useful it is.
-2. **Never lose recorded data.** An event reaches the database or the spool,
-   never neither.
-3. **Nothing leaves the machine.** No network-capable crate in the hook path
-   (`ci/check-no-network-deps.sh` enforces this), no telemetry, no LLM calls.
-4. **Record decisions.** Every resolved ambiguity or behavioural change gets a
-   numbered row in [`DECISIONS.md`](DECISIONS.md) (currently D1–D69) with its
-   rationale.
-5. **Claims follow evidence.** Documentation and benchmark text say what was
-   measured and nothing more. See [the benchmark rules](#benchmark-changes).
+   writes to stderr, and writes to stdout either nothing or exactly one
+   JSON object. A change that can violate this is a top-severity bug,
+   however useful it is.
+2. **Never lose recorded data.** An event reaches the database or the
+   spool, never neither.
+3. **Nothing leaves the machine.** No network-capable crate in the hook
+   path (`ci/check-no-network-deps.sh` enforces it), no telemetry, no model
+   calls.
+4. **Record decisions.** Every resolved ambiguity or behavioural change gets
+   a numbered row in [`DECISIONS.md`](DECISIONS.md) (currently D1–D150),
+   with what was reproduced or measured to justify it.
+5. **Claims follow evidence.** Documentation says what the code does and
+   what was measured, and nothing more. [docs/GUARANTEES.md](docs/GUARANTEES.md)
+   sorts every claim by strength; keep it true.
 
-## Setting up
+## Getting set up
+
+Toolchain, repository layout and build details are in
+[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md). In short:
 
 ```bash
 git clone https://github.com/aryanghai12/Velra.git
@@ -28,96 +33,73 @@ cd Velra
 cargo build --release -p velra
 ```
 
-You need Rust ≥ 1.98 and a C compiler for the bundled SQLite
-([Install → Build from source](docs/INSTALL.md#build-from-source)). The
-repository pins no toolchain. On a Windows GNU host, make sure MinGW-w64's
-`bin` directory (with `gcc.exe` and `dlltool.exe`) is on `PATH` **in the shell
-that runs cargo**. Existing `target/` artifacts can mask a missing compiler.
+Rust 1.98 or newer, a C compiler for the bundled SQLite, and Python 3.10+
+with `pytest`.
 
-Python 3.10+ with `pytest` runs the benchmark harness tests.
-
-## The checks CI runs
-
-Run these before opening a pull request:
+## Before you open a pull request
 
 ```bash
 cargo fmt --all -- --check
 cargo clippy --workspace --all-targets --all-features -- -D warnings
-cargo test --workspace --all-features
+cargo test --workspace --all-features --no-fail-fast
+cargo test --workspace --no-fail-fast            # default features: CI does not run this one
 python -m pytest bench/tests -q
-python bench/tokenburn/run.py --selftest     # scoring pipeline on 23 scripted cases; offline, spends nothing
-python bench/tokenburn/run.py --preflight    # memory-isolation and handoff validation; offline
-python scripts/smoke.py                      # the product end to end against the release binary, offline
+python bench/tokenburn/run.py --selftest
+python bench/tokenburn/run.py --preflight
+python scripts/smoke.py                          # needs the release binary
 ```
 
-CI also runs an MSRV job (`cargo check` on 1.98.1), an IPC fuzz job
-(`cargo test --test ipc_contract -- --ignored`), the no-network dependency
-check, and the hook latency budgets (`bench/legacy/run.sh`, reported, not
-gating).
+All of these are offline and spend nothing. What each suite covers, the
+tests that are platform-specific or ignored, and the known intermittent
+failures: [docs/TESTING.md](docs/TESTING.md).
 
-Two Rust tests are `#[cfg(unix)]`, so Windows runs slightly fewer tests than
-Linux.
-
-## Where things are
-
-| Path | What |
-|---|---|
-| `crates/velra/` | the binary: hook runtime (`hook.rs`), CLI (`cli.rs`), restore picker, settings editing |
-| `crates/velra-core/` | the logic, with no Claude Code I/O: event log, reducer, snapshot, renderer, staging, continuation |
-| `crates/velra/tests/` | integration tests against the real binary: fail-open, restore, staged delivery, settings round-trips, security |
-| `tests/fixtures/`, `tests/golden/` | recorded Claude Code hook payloads and golden capsules |
-| `bench/tokenburn/` | the v0.1.2 benchmark harness and scoring pipeline |
-| `bench/results/` | frozen evidence. **Never edit by hand** ([README](bench/results/README.md)) |
-| `bench/legacy/`, `bench/harness/` | archived v0.1–v0.1.2-hardened benchmarks, still runnable |
-| `docs/` | user and contributor documentation |
-| `prompts doc/` | the original build specifications that `DECISIONS.md` sections refer to |
-
-[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) explains how the pieces fit.
-[`HANDOFF.md`](HANDOFF.md) holds historical v0.1 working notes, including
-toolchain gotchas.
+CI also runs an MSRV job, an IPC fuzz job, the no-network dependency check
+and the hook latency budgets (reported, not gating).
 
 ## Making a change
 
-- Keep the hook path cheap. `main.rs` dispatches hooks before clap or any
-  initialisation; do not add work there that the CLI could do instead.
-- Capsule changes: the renderer is a pure function with a hard ceiling. Add a
-  property or golden test, and check that the truncation-ladder tests still
-  describe the behaviour. Use `velra inspect --trace` to see the effect on
-  real sessions.
-- Settings changes: `velra disable` must restore the settings file byte for
-  byte. The round-trip tests in `crates/velra/tests/settings_edit.rs` guard
-  this.
-- Workspace identity lives in exactly one function
-  (`velra_core::workspace::resolve`). Do not re-derive it elsewhere.
-- Update the relevant page in `docs/` and add a `CHANGELOG.md` entry under the
-  unreleased version.
+- **Hook path.** `main.rs` dispatches hooks before clap or any
+  initialisation; keep work there minimal. Test through the real binary
+  (`crates/velra/tests/common`), not only through the library.
+- **Capsule.** The renderer is a pure function with a hard ceiling. Add a
+  property or golden test, keep the ladder tests describing the behaviour,
+  and check the effect on a real session with `velra inspect --trace`.
+- **Settings.** `velra disable` must restore the settings file byte for
+  byte; `crates/velra/tests/settings_edit.rs` guards it.
+- **Workspace identity** lives in one function,
+  `velra_core::workspace::resolve`. Do not re-derive it.
+- **Documentation.** Update the page in `docs/` that describes the
+  behaviour, and add a `CHANGELOG.md` entry under the unreleased version.
+  If a claim in [GUARANTEES.md](docs/GUARANTEES.md) changes strength, move
+  it.
 
 ## Benchmark changes
 
-The benchmark is only worth anything if nobody can quietly tune it:
+The benchmark is only worth anything if nobody can quietly tune it.
 
 - `bench/tokenburn/preregistration_tokenburn.json` is hashed into every
   artifact. Changing it after a run invalidates that run instead of
   reinterpreting it. Amendments bump its version and say why.
 - Frozen result trees are protected: the runner refuses to write into them
-  (`bench/tokenburn/runroot.py`). Put a new run under a new `--results-root`.
+  (`bench/tokenburn/runroot.py`). Put a new run under a new
+  `--results-root`. Never edit a file under `bench/results/` by hand.
 - A pipeline change that would alter the committed v0.1.2 verdicts fails
-  `bench/tests/test_tokenburn_requal_evidence.py`. If the change is a genuine
-  fix, re-score into a copy, record the correction in `DECISIONS.md`, and
-  keep the original evidence.
-- Live runs cost money and refuse to start without `VELRA_ALLOW_LIVE_BENCHMARK=1`
-  and `--live`, and from inside a Claude Code session. See
-  [`bench/README.md`](bench/README.md).
+  `bench/tests/test_tokenburn_requal_evidence.py`. If the change is a
+  genuine fix, re-score into a copy, record the correction in
+  `DECISIONS.md`, and keep the original evidence.
+- Live runs cost money, refuse to start without
+  `VELRA_ALLOW_LIVE_BENCHMARK=1` and `--live`, and refuse from inside a
+  Claude Code session. See [`bench/README.md`](bench/README.md).
 
 ## Reporting bugs and security issues
 
 Open an issue with `velra --version`, `velra doctor --json`, your OS and
-Claude Code version, and, for capsule content problems,
-`velra inspect --session <id> --trace "<fact>" --json`. Review what you paste
-for private content first.
+Claude Code version, and, for a capsule content problem,
+`velra inspect --session <id> --trace "<fact>" --json`. Capsules and logs
+quote your prompts and file paths: review what you paste.
 
 Security vulnerabilities: use a private advisory, as described in
-[SECURITY.md](SECURITY.md).
+[SECURITY.md](SECURITY.md#reporting-a-vulnerability).
 
 ## License
 

@@ -3,7 +3,7 @@
 The maintainer's runbook. It covers what publishes what, and the order that
 keeps the installers, the npm launcher and `cargo binstall` consistent.
 
-## State of v0.1.2 (2026-09-23)
+## State of v0.1.2 (2026-09-30)
 
 | Channel | Published | This branch |
 |---|---|---|
@@ -12,8 +12,18 @@ keeps the installers, the npm launcher and `cargo binstall` consistent.
 | crates.io `velra`, `velra-core` | **0.1.1** | `Cargo.toml` workspace version = 0.1.2 |
 | git tag `v0.1.2` | not created | — |
 
-Nothing for 0.1.2 has been published. Until it is, `install.ps1`/`install.sh`
-resolve `releases/latest`, which is 0.1.1.
+Checked on 2026-09-30 against the GitHub releases API, the npm registry and
+crates.io: nothing for 0.1.2 has been published. Until it is,
+`install.ps1`/`install.sh` resolve `releases/latest`, which is 0.1.1.
+
+Open before publishing:
+
+- **macOS CI.** The last CI run on macOS (`108c70d`) failed; the fix (D146)
+  has not run on macOS. CI runs on pull requests, pushes to `main` and
+  manual dispatch, so open the release pull request (or dispatch CI on the
+  branch) and require a green `test (macos-latest)` job.
+- **E2E checklist.** [`E2E_CHECKLIST.md`](E2E_CHECKLIST.md) has not been
+  completed against a real Claude Code for this release tree.
 
 ## What depends on what
 

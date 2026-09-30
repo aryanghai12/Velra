@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="420" viewBox="0 0 900 420" role="img" aria-labelledby="t d">
+<title id="t">Velra pipeline, v0.1.2</title>
+<desc id="d">Row one, automatic in the source session: Claude Code hook events are captured by velra hook, normalised, redacted and capped, appended to the SQLite ledger or spooled when the database is busy, and reduced in logical order into task state. Row two, explicit: velra restore builds a snapshot of the source session you name, renders it within the token budget, and stages one capsule for the workspace. At the next SessionStart with source startup in the same workspace, the hook claims the capsule once and delivers it as additionalContext to the new destination session.</desc>
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#52514e"/></marker></defs>
+<rect width="900" height="420" rx="8" fill="#fcfcfb"/>
+<text x="24" y="34" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" fill="#0b0b0b" text-anchor="start" font-weight="600">Velra pipeline: from a source session to a new destination session</text>
+<text x="24" y="56" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" fill="#52514e" text-anchor="start" font-weight="normal">Everything runs locally in one binary and one SQLite database. No model, no network.</text>
+<rect x="20" y="74" width="860" height="128" rx="10" fill="#f3f2ee"/>
+<text x="32" y="92" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" fill="#52514e" text-anchor="start" font-weight="600">IN THE SOURCE SESSION · automatic, on every hook</text>
+<rect x="30" y="104" width="190" height="82" rx="8" fill="#eaf2fc" stroke="#2a78d6" stroke-width="1.5"/>
+<text x="125.0" y="133.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" fill="#0b0b0b" text-anchor="middle" font-weight="600">Source session</text>
+<text x="125.0" y="149.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" fill="#52514e" text-anchor="middle" font-weight="normal">Claude Code, session id A</text>
+<text x="125.0" y="165.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" fill="#52514e" text-anchor="middle" font-weight="normal">prompts · tools · tests</text>
+<rect x="250" y="104" width="190" height="82" rx="8" fill="#ffffff" stroke="#b9b8b1" stroke-width="1.5"/>
+<text x="345.0" y="133.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" fill="#0b0b0b" text-anchor="middle" font-weight="600">Capture</text>
+<text x="345.0" y="149.0" font-family="ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', monospace" font-size="11" fill="#52514e" text-anchor="middle" font-weight="normal">velra hook &lt;event&gt;</text>
+<text x="345.0" y="165.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" fill="#52514e" text-anchor="middle" font-weight="normal">normalise · redact · cap</text>
+<rect x="470" y="104" width="190" height="82" rx="8" fill="#ffffff" stroke="#b9b8b1" stroke-width="1.5"/>
+<text x="565.0" y="133.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" fill="#0b0b0b" text-anchor="middle" font-weight="600">Ledger</text>
+<text x="565.0" y="149.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" fill="#52514e" text-anchor="middle" font-weight="normal">events table, SQLite WAL</text>
+<text x="565.0" y="165.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" fill="#52514e" text-anchor="middle" font-weight="normal">spool/ when the DB is busy</text>
+<rect x="690" y="104" width="190" height="82" rx="8" fill="#ffffff" stroke="#b9b8b1" stroke-width="1.5"/>
+<text x="785.0" y="133.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" fill="#0b0b0b" text-anchor="middle" font-weight="600">Reduce</text>
+<text x="785.0" y="149.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" fill="#52514e" text-anchor="middle" font-weight="normal">events in logical order</text>
+<text x="785.0" y="165.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" fill="#52514e" text-anchor="middle" font-weight="normal">→ task-state tables</text>
+<path d="M220,145 L246,145" fill="none" stroke="#52514e" stroke-width="1.5" marker-end="url(#a)"/>
+<path d="M440,145 L466,145" fill="none" stroke="#52514e" stroke-width="1.5" marker-end="url(#a)"/>
+<path d="M660,145 L686,145" fill="none" stroke="#52514e" stroke-width="1.5" marker-end="url(#a)"/>
+<rect x="20" y="216" width="520" height="140" rx="10" fill="#f3f2ee"/>
+<text x="32" y="346" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" fill="#52514e" text-anchor="start" font-weight="600">WHEN YOU RUN velra restore · explicit, you name the source</text>
+<rect x="552" y="216" width="328" height="140" rx="10" fill="#eef4fb"/>
+<text x="564" y="346" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" fill="#52514e" text-anchor="start" font-weight="600">NEXT NEW SESSION, SAME WORKSPACE</text>
+<rect x="30" y="230" width="150" height="88" rx="8" fill="#ffffff" stroke="#b9b8b1" stroke-width="1.5"/>
+<text x="105.0" y="262.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" fill="#0b0b0b" text-anchor="middle" font-weight="600">Snapshot</text>
+<text x="105.0" y="278.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" fill="#52514e" text-anchor="middle" font-weight="normal">current epoch of</text>
+<text x="105.0" y="294.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" fill="#52514e" text-anchor="middle" font-weight="normal">session A</text>
+<rect x="200" y="230" width="150" height="88" rx="8" fill="#ffffff" stroke="#b9b8b1" stroke-width="1.5"/>
+<text x="275.0" y="262.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" fill="#0b0b0b" text-anchor="middle" font-weight="600">Render</text>
+<text x="275.0" y="278.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" fill="#52514e" text-anchor="middle" font-weight="normal">pure, deterministic</text>
+<text x="275.0" y="294.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" fill="#52514e" text-anchor="middle" font-weight="normal">≤ 740 target, 1,000 max</text>
+<rect x="370" y="230" width="150" height="88" rx="8" fill="#fdeee7" stroke="#eb6834" stroke-width="1.5"/>
+<text x="445.0" y="262.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" fill="#0b0b0b" text-anchor="middle" font-weight="600">Stage</text>
+<text x="445.0" y="278.0" font-family="ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', monospace" font-size="11" fill="#52514e" text-anchor="middle" font-weight="normal">staged/&lt;workspace_id&gt;/</text>
+<text x="445.0" y="294.0" font-family="ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', monospace" font-size="11" fill="#52514e" text-anchor="middle" font-weight="normal">capsule.&lt;gen&gt;.json</text>
+<rect x="562" y="230" width="150" height="88" rx="8" fill="#ffffff" stroke="#b9b8b1" stroke-width="1.5"/>
+<text x="637.0" y="262.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" fill="#0b0b0b" text-anchor="middle" font-weight="600">Claim once</text>
+<text x="637.0" y="278.0" font-family="ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', monospace" font-size="11" fill="#52514e" text-anchor="middle" font-weight="normal">SessionStart(startup)</text>
+<text x="637.0" y="294.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" fill="#52514e" text-anchor="middle" font-weight="normal">→ additionalContext</text>
+<rect x="722" y="230" width="148" height="88" rx="8" fill="#eaf2fc" stroke="#2a78d6" stroke-width="1.5"/>
+<text x="796.0" y="262.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" fill="#0b0b0b" text-anchor="middle" font-weight="600">Destination</text>
+<text x="796.0" y="278.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" fill="#52514e" text-anchor="middle" font-weight="normal">new session id B</text>
+<text x="796.0" y="294.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" fill="#52514e" text-anchor="middle" font-weight="normal">receives the capsule</text>
+<path d="M785.0,186 L785.0,208 L105.0,208 L105.0,226" fill="none" stroke="#52514e" stroke-width="1.5" marker-end="url(#a)"/>
+<path d="M180,274 L196,274" fill="none" stroke="#52514e" stroke-width="1.5" marker-end="url(#a)"/>
+<path d="M350,274 L366,274" fill="none" stroke="#52514e" stroke-width="1.5" marker-end="url(#a)"/>
+<path d="M520,274 L558,274" fill="none" stroke="#52514e" stroke-width="1.5" marker-end="url(#a)"/>
+<path d="M712,274 L718,274" fill="none" stroke="#52514e" stroke-width="1.5" marker-end="url(#a)"/>
+<text x="24" y="382" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" fill="#52514e" text-anchor="start" font-weight="normal">clear, resume, compact and fork session starts leave the staged capsule alone · delivery is at most once · expires after 7 days</text>
+<text x="24" y="402" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" fill="#52514e" text-anchor="start" font-weight="normal">The same snapshot and renderer serve the /compact continuation, which is only ever delivered back into the session that produced it.</text>
+</svg>

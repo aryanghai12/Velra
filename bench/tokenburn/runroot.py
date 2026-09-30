@@ -54,11 +54,16 @@ FROZEN = BENCH / "results" / "v0.1.2"
 #: write=False)`) or a copy into a new root, never a write in place.
 REQUAL = BENCH / "results" / "v0.1.2-requal"
 
-#: Every tree no run may write to. The first two are the qualification
-#: evidence; the rest are the historical record `run.PRESERVED` already names.
+#: The v0.1.2 release build's offline evidence: the frozen source ledgers
+#: replayed through it (`replay.py`) and its hook latency (D150).
+FINAL = BENCH / "results" / "v0.1.2-final"
+
+#: Every tree no run may write to. The first three are the v0.1.2 evidence;
+#: the rest are the historical record `run.PRESERVED` already names.
 PROTECTED: tuple[pathlib.Path, ...] = (
     FROZEN,
     REQUAL,
+    FINAL,
     BENCH / "results" / "trials",
     BENCH / "results" / "v0.1.1",
     BENCH / "results" / "v0.1.1_frozen_baseline",

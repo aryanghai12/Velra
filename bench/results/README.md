@@ -8,9 +8,11 @@ and **not** part of the current release evidence.
 
 | Tree | What it is |
 |---|---|
-| [`v0.1.2-requal/`](v0.1.2-requal/) | **Velra v0.1.2 Token-Burn requalification.** Preregistration `velra-tokenburn` v1.1.0 (sha256 `c13150b6…ffcd2`). 4 matched pairs, 8 trials, 16 Claude Code sessions. Claude Code 2.1.280, Sonnet, run at commit `51b96cb`, 250K synthetic-context rung. All 8 trials valid. |
+| [`v0.1.2-requal/`](v0.1.2-requal/) | **Velra v0.1.2 Token-Burn requalification: the live evidence.** Preregistration `velra-tokenburn` v1.1.0 (sha256 `c13150b6…ffcd2`). 4 matched pairs, 8 trials, 16 Claude Code sessions. Claude Code 2.1.280, Sonnet, run at commit `51b96cb`, 250K synthetic-context rung. All 8 trials valid. |
+| [`v0.1.2-final/`](v0.1.2-final/) | **Release-build offline evidence.** The four Velra-arm source ledgers of `v0.1.2-requal/` replayed through the release binary (`replay/`), and hook latency with a process-start floor on the release binary (`latency/`). Not preregistered; never pooled with the live results. |
 
-Start with [`v0.1.2-requal/report.md`](v0.1.2-requal/report.md), the pipeline's
+Both are written up in [`docs/BENCHMARK.md`](../../docs/BENCHMARK.md). For the
+live run, [`v0.1.2-requal/report.md`](v0.1.2-requal/report.md) is the pipeline's
 own output. [`aggregate.json`](v0.1.2-requal/aggregate.json) is the same data
 with every number's provenance attached. Each directory under
 [`v0.1.2-requal/trials/`](v0.1.2-requal/trials/) holds one trial:

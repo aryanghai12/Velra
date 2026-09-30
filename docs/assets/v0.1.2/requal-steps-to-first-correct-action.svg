@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="380" viewBox="0 0 760 380" role="img" aria-labelledby="t d">
+<title id="t">Tool steps to the first correct action, v0.1.2 live qualification</title>
+<desc id="d">Grouped bars for four matched pairs: A q1 baseline 6, Velra 2; A q2 baseline 7, Velra 2; B q1 baseline 4, Velra 2; B q2 baseline 5, Velra 4.</desc>
+<rect width="760" height="380" rx="8" fill="#fcfcfb"/>
+<text x="24.0" y="34.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" fill="#0b0b0b" text-anchor="start" font-weight="600">Tool steps before the first correct action</text>
+<text x="24.0" y="56.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" fill="#52514e" text-anchor="start" font-weight="normal">v0.1.2 live qualification · n = 4 pairs (8 trials) · fewer is better · build 51b96cb</text>
+<text x="24.0" y="364.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#76756f" text-anchor="start" font-weight="normal">Source: bench/results/v0.1.2-requal/aggregate.json (first Read/Edit/Grep of the target file)</text>
+<rect x="24.0" y="74.0" width="12" height="12" rx="2" fill="#eb6834"/>
+<text x="42.0" y="84.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" fill="#52514e" text-anchor="start" font-weight="normal">Baseline</text>
+<rect x="111.6" y="74.0" width="12" height="12" rx="2" fill="#2a78d6"/>
+<text x="129.6" y="84.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" fill="#52514e" text-anchor="start" font-weight="normal">Velra</text>
+<line x1="64.0" y1="320.0" x2="736.0" y2="320.0" stroke="#e4e3df" stroke-width="1"/>
+<text x="56.0" y="324.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#76756f" text-anchor="end" font-weight="normal">0</text>
+<line x1="64.0" y1="267.5" x2="736.0" y2="267.5" stroke="#e4e3df" stroke-width="1"/>
+<text x="56.0" y="271.5" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#76756f" text-anchor="end" font-weight="normal">2</text>
+<line x1="64.0" y1="215.0" x2="736.0" y2="215.0" stroke="#e4e3df" stroke-width="1"/>
+<text x="56.0" y="219.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#76756f" text-anchor="end" font-weight="normal">4</text>
+<line x1="64.0" y1="162.5" x2="736.0" y2="162.5" stroke="#e4e3df" stroke-width="1"/>
+<text x="56.0" y="166.5" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#76756f" text-anchor="end" font-weight="normal">6</text>
+<line x1="64.0" y1="110.0" x2="736.0" y2="110.0" stroke="#e4e3df" stroke-width="1"/>
+<text x="56.0" y="114.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#76756f" text-anchor="end" font-weight="normal">8</text>
+<path d="M101.0,320.0 V166.5 Q101.0,162.5 105.0,162.5 H143.0 Q147.0,162.5 147.0,166.5 V320.0 Z" fill="#eb6834"/>
+<text x="124.0" y="156.5" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" fill="#0b0b0b" text-anchor="middle" font-weight="normal">6</text>
+<path d="M149.0,320.0 V271.5 Q149.0,267.5 153.0,267.5 H191.0 Q195.0,267.5 195.0,271.5 V320.0 Z" fill="#2a78d6"/>
+<text x="172.0" y="261.5" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" fill="#0b0b0b" text-anchor="middle" font-weight="normal">2</text>
+<text x="148.0" y="340.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" fill="#0b0b0b" text-anchor="middle" font-weight="600">A q1</text>
+<path d="M269.0,320.0 V140.2 Q269.0,136.2 273.0,136.2 H311.0 Q315.0,136.2 315.0,140.2 V320.0 Z" fill="#eb6834"/>
+<text x="292.0" y="130.2" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" fill="#0b0b0b" text-anchor="middle" font-weight="normal">7</text>
+<path d="M317.0,320.0 V271.5 Q317.0,267.5 321.0,267.5 H359.0 Q363.0,267.5 363.0,271.5 V320.0 Z" fill="#2a78d6"/>
+<text x="340.0" y="261.5" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" fill="#0b0b0b" text-anchor="middle" font-weight="normal">2</text>
+<text x="316.0" y="340.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" fill="#0b0b0b" text-anchor="middle" font-weight="600">A q2</text>
+<path d="M437.0,320.0 V219.0 Q437.0,215.0 441.0,215.0 H479.0 Q483.0,215.0 483.0,219.0 V320.0 Z" fill="#eb6834"/>
+<text x="460.0" y="209.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" fill="#0b0b0b" text-anchor="middle" font-weight="normal">4</text>
+<path d="M485.0,320.0 V271.5 Q485.0,267.5 489.0,267.5 H527.0 Q531.0,267.5 531.0,271.5 V320.0 Z" fill="#2a78d6"/>
+<text x="508.0" y="261.5" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" fill="#0b0b0b" text-anchor="middle" font-weight="normal">2</text>
+<text x="484.0" y="340.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" fill="#0b0b0b" text-anchor="middle" font-weight="600">B q1</text>
+<path d="M605.0,320.0 V192.8 Q605.0,188.8 609.0,188.8 H647.0 Q651.0,188.8 651.0,192.8 V320.0 Z" fill="#eb6834"/>
+<text x="628.0" y="182.8" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" fill="#0b0b0b" text-anchor="middle" font-weight="normal">5</text>
+<path d="M653.0,320.0 V219.0 Q653.0,215.0 657.0,215.0 H695.0 Q699.0,215.0 699.0,219.0 V320.0 Z" fill="#2a78d6"/>
+<text x="676.0" y="209.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" fill="#0b0b0b" text-anchor="middle" font-weight="normal">4</text>
+<text x="652.0" y="340.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" fill="#0b0b0b" text-anchor="middle" font-weight="600">B q2</text>
+<line x1="64.0" y1="320.0" x2="736.0" y2="320.0" stroke="#76756f" stroke-width="1"/>
+</svg>

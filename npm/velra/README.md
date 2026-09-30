@@ -1,11 +1,12 @@
 # velra
 
-**Local-first session continuity for Claude Code. Clear the context, keep the state.**
+**A local-first, deterministic continuation layer for Claude Code. Clear the context, keep the state, continue working.**
 
-Velra records what a Claude Code session does and hands a small, bounded
-record of where the work stands to the next context: after `/compact`, or
-(with `velra restore`, 0.1.2+) in a brand-new session. It never replays the
-conversation, calls no model, and never touches the network at runtime.
+Velra records what a Claude Code session does and, when you run
+`velra restore` (0.1.2+), carries a small, bounded record of where the work
+stands into your next brand-new session. It also hands that record back to
+the same session after `/compact`. It never replays the conversation, calls
+no model, and never touches the network at runtime.
 
 Full documentation: <https://github.com/aryanghai12/Velra>
 
@@ -43,8 +44,9 @@ There are no npm dependencies, no postinstall script, and no C toolchain
 required. `velra enable` registers the *binary's* absolute path with Claude
 Code, so your hooks never start Node.
 
-Supported platforms: macOS (arm64, x64), Linux (x64, arm64, musl-static),
-Windows (x64, arm64).
+Prebuilt binaries: macOS (arm64, x64), Linux (x64, arm64, musl-static),
+Windows (x64, arm64). Which of these the test suite runs on:
+[Guarantees → Platform support](https://github.com/aryanghai12/Velra/blob/main/docs/GUARANTEES.md#platform-support).
 
 ## Verify
 

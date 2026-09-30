@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="420" viewBox="0 0 760 420" role="img" aria-labelledby="t d">
+<title id="t">Capsule size from the frozen source ledgers: live-run build versus final build</title>
+<desc id="d">Grouped bars, estimated tokens per trial. A q1: live run 737, final build 717, 3/3 markers delivered; A q2: live run 737, final build 710, 3/3 markers delivered; B q1: live run 680, final build 711, 4/4 markers delivered; B q2: live run 693, final build 721, 4/4 markers delivered. Dashed line: the 740-token default target.</desc>
+<rect width="760" height="420" rx="8" fill="#fcfcfb"/>
+<text x="24.0" y="34.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" fill="#0b0b0b" text-anchor="start" font-weight="600">Capsule size for the same source ledgers, before and after hardening</text>
+<text x="24.0" y="56.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" fill="#52514e" text-anchor="start" font-weight="normal">Velra-arm source ledgers of the live run, n = 4 · estimated tokens (Velra&#x27;s estimator, not a tokenizer)</text>
+<text x="24.0" y="404.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#76756f" text-anchor="start" font-weight="normal">Source: bench/results/v0.1.2-final/replay/replay.json · live-run capsules from bench/results/v0.1.2-requal/trials/*/velra_restore.json</text>
+<rect x="24.0" y="74.0" width="12" height="12" rx="2" fill="#eb6834"/>
+<text x="42.0" y="84.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" fill="#52514e" text-anchor="start" font-weight="normal">Live run (build 51b96cb)</text>
+<rect x="226.8" y="74.0" width="12" height="12" rx="2" fill="#2a78d6"/>
+<text x="244.8" y="84.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" fill="#52514e" text-anchor="start" font-weight="normal">Final build, replayed offline</text>
+<line x1="470.0" y1="80.0" x2="494.0" y2="80.0" stroke="#52514e" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="500.0" y="84.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" fill="#52514e" text-anchor="start" font-weight="normal">740 default target (axis top: 1,000 hard ceiling)</text>
+<line x1="64.0" y1="340.0" x2="736.0" y2="340.0" stroke="#e4e3df" stroke-width="1"/>
+<text x="56.0" y="344.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#76756f" text-anchor="end" font-weight="normal">0</text>
+<line x1="64.0" y1="282.5" x2="736.0" y2="282.5" stroke="#e4e3df" stroke-width="1"/>
+<text x="56.0" y="286.5" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#76756f" text-anchor="end" font-weight="normal">250</text>
+<line x1="64.0" y1="225.0" x2="736.0" y2="225.0" stroke="#e4e3df" stroke-width="1"/>
+<text x="56.0" y="229.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#76756f" text-anchor="end" font-weight="normal">500</text>
+<line x1="64.0" y1="167.5" x2="736.0" y2="167.5" stroke="#e4e3df" stroke-width="1"/>
+<text x="56.0" y="171.5" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#76756f" text-anchor="end" font-weight="normal">750</text>
+<line x1="64.0" y1="110.0" x2="736.0" y2="110.0" stroke="#e4e3df" stroke-width="1"/>
+<text x="56.0" y="114.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#76756f" text-anchor="end" font-weight="normal">1000</text>
+<path d="M101.0,340.0 V174.5 Q101.0,170.5 105.0,170.5 H143.0 Q147.0,170.5 147.0,174.5 V340.0 Z" fill="#eb6834"/>
+<text x="124.0" y="188.5" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" fill="#ffffff" text-anchor="middle" font-weight="600">737</text>
+<path d="M149.0,340.0 V179.1 Q149.0,175.1 153.0,175.1 H191.0 Q195.0,175.1 195.0,179.1 V340.0 Z" fill="#2a78d6"/>
+<text x="172.0" y="193.1" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" fill="#ffffff" text-anchor="middle" font-weight="600">717</text>
+<text x="148.0" y="360.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" fill="#0b0b0b" text-anchor="middle" font-weight="600">A q1</text>
+<text x="148.0" y="377.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" fill="#52514e" text-anchor="middle" font-weight="normal">3/3 markers delivered</text>
+<path d="M269.0,340.0 V174.5 Q269.0,170.5 273.0,170.5 H311.0 Q315.0,170.5 315.0,174.5 V340.0 Z" fill="#eb6834"/>
+<text x="292.0" y="188.5" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" fill="#ffffff" text-anchor="middle" font-weight="600">737</text>
+<path d="M317.0,340.0 V180.7 Q317.0,176.7 321.0,176.7 H359.0 Q363.0,176.7 363.0,180.7 V340.0 Z" fill="#2a78d6"/>
+<text x="340.0" y="194.7" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" fill="#ffffff" text-anchor="middle" font-weight="600">710</text>
+<text x="316.0" y="360.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" fill="#0b0b0b" text-anchor="middle" font-weight="600">A q2</text>
+<text x="316.0" y="377.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" fill="#52514e" text-anchor="middle" font-weight="normal">3/3 markers delivered</text>
+<path d="M437.0,340.0 V187.6 Q437.0,183.6 441.0,183.6 H479.0 Q483.0,183.6 483.0,187.6 V340.0 Z" fill="#eb6834"/>
+<text x="460.0" y="201.6" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" fill="#ffffff" text-anchor="middle" font-weight="600">680</text>
+<path d="M485.0,340.0 V180.5 Q485.0,176.5 489.0,176.5 H527.0 Q531.0,176.5 531.0,180.5 V340.0 Z" fill="#2a78d6"/>
+<text x="508.0" y="194.5" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" fill="#ffffff" text-anchor="middle" font-weight="600">711</text>
+<text x="484.0" y="360.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" fill="#0b0b0b" text-anchor="middle" font-weight="600">B q1</text>
+<text x="484.0" y="377.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" fill="#52514e" text-anchor="middle" font-weight="normal">4/4 markers delivered</text>
+<path d="M605.0,340.0 V184.6 Q605.0,180.6 609.0,180.6 H647.0 Q651.0,180.6 651.0,184.6 V340.0 Z" fill="#eb6834"/>
+<text x="628.0" y="198.6" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" fill="#ffffff" text-anchor="middle" font-weight="600">693</text>
+<path d="M653.0,340.0 V178.2 Q653.0,174.2 657.0,174.2 H695.0 Q699.0,174.2 699.0,178.2 V340.0 Z" fill="#2a78d6"/>
+<text x="676.0" y="192.2" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" fill="#ffffff" text-anchor="middle" font-weight="600">721</text>
+<text x="652.0" y="360.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" fill="#0b0b0b" text-anchor="middle" font-weight="600">B q2</text>
+<text x="652.0" y="377.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" fill="#52514e" text-anchor="middle" font-weight="normal">4/4 markers delivered</text>
+<line x1="64.0" y1="340.0" x2="736.0" y2="340.0" stroke="#76756f" stroke-width="1"/>
+<line x1="64.0" y1="169.8" x2="736.0" y2="169.8" stroke="#52514e" stroke-width="1.5" stroke-dasharray="6 4"/>
+</svg>

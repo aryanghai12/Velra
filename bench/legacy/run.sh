@@ -5,6 +5,8 @@
 #
 # Measures full process wall time (spawn → exit) against a database
 # pre-populated with 100,000 events, and fails when a p50/p99 budget is missed.
+# Results go to bench/results/ (untracked there) unless VELRA_BENCH_RESULTS
+# names another directory.
 
 set -euo pipefail
 
@@ -24,7 +26,7 @@ else
   echo "      not gate on them. For CI-grade numbers: cargo install hyperfine."
 fi
 
-RESULTS="$ROOT/bench/results"
+RESULTS="${VELRA_BENCH_RESULTS:-$ROOT/bench/results}"
 WORK="$(mktemp -d "${TMPDIR:-/tmp}/velra-bench.XXXXXX")"
 export VELRA_HOME="$WORK/home"
 export CLAUDE_PROJECT_DIR="$WORK/project"

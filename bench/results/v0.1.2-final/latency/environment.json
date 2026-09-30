@@ -1,0 +1,13 @@
+{
+  "binary": {
+    "version": "velra 0.1.2 (77328b098, x86_64-pc-windows-gnu)",
+    "sha256": "98873ebb94c4d2b4db51341d4a2b5e74d2d3465b0e71909b7c8402546e55fae8"
+  },
+  "platform": "Windows 11 10.0.26200 AMD64",
+  "processor": "Intel64 Family 6 Model 183 Stepping 1, GenuineIntel",
+  "cpu_count": 20,
+  "python": "3.14.0",
+  "timer": "builtin (Python time.perf_counter around subprocess.run)",
+  "runs": 500,
+  "warmup": 20
+}
