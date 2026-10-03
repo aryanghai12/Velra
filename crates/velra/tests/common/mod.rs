@@ -251,6 +251,18 @@ impl Env {
         })
     }
 
+    /// What the hook records as `Payload::cwd_real` for a command run in
+    /// `project`: its resolved form, when that is spelled differently (a
+    /// symlinked temp dir, an 8.3 short name). `Log` mirrors it so that its
+    /// events are the ones the product writes on such a runner.
+    pub fn cwd_real(&self) -> Option<String> {
+        let real = paths::canonical(&self.project)?;
+        let real = paths::normalize_abs(&real.to_string_lossy());
+        let spelled = paths::normalize_abs(&self.project.to_string_lossy());
+        (!paths::paths_equal(spelled.trim_end_matches('/'), real.trim_end_matches('/')))
+            .then_some(real)
+    }
+
     pub fn write_file(&self, rel: &str, content: &str) -> PathBuf {
         let path = self.project.join(rel);
         if let Some(parent) = path.parent() {
@@ -432,6 +444,10 @@ impl Log {
         self.seq += 1;
         let tool_use_id = format!("toolu_late_{:04}", self.seq);
         let session = self.env.session.clone();
+        // Marked as `spool::write` marks it: that is how the reducer knows the
+        // row id does not say when it happened.
+        let mut payload = payload;
+        payload.spooled = Some(true);
         let ev = NewEvent {
             dedupe_key: dedupe_key(hook_event, &session, Some(&tool_use_id), None, ts_ms, None),
             session_id: session,
@@ -536,25 +552,45 @@ impl Log {
         );
     }
 
+    /// `payload` with the mentioned files the hook records for a test, build
+    /// or lint run: checked against the disk now, as the command returns
+    /// (`velra_core::commands::mentioned_files`).
+    pub fn with_mentions(&self, mut payload: Payload, failure: bool) -> Payload {
+        use velra_core::model::CommandKind;
+        let kind = velra_core::commands::classify(payload.command.as_deref().unwrap_or("")).kind;
+        if matches!(
+            kind,
+            CommandKind::Test | CommandKind::Build | CommandKind::Lint
+        ) {
+            let (_, output) = velra_core::commands::stored_output(&payload, failure);
+            let root =
+                paths::canonical(&self.env.project).unwrap_or_else(|| self.env.project.clone());
+            payload.mentioned = Some(velra_core::commands::mentioned_files(
+                &output,
+                Some(&self.env.project),
+                &root,
+            ));
+        }
+        payload
+    }
+
     /// A shell command that succeeded.
     pub fn command_ok(&mut self, command: &str, stdout: &str) {
-        self.append(
-            "PostToolUse",
-            Some("Bash"),
+        let payload = self.with_mentions(
             Payload {
                 command: Some(command.into()),
                 cwd: Some(self.env.project.to_string_lossy().into_owned()),
                 stdout_tail: Some(stdout.into()),
                 ..Default::default()
             },
+            false,
         );
+        self.append("PostToolUse", Some("Bash"), payload);
     }
 
     /// A shell command that failed (`PostToolUseFailure` with `Exit code N`).
     pub fn command_fail(&mut self, command: &str, exit: i64, output: &str) {
-        self.append(
-            "PostToolUseFailure",
-            Some("Bash"),
+        let payload = self.with_mentions(
             Payload {
                 command: Some(command.into()),
                 cwd: Some(self.env.project.to_string_lossy().into_owned()),
@@ -563,7 +599,9 @@ impl Log {
                 tool_name: Some("Bash".into()),
                 ..Default::default()
             },
+            true,
         );
+        self.append("PostToolUseFailure", Some("Bash"), payload);
     }
 
     /// A git restore-family command: hashes before, file change, hashes after.
@@ -613,6 +651,18 @@ impl Log {
         commit: bool,
         failure: Option<(i64, &str)>,
     ) {
+        // The hook hashes every file the session edited in this epoch around
+        // a restore-family or commit command, whatever the command names
+        // (`reducer::scan_paths`). A file only the test names is observed as
+        // well, as one the session edited before the harness saw it would be.
+        let session = self.env.session.clone();
+        let mut observed: Vec<String> =
+            reducer::scan_paths(&self.db.conn, &session, 64).expect("scan paths");
+        for (rel, _) in changes {
+            if !observed.iter().any(|p| p == rel) {
+                observed.push(rel.to_string());
+            }
+        }
         let observe = |env: &Env, rel: &str| {
             let (h, size) = hash::hash_file(&env.project.join(rel));
             velra_core::event::FileObservation {
@@ -628,10 +678,7 @@ impl Log {
             .then(|| velra_core::shell::git_effects(command, &|_| false).restore)
             .flatten()
             .or_else(|| restore.then(|| command.to_string()));
-        let pre: Vec<_> = changes
-            .iter()
-            .map(|(rel, _)| observe(&self.env, rel))
-            .collect();
+        let pre: Vec<_> = observed.iter().map(|rel| observe(&self.env, rel)).collect();
         self.append(
             "PreToolUse",
             Some("Bash"),
@@ -650,10 +697,7 @@ impl Log {
                 self.env.write_file(rel, content);
             }
         }
-        let post: Vec<_> = changes
-            .iter()
-            .map(|(rel, _)| observe(&self.env, rel))
-            .collect();
+        let post: Vec<_> = observed.iter().map(|rel| observe(&self.env, rel)).collect();
         let git = Some(velra_core::event::GitObservation {
             restore,
             commit,
@@ -666,33 +710,45 @@ impl Log {
                 Payload {
                     command: Some(command.into()),
                     cwd: Some(self.env.project.to_string_lossy().into_owned()),
+                    cwd_real: self.env.cwd_real(),
                     stdout_tail: Some(String::new()),
                     git,
                     ..Default::default()
                 },
             ),
-            Some((exit, output)) => self.append(
-                "PostToolUseFailure",
-                Some("Bash"),
-                Payload {
-                    command: Some(command.into()),
-                    cwd: Some(self.env.project.to_string_lossy().into_owned()),
-                    error: Some(format!("Exit code {exit}\n{output}")),
-                    is_interrupt: Some(false),
-                    tool_name: Some("Bash".into()),
-                    git,
-                    ..Default::default()
-                },
-            ),
+            Some((exit, output)) => {
+                let payload = self.with_mentions(
+                    Payload {
+                        command: Some(command.into()),
+                        cwd: Some(self.env.project.to_string_lossy().into_owned()),
+                        cwd_real: self.env.cwd_real(),
+                        error: Some(format!("Exit code {exit}\n{output}")),
+                        is_interrupt: Some(false),
+                        tool_name: Some("Bash".into()),
+                        git,
+                        ..Default::default()
+                    },
+                    true,
+                );
+                self.append("PostToolUseFailure", Some("Bash"), payload)
+            }
         };
     }
 
+    /// A Stop event carrying the turn-end scan the hook takes: the session's
+    /// edited files, hashed as they are on disk now.
     pub fn stop(&mut self) {
+        let session = self.env.session.clone();
+        let paths =
+            velra_core::reducer::scan_paths(&self.db.conn, &session, 64).expect("scan paths");
+        let rels: Vec<&str> = paths.iter().map(String::as_str).collect();
+        let scan = self.observe(&rels);
         self.append(
             "Stop",
             None,
             Payload {
                 stop_hook_active: Some(false),
+                turn_scan: Some(scan),
                 ..Default::default()
             },
         );
@@ -710,6 +766,7 @@ impl Log {
             trigger: Trigger::Manual,
             partial: false,
             preview: false,
+            restore: false,
             tz_offset_secs: 0,
         };
         velra_core::snapshot::build(&self.db.conn, &self.env.session.clone(), &meta)

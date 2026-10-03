@@ -35,6 +35,8 @@
 /bench/results/v0.1.2/tokenburn/trials/*/source_stream.jsonl
 /bench/results/v0.1.2/tokenburn/trials/*/transcript.jsonl
 /bench/results/v0.1.2/tokenburn/trials/*/velra_home/
+# An earlier run's auto-memory, moved aside before a trial (never deleted).
+/bench/results/v0.1.2/tokenburn/trials/*/memory_quarantine-*/
 /bench/results/v0.1.2/tokenburn/quarantine/*/*/stream.jsonl
 /bench/results/v0.1.2/tokenburn/quarantine/*/*/source_stream.jsonl
 /bench/results/v0.1.2/tokenburn/quarantine/*/*/transcript.jsonl
@@ -53,6 +55,10 @@
 /bench/results/v0.1.2/quarantine/*/*/transcript.jsonl
 /bench/results/v0.1.2/quarantine/*/*/velra_home/
 /bench/results/v0.1.2/fixtures/
+# The archived hardened runner (bench/legacy/run_hardened_eval.py) rewrites its
+# live readiness snapshot on every invocation, full of that machine's paths.
+# The frozen historical snapshot beside it (readiness.2026*.json) is tracked.
+/bench/results/v0.1.2/hardened/readiness.json
 /bench/results/post-tool-use-*.json
 /bench/results/pre-tool-use-*.json
 /bench/results/pre-compact.json
@@ -111,3 +117,4 @@ id_rsa*
 Thumbs.db
 desktop.ini
 __pycache__/
+.pytest_cache/

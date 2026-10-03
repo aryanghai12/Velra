@@ -1,0 +1,21 @@
+{
+  "files": {
+    "src/payments/feed.py": "\"\"\"The upstream settlement feed.\"\"\"\n\nimport datetime\n\n\ndef parse_row(row):\n    \"\"\"One feed row into a dict.\n\n    The feed carries both dates. Which one a window is closed on is a policy\n    decision and is not made here.\n    \"\"\"\n    return {\n        \"reference\": row[\"reference\"],\n        \"amount_minor\": int(row[\"amount_minor\"]),\n        \"booking_date\": datetime.date.fromisoformat(row[\"booking_date\"]),\n        \"value_date\": datetime.date.fromisoformat(row[\"value_date\"]),\n    }\n",
+    "src/payments/reconcile.py": "\"\"\"Close a reconciliation window over feed rows.\"\"\"\n\n\ndef in_window(row, start, end):\n    \"\"\"Whether a row belongs to the window [start, end].\"\"\"\n    stamp = row[\"booking_date\"]\n    return start <= stamp <= end\n\n\ndef close_window(rows, start, end):\n    \"\"\"Total the rows that belong to this window.\"\"\"\n    return sum(r[\"amount_minor\"] for r in rows if in_window(r, start, end))\n"
+  },
+  "target_test": "tests/test_reconcile.py::test_march_window_totals",
+  "target_exit": 0,
+  "target_tail": [
+    ".                                                                        [100%]",
+    "1 passed in 0.01s"
+  ],
+  "suite_exit": 1,
+  "suite_failures": 2,
+  "suite_tail": [
+    "FAILED tests/test_ledger.py::test_apply_fee_on_empty_total - assert 0 == 1",
+    "FAILED tests/test_retry.py::test_retry_preserves_idempotency_key - AssertionE...",
+    "2 failed, 6 passed in 0.06s"
+  ],
+  "git_status": " M src/payments/reconcile.py\n?? logs/\n?? src/payments/__pycache__/\n?? tests/__pycache__/\n",
+  "git_diff": "diff --git a/src/payments/reconcile.py b/src/payments/reconcile.py\nindex f861435..3b4a87a 100644\n--- a/src/payments/reconcile.py\n+++ b/src/payments/reconcile.py\n@@ -3,7 +3,7 @@\n \n def in_window(row, start, end):\n     \"\"\"Whether a row belongs to the window [start, end].\"\"\"\n-    stamp = row[\"value_date\"]\n+    stamp = row[\"booking_date\"]\n     return start <= stamp <= end\n \n \n"
+}

@@ -1,0 +1,123 @@
+{
+  "trials": {
+    "A_cold_continuation-q1-baseline": {
+      "pair_id": "A_cold_continuation#q1",
+      "benchmark": "A_cold_continuation",
+      "stage": "q",
+      "arm": "baseline",
+      "state": "complete",
+      "arm_order_index": 0,
+      "arm_order": [
+        "baseline",
+        "velra"
+      ],
+      "started": "20260923T120443Z",
+      "finished": "20260923T120906Z"
+    },
+    "A_cold_continuation-q1-velra": {
+      "pair_id": "A_cold_continuation#q1",
+      "benchmark": "A_cold_continuation",
+      "stage": "q",
+      "arm": "velra",
+      "state": "complete",
+      "arm_order_index": 1,
+      "arm_order": [
+        "baseline",
+        "velra"
+      ],
+      "started": "20260923T120906Z",
+      "finished": "20260923T121401Z"
+    },
+    "A_cold_continuation-q2-velra": {
+      "pair_id": "A_cold_continuation#q2",
+      "benchmark": "A_cold_continuation",
+      "stage": "q",
+      "arm": "velra",
+      "state": "complete",
+      "arm_order_index": 0,
+      "arm_order": [
+        "velra",
+        "baseline"
+      ],
+      "started": "20260923T121401Z",
+      "finished": "20260923T121948Z"
+    },
+    "A_cold_continuation-q2-baseline": {
+      "pair_id": "A_cold_continuation#q2",
+      "benchmark": "A_cold_continuation",
+      "stage": "q",
+      "arm": "baseline",
+      "state": "complete",
+      "arm_order_index": 1,
+      "arm_order": [
+        "velra",
+        "baseline"
+      ],
+      "started": "20260923T121948Z",
+      "finished": "20260923T122539Z"
+    },
+    "B_clear_survival-q1-baseline": {
+      "pair_id": "B_clear_survival#q1",
+      "benchmark": "B_clear_survival",
+      "stage": "q",
+      "arm": "baseline",
+      "state": "complete",
+      "arm_order_index": 0,
+      "arm_order": [
+        "baseline",
+        "velra"
+      ],
+      "started": "20260923T122539Z",
+      "finished": "20260923T122929Z"
+    },
+    "B_clear_survival-q1-velra": {
+      "pair_id": "B_clear_survival#q1",
+      "benchmark": "B_clear_survival",
+      "stage": "q",
+      "arm": "velra",
+      "state": "complete",
+      "arm_order_index": 1,
+      "arm_order": [
+        "baseline",
+        "velra"
+      ],
+      "started": "20260923T122929Z",
+      "finished": "20260923T123303Z"
+    },
+    "B_clear_survival-q2-velra": {
+      "pair_id": "B_clear_survival#q2",
+      "benchmark": "B_clear_survival",
+      "stage": "q",
+      "arm": "velra",
+      "state": "complete",
+      "arm_order_index": 0,
+      "arm_order": [
+        "velra",
+        "baseline"
+      ],
+      "started": "20260923T123303Z",
+      "finished": "20260923T123645Z"
+    },
+    "B_clear_survival-q2-baseline": {
+      "pair_id": "B_clear_survival#q2",
+      "benchmark": "B_clear_survival",
+      "stage": "q",
+      "arm": "baseline",
+      "state": "complete",
+      "arm_order_index": 1,
+      "arm_order": [
+        "velra",
+        "baseline"
+      ],
+      "started": "20260923T123645Z",
+      "finished": "20260923T124006Z"
+    }
+  },
+  "last_aggregate": "20260923T124007Z",
+  "verdicts": {
+    "A_cold_continuation#q1": "VELRA_WIN",
+    "A_cold_continuation#q2": "TIE",
+    "B_clear_survival#q1": "VELRA_WIN",
+    "B_clear_survival#q2": "VELRA_WIN"
+  }
+}

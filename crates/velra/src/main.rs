@@ -1,4 +1,4 @@
-//! velra — lossless compaction for Claude Code.
+//! velra — local-first session continuity for Claude Code.
 //!
 //! The hook path (`velra hook <event>`, `velra reduce`) dispatches straight
 //! from `argv` and never initializes clap, a logger, an async runtime or a

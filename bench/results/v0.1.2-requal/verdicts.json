@@ -1,0 +1,1644 @@
+{
+  "pairs": [
+    {
+      "pair_id": "A_cold_continuation#q1",
+      "benchmark": "A_cold_continuation",
+      "scenario": "A_cold_continuation",
+      "pair_key": {
+        "benchmark": "A_cold_continuation",
+        "scenario": "A_cold_continuation",
+        "pair_id": "A_cold_continuation#q1",
+        "fixture_seed": "f6233e55efb918ca",
+        "model": "sonnet",
+        "claude_version": "2.1.280 (Claude Code)",
+        "git_head": "51b96cb5fd03e1bcba9e4c5a5140727ddbe8055c",
+        "turn_script_hash": "e84715336b0762fc",
+        "permission_mode": "bypassPermissions",
+        "context_ladder_rung": 250000
+      },
+      "arms": {
+        "baseline": {
+          "trial": "A_cold_continuation-q1-baseline",
+          "source_session": "268ef366-3150-49de-b546-3e27107f5523",
+          "destination_session": "14985d6d-8521-4605-a233-600a4b6211d4",
+          "telemetry_source": "structured_usage",
+          "measurement_status": "measured",
+          "cache_condition": "HIT",
+          "final_correctness": false,
+          "causal_validity": "INCOMPLETE"
+        },
+        "velra": {
+          "trial": "A_cold_continuation-q1-velra",
+          "source_session": "9028c4e6-24f7-405b-90e3-8c45af82a40f",
+          "destination_session": "d6a12f6a-791d-4130-91cb-83c6059ef566",
+          "telemetry_source": "structured_usage",
+          "measurement_status": "measured",
+          "cache_condition": "HIT",
+          "final_correctness": true,
+          "causal_validity": "DEFERRED"
+        }
+      },
+      "burden": {
+        "total_input_tokens": {
+          "baseline": {
+            "name": "total_input_tokens",
+            "value": 369854,
+            "unit": "tokens",
+            "source": "derived",
+            "raw_artifact_reference": "A_cold_continuation-q1-baseline/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "uncached input + cache reads + cache creation"
+          },
+          "velra": {
+            "name": "total_input_tokens",
+            "value": 274900,
+            "unit": "tokens",
+            "source": "derived",
+            "raw_artifact_reference": "A_cold_continuation-q1-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "uncached input + cache reads + cache creation"
+          },
+          "absolute_difference": {
+            "name": "total_input_tokens_delta",
+            "value": -94954,
+            "unit": "tokens",
+            "source": "derived",
+            "raw_artifact_reference": "A_cold_continuation-q1-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "velra minus baseline; negative means Velra spent less"
+          },
+          "percentage_difference": {
+            "name": "total_input_tokens_pct",
+            "value": -25.6734,
+            "unit": "percent",
+            "source": "derived",
+            "raw_artifact_reference": "A_cold_continuation-q1-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "relative to the baseline arm"
+          }
+        },
+        "input_tokens": {
+          "baseline": {
+            "name": "input_tokens",
+            "value": 18,
+            "unit": "tokens",
+            "source": "structured_usage",
+            "raw_artifact_reference": "A_cold_continuation-q1-baseline/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "summed over 1 structured usage records"
+          },
+          "velra": {
+            "name": "input_tokens",
+            "value": 14,
+            "unit": "tokens",
+            "source": "structured_usage",
+            "raw_artifact_reference": "A_cold_continuation-q1-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "summed over 1 structured usage records"
+          },
+          "absolute_difference": {
+            "name": "input_tokens_delta",
+            "value": -4,
+            "unit": "tokens",
+            "source": "derived",
+            "raw_artifact_reference": "A_cold_continuation-q1-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "velra minus baseline; negative means Velra spent less"
+          },
+          "percentage_difference": {
+            "name": "input_tokens_pct",
+            "value": -22.2222,
+            "unit": "percent",
+            "source": "derived",
+            "raw_artifact_reference": "A_cold_continuation-q1-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "relative to the baseline arm"
+          }
+        },
+        "cache_read_input_tokens": {
+          "baseline": {
+            "name": "cache_read_input_tokens",
+            "value": 348840,
+            "unit": "tokens",
+            "source": "structured_usage",
+            "raw_artifact_reference": "A_cold_continuation-q1-baseline/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "summed over 1 structured usage records"
+          },
+          "velra": {
+            "name": "cache_read_input_tokens",
+            "value": 256302,
+            "unit": "tokens",
+            "source": "structured_usage",
+            "raw_artifact_reference": "A_cold_continuation-q1-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "summed over 1 structured usage records"
+          },
+          "absolute_difference": {
+            "name": "cache_read_input_tokens_delta",
+            "value": -92538,
+            "unit": "tokens",
+            "source": "derived",
+            "raw_artifact_reference": "A_cold_continuation-q1-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "velra minus baseline; negative means Velra spent less"
+          },
+          "percentage_difference": {
+            "name": "cache_read_input_tokens_pct",
+            "value": -26.5273,
+            "unit": "percent",
+            "source": "derived",
+            "raw_artifact_reference": "A_cold_continuation-q1-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "relative to the baseline arm"
+          }
+        },
+        "cache_creation_input_tokens": {
+          "baseline": {
+            "name": "cache_creation_input_tokens",
+            "value": 20996,
+            "unit": "tokens",
+            "source": "structured_usage",
+            "raw_artifact_reference": "A_cold_continuation-q1-baseline/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "summed over 1 structured usage records"
+          },
+          "velra": {
+            "name": "cache_creation_input_tokens",
+            "value": 18584,
+            "unit": "tokens",
+            "source": "structured_usage",
+            "raw_artifact_reference": "A_cold_continuation-q1-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "summed over 1 structured usage records"
+          },
+          "absolute_difference": {
+            "name": "cache_creation_input_tokens_delta",
+            "value": -2412,
+            "unit": "tokens",
+            "source": "derived",
+            "raw_artifact_reference": "A_cold_continuation-q1-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "velra minus baseline; negative means Velra spent less"
+          },
+          "percentage_difference": {
+            "name": "cache_creation_input_tokens_pct",
+            "value": -11.4879,
+            "unit": "percent",
+            "source": "derived",
+            "raw_artifact_reference": "A_cold_continuation-q1-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "relative to the baseline arm"
+          }
+        },
+        "output_tokens": {
+          "baseline": {
+            "name": "output_tokens",
+            "value": 4305,
+            "unit": "tokens",
+            "source": "structured_usage",
+            "raw_artifact_reference": "A_cold_continuation-q1-baseline/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "summed over 1 structured usage records"
+          },
+          "velra": {
+            "name": "output_tokens",
+            "value": 3709,
+            "unit": "tokens",
+            "source": "structured_usage",
+            "raw_artifact_reference": "A_cold_continuation-q1-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "summed over 1 structured usage records"
+          },
+          "absolute_difference": {
+            "name": "output_tokens_delta",
+            "value": -596,
+            "unit": "tokens",
+            "source": "derived",
+            "raw_artifact_reference": "A_cold_continuation-q1-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "velra minus baseline; negative means Velra spent less"
+          },
+          "percentage_difference": {
+            "name": "output_tokens_pct",
+            "value": -13.8444,
+            "unit": "percent",
+            "source": "derived",
+            "raw_artifact_reference": "A_cold_continuation-q1-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "relative to the baseline arm"
+          }
+        }
+      },
+      "effort": {
+        "turns": {
+          "baseline": {
+            "name": "turns",
+            "value": 1,
+            "unit": "turns",
+            "source": "structured_usage",
+            "raw_artifact_reference": "A_cold_continuation-q1-baseline/stream.jsonl",
+            "measurement_status": "measured",
+            "note": ""
+          },
+          "velra": {
+            "name": "turns",
+            "value": 1,
+            "unit": "turns",
+            "source": "structured_usage",
+            "raw_artifact_reference": "A_cold_continuation-q1-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": ""
+          },
+          "absolute_difference": {
+            "name": "turns_delta",
+            "value": 0,
+            "unit": "turns",
+            "source": "derived",
+            "raw_artifact_reference": "A_cold_continuation-q1-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "velra minus baseline"
+          }
+        },
+        "tool_calls": {
+          "baseline": {
+            "name": "tool_calls",
+            "value": 9,
+            "unit": "calls",
+            "source": "structured_usage",
+            "raw_artifact_reference": "A_cold_continuation-q1-baseline/stream.jsonl",
+            "measurement_status": "measured",
+            "note": ""
+          },
+          "velra": {
+            "name": "tool_calls",
+            "value": 9,
+            "unit": "calls",
+            "source": "structured_usage",
+            "raw_artifact_reference": "A_cold_continuation-q1-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": ""
+          },
+          "absolute_difference": {
+            "name": "tool_calls_delta",
+            "value": 0,
+            "unit": "calls",
+            "source": "derived",
+            "raw_artifact_reference": "A_cold_continuation-q1-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "velra minus baseline"
+          }
+        },
+        "file_reads": {
+          "baseline": {
+            "name": "file_reads",
+            "value": 1,
+            "unit": "reads",
+            "source": "structured_usage",
+            "raw_artifact_reference": "A_cold_continuation-q1-baseline/stream.jsonl",
+            "measurement_status": "measured",
+            "note": ""
+          },
+          "velra": {
+            "name": "file_reads",
+            "value": 3,
+            "unit": "reads",
+            "source": "structured_usage",
+            "raw_artifact_reference": "A_cold_continuation-q1-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": ""
+          },
+          "absolute_difference": {
+            "name": "file_reads_delta",
+            "value": 2,
+            "unit": "reads",
+            "source": "derived",
+            "raw_artifact_reference": "A_cold_continuation-q1-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "velra minus baseline"
+          }
+        },
+        "searches": {
+          "baseline": {
+            "name": "searches",
+            "value": 0,
+            "unit": "searches",
+            "source": "structured_usage",
+            "raw_artifact_reference": "A_cold_continuation-q1-baseline/stream.jsonl",
+            "measurement_status": "measured",
+            "note": ""
+          },
+          "velra": {
+            "name": "searches",
+            "value": 2,
+            "unit": "searches",
+            "source": "structured_usage",
+            "raw_artifact_reference": "A_cold_continuation-q1-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": ""
+          },
+          "absolute_difference": {
+            "name": "searches_delta",
+            "value": 2,
+            "unit": "searches",
+            "source": "derived",
+            "raw_artifact_reference": "A_cold_continuation-q1-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "velra minus baseline"
+          }
+        },
+        "steps_to_first_correct_action": {
+          "baseline": {
+            "name": "steps_to_first_correct_action",
+            "value": 6,
+            "unit": "steps",
+            "source": "structured_usage",
+            "raw_artifact_reference": "A_cold_continuation-q1-baseline/stream.jsonl",
+            "measurement_status": "measured",
+            "note": ""
+          },
+          "velra": {
+            "name": "steps_to_first_correct_action",
+            "value": 2,
+            "unit": "steps",
+            "source": "structured_usage",
+            "raw_artifact_reference": "A_cold_continuation-q1-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": ""
+          },
+          "absolute_difference": {
+            "name": "steps_to_first_correct_action_delta",
+            "value": -4,
+            "unit": "steps",
+            "source": "derived",
+            "raw_artifact_reference": "A_cold_continuation-q1-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "velra minus baseline"
+          }
+        }
+      },
+      "thresholds": {
+        "material_burden_change_pct": 25.0,
+        "material_effort_change_steps": 2
+      },
+      "burden_change_pct": -25.6734,
+      "burden_comparable": true,
+      "verdict": "VELRA_WIN",
+      "basis": "burden+correctness",
+      "why": "the Velra arm was correct and spent 25.7% less total input than the baseline"
+    },
+    {
+      "pair_id": "A_cold_continuation#q2",
+      "benchmark": "A_cold_continuation",
+      "scenario": "A_cold_continuation",
+      "pair_key": {
+        "benchmark": "A_cold_continuation",
+        "scenario": "A_cold_continuation",
+        "pair_id": "A_cold_continuation#q2",
+        "fixture_seed": "f6233e55efb918ca",
+        "model": "sonnet",
+        "claude_version": "2.1.280 (Claude Code)",
+        "git_head": "51b96cb5fd03e1bcba9e4c5a5140727ddbe8055c",
+        "turn_script_hash": "e84715336b0762fc",
+        "permission_mode": "bypassPermissions",
+        "context_ladder_rung": 250000
+      },
+      "arms": {
+        "baseline": {
+          "trial": "A_cold_continuation-q2-baseline",
+          "source_session": "99e478a7-0573-46dd-abf6-d43dc83826d0",
+          "destination_session": "7f52f6fb-44c6-42c9-bdac-653cd6935352",
+          "telemetry_source": "structured_usage",
+          "measurement_status": "measured",
+          "cache_condition": "HIT",
+          "final_correctness": false,
+          "causal_validity": "INCOMPLETE"
+        },
+        "velra": {
+          "trial": "A_cold_continuation-q2-velra",
+          "source_session": "5ca39c24-66f5-45d4-a399-42f65b592559",
+          "destination_session": "bc87e8db-c816-4a33-989f-526b9e7437ce",
+          "telemetry_source": "structured_usage",
+          "measurement_status": "measured",
+          "cache_condition": "HIT",
+          "final_correctness": true,
+          "causal_validity": "DEFERRED"
+        }
+      },
+      "burden": {
+        "total_input_tokens": {
+          "baseline": {
+            "name": "total_input_tokens",
+            "value": 250203,
+            "unit": "tokens",
+            "source": "derived",
+            "raw_artifact_reference": "A_cold_continuation-q2-baseline/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "uncached input + cache reads + cache creation"
+          },
+          "velra": {
+            "name": "total_input_tokens",
+            "value": 283635,
+            "unit": "tokens",
+            "source": "derived",
+            "raw_artifact_reference": "A_cold_continuation-q2-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "uncached input + cache reads + cache creation"
+          },
+          "absolute_difference": {
+            "name": "total_input_tokens_delta",
+            "value": 33432,
+            "unit": "tokens",
+            "source": "derived",
+            "raw_artifact_reference": "A_cold_continuation-q2-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "velra minus baseline; negative means Velra spent less"
+          },
+          "percentage_difference": {
+            "name": "total_input_tokens_pct",
+            "value": 13.362,
+            "unit": "percent",
+            "source": "derived",
+            "raw_artifact_reference": "A_cold_continuation-q2-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "relative to the baseline arm"
+          }
+        },
+        "input_tokens": {
+          "baseline": {
+            "name": "input_tokens",
+            "value": 12,
+            "unit": "tokens",
+            "source": "structured_usage",
+            "raw_artifact_reference": "A_cold_continuation-q2-baseline/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "summed over 1 structured usage records"
+          },
+          "velra": {
+            "name": "input_tokens",
+            "value": 14,
+            "unit": "tokens",
+            "source": "structured_usage",
+            "raw_artifact_reference": "A_cold_continuation-q2-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "summed over 1 structured usage records"
+          },
+          "absolute_difference": {
+            "name": "input_tokens_delta",
+            "value": 2,
+            "unit": "tokens",
+            "source": "derived",
+            "raw_artifact_reference": "A_cold_continuation-q2-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "velra minus baseline; negative means Velra spent less"
+          },
+          "percentage_difference": {
+            "name": "input_tokens_pct",
+            "value": 16.6667,
+            "unit": "percent",
+            "source": "derived",
+            "raw_artifact_reference": "A_cold_continuation-q2-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "relative to the baseline arm"
+          }
+        },
+        "cache_read_input_tokens": {
+          "baseline": {
+            "name": "cache_read_input_tokens",
+            "value": 226649,
+            "unit": "tokens",
+            "source": "structured_usage",
+            "raw_artifact_reference": "A_cold_continuation-q2-baseline/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "summed over 1 structured usage records"
+          },
+          "velra": {
+            "name": "cache_read_input_tokens",
+            "value": 262512,
+            "unit": "tokens",
+            "source": "structured_usage",
+            "raw_artifact_reference": "A_cold_continuation-q2-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "summed over 1 structured usage records"
+          },
+          "absolute_difference": {
+            "name": "cache_read_input_tokens_delta",
+            "value": 35863,
+            "unit": "tokens",
+            "source": "derived",
+            "raw_artifact_reference": "A_cold_continuation-q2-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "velra minus baseline; negative means Velra spent less"
+          },
+          "percentage_difference": {
+            "name": "cache_read_input_tokens_pct",
+            "value": 15.8231,
+            "unit": "percent",
+            "source": "derived",
+            "raw_artifact_reference": "A_cold_continuation-q2-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "relative to the baseline arm"
+          }
+        },
+        "cache_creation_input_tokens": {
+          "baseline": {
+            "name": "cache_creation_input_tokens",
+            "value": 23542,
+            "unit": "tokens",
+            "source": "structured_usage",
+            "raw_artifact_reference": "A_cold_continuation-q2-baseline/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "summed over 1 structured usage records"
+          },
+          "velra": {
+            "name": "cache_creation_input_tokens",
+            "value": 21109,
+            "unit": "tokens",
+            "source": "structured_usage",
+            "raw_artifact_reference": "A_cold_continuation-q2-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "summed over 1 structured usage records"
+          },
+          "absolute_difference": {
+            "name": "cache_creation_input_tokens_delta",
+            "value": -2433,
+            "unit": "tokens",
+            "source": "derived",
+            "raw_artifact_reference": "A_cold_continuation-q2-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "velra minus baseline; negative means Velra spent less"
+          },
+          "percentage_difference": {
+            "name": "cache_creation_input_tokens_pct",
+            "value": -10.3347,
+            "unit": "percent",
+            "source": "derived",
+            "raw_artifact_reference": "A_cold_continuation-q2-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "relative to the baseline arm"
+          }
+        },
+        "output_tokens": {
+          "baseline": {
+            "name": "output_tokens",
+            "value": 5326,
+            "unit": "tokens",
+            "source": "structured_usage",
+            "raw_artifact_reference": "A_cold_continuation-q2-baseline/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "summed over 1 structured usage records"
+          },
+          "velra": {
+            "name": "output_tokens",
+            "value": 4825,
+            "unit": "tokens",
+            "source": "structured_usage",
+            "raw_artifact_reference": "A_cold_continuation-q2-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "summed over 1 structured usage records"
+          },
+          "absolute_difference": {
+            "name": "output_tokens_delta",
+            "value": -501,
+            "unit": "tokens",
+            "source": "derived",
+            "raw_artifact_reference": "A_cold_continuation-q2-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "velra minus baseline; negative means Velra spent less"
+          },
+          "percentage_difference": {
+            "name": "output_tokens_pct",
+            "value": -9.4067,
+            "unit": "percent",
+            "source": "derived",
+            "raw_artifact_reference": "A_cold_continuation-q2-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "relative to the baseline arm"
+          }
+        }
+      },
+      "effort": {
+        "turns": {
+          "baseline": {
+            "name": "turns",
+            "value": 1,
+            "unit": "turns",
+            "source": "structured_usage",
+            "raw_artifact_reference": "A_cold_continuation-q2-baseline/stream.jsonl",
+            "measurement_status": "measured",
+            "note": ""
+          },
+          "velra": {
+            "name": "turns",
+            "value": 1,
+            "unit": "turns",
+            "source": "structured_usage",
+            "raw_artifact_reference": "A_cold_continuation-q2-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": ""
+          },
+          "absolute_difference": {
+            "name": "turns_delta",
+            "value": 0,
+            "unit": "turns",
+            "source": "derived",
+            "raw_artifact_reference": "A_cold_continuation-q2-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "velra minus baseline"
+          }
+        },
+        "tool_calls": {
+          "baseline": {
+            "name": "tool_calls",
+            "value": 18,
+            "unit": "calls",
+            "source": "structured_usage",
+            "raw_artifact_reference": "A_cold_continuation-q2-baseline/stream.jsonl",
+            "measurement_status": "measured",
+            "note": ""
+          },
+          "velra": {
+            "name": "tool_calls",
+            "value": 9,
+            "unit": "calls",
+            "source": "structured_usage",
+            "raw_artifact_reference": "A_cold_continuation-q2-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": ""
+          },
+          "absolute_difference": {
+            "name": "tool_calls_delta",
+            "value": -9,
+            "unit": "calls",
+            "source": "derived",
+            "raw_artifact_reference": "A_cold_continuation-q2-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "velra minus baseline"
+          }
+        },
+        "file_reads": {
+          "baseline": {
+            "name": "file_reads",
+            "value": 12,
+            "unit": "reads",
+            "source": "structured_usage",
+            "raw_artifact_reference": "A_cold_continuation-q2-baseline/stream.jsonl",
+            "measurement_status": "measured",
+            "note": ""
+          },
+          "velra": {
+            "name": "file_reads",
+            "value": 2,
+            "unit": "reads",
+            "source": "structured_usage",
+            "raw_artifact_reference": "A_cold_continuation-q2-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": ""
+          },
+          "absolute_difference": {
+            "name": "file_reads_delta",
+            "value": -10,
+            "unit": "reads",
+            "source": "derived",
+            "raw_artifact_reference": "A_cold_continuation-q2-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "velra minus baseline"
+          }
+        },
+        "searches": {
+          "baseline": {
+            "name": "searches",
+            "value": 1,
+            "unit": "searches",
+            "source": "structured_usage",
+            "raw_artifact_reference": "A_cold_continuation-q2-baseline/stream.jsonl",
+            "measurement_status": "measured",
+            "note": ""
+          },
+          "velra": {
+            "name": "searches",
+            "value": 1,
+            "unit": "searches",
+            "source": "structured_usage",
+            "raw_artifact_reference": "A_cold_continuation-q2-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": ""
+          },
+          "absolute_difference": {
+            "name": "searches_delta",
+            "value": 0,
+            "unit": "searches",
+            "source": "derived",
+            "raw_artifact_reference": "A_cold_continuation-q2-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "velra minus baseline"
+          }
+        },
+        "steps_to_first_correct_action": {
+          "baseline": {
+            "name": "steps_to_first_correct_action",
+            "value": 7,
+            "unit": "steps",
+            "source": "structured_usage",
+            "raw_artifact_reference": "A_cold_continuation-q2-baseline/stream.jsonl",
+            "measurement_status": "measured",
+            "note": ""
+          },
+          "velra": {
+            "name": "steps_to_first_correct_action",
+            "value": 2,
+            "unit": "steps",
+            "source": "structured_usage",
+            "raw_artifact_reference": "A_cold_continuation-q2-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": ""
+          },
+          "absolute_difference": {
+            "name": "steps_to_first_correct_action_delta",
+            "value": -5,
+            "unit": "steps",
+            "source": "derived",
+            "raw_artifact_reference": "A_cold_continuation-q2-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "velra minus baseline"
+          }
+        }
+      },
+      "thresholds": {
+        "material_burden_change_pct": 25.0,
+        "material_effort_change_steps": 2
+      },
+      "burden_change_pct": 13.362,
+      "burden_comparable": true,
+      "verdict": "INCONCLUSIVE",
+      "basis": "no registered rule",
+      "broken_link": "pair/I_burden_reduced",
+      "correctness_outcome": {
+        "baseline": false,
+        "velra": true
+      },
+      "why": "only the Velra arm was correct, but its total input changed by +13.4%, short of the registered 25% reduction a VELRA_WIN requires; a TIE requires both arms correct, so no registered rule decides this pair"
+    },
+    {
+      "pair_id": "B_clear_survival#q1",
+      "benchmark": "B_clear_survival",
+      "scenario": "B_clear_survival",
+      "pair_key": {
+        "benchmark": "B_clear_survival",
+        "scenario": "B_clear_survival",
+        "pair_id": "B_clear_survival#q1",
+        "fixture_seed": "a070849ef9ae109d",
+        "model": "sonnet",
+        "claude_version": "2.1.280 (Claude Code)",
+        "git_head": "51b96cb5fd03e1bcba9e4c5a5140727ddbe8055c",
+        "turn_script_hash": "8656331d0e9dd957",
+        "permission_mode": "bypassPermissions",
+        "context_ladder_rung": 250000
+      },
+      "arms": {
+        "baseline": {
+          "trial": "B_clear_survival-q1-baseline",
+          "source_session": "819dd370-77f8-4d40-99d2-0b9a262f50d1",
+          "destination_session": "e14ef789-c5cc-4510-aa1e-067d24a4368f",
+          "telemetry_source": "structured_usage",
+          "measurement_status": "measured",
+          "cache_condition": "HIT",
+          "final_correctness": false,
+          "causal_validity": "INCOMPLETE"
+        },
+        "velra": {
+          "trial": "B_clear_survival-q1-velra",
+          "source_session": "87901fc6-65ee-4265-8c7c-513b5d8ae43d",
+          "destination_session": "7fa9ba41-0b8a-4375-89dd-3990625ae4ad",
+          "telemetry_source": "structured_usage",
+          "measurement_status": "measured",
+          "cache_condition": "HIT",
+          "final_correctness": true,
+          "causal_validity": "DEFERRED"
+        }
+      },
+      "burden": {
+        "total_input_tokens": {
+          "baseline": {
+            "name": "total_input_tokens",
+            "value": 328371,
+            "unit": "tokens",
+            "source": "derived",
+            "raw_artifact_reference": "B_clear_survival-q1-baseline/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "uncached input + cache reads + cache creation"
+          },
+          "velra": {
+            "name": "total_input_tokens",
+            "value": 236454,
+            "unit": "tokens",
+            "source": "derived",
+            "raw_artifact_reference": "B_clear_survival-q1-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "uncached input + cache reads + cache creation"
+          },
+          "absolute_difference": {
+            "name": "total_input_tokens_delta",
+            "value": -91917,
+            "unit": "tokens",
+            "source": "derived",
+            "raw_artifact_reference": "B_clear_survival-q1-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "velra minus baseline; negative means Velra spent less"
+          },
+          "percentage_difference": {
+            "name": "total_input_tokens_pct",
+            "value": -27.9918,
+            "unit": "percent",
+            "source": "derived",
+            "raw_artifact_reference": "B_clear_survival-q1-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "relative to the baseline arm"
+          }
+        },
+        "input_tokens": {
+          "baseline": {
+            "name": "input_tokens",
+            "value": 16,
+            "unit": "tokens",
+            "source": "structured_usage",
+            "raw_artifact_reference": "B_clear_survival-q1-baseline/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "summed over 1 structured usage records"
+          },
+          "velra": {
+            "name": "input_tokens",
+            "value": 12,
+            "unit": "tokens",
+            "source": "structured_usage",
+            "raw_artifact_reference": "B_clear_survival-q1-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "summed over 1 structured usage records"
+          },
+          "absolute_difference": {
+            "name": "input_tokens_delta",
+            "value": -4,
+            "unit": "tokens",
+            "source": "derived",
+            "raw_artifact_reference": "B_clear_survival-q1-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "velra minus baseline; negative means Velra spent less"
+          },
+          "percentage_difference": {
+            "name": "input_tokens_pct",
+            "value": -25.0,
+            "unit": "percent",
+            "source": "derived",
+            "raw_artifact_reference": "B_clear_survival-q1-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "relative to the baseline arm"
+          }
+        },
+        "cache_read_input_tokens": {
+          "baseline": {
+            "name": "cache_read_input_tokens",
+            "value": 305882,
+            "unit": "tokens",
+            "source": "structured_usage",
+            "raw_artifact_reference": "B_clear_survival-q1-baseline/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "summed over 1 structured usage records"
+          },
+          "velra": {
+            "name": "cache_read_input_tokens",
+            "value": 217190,
+            "unit": "tokens",
+            "source": "structured_usage",
+            "raw_artifact_reference": "B_clear_survival-q1-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "summed over 1 structured usage records"
+          },
+          "absolute_difference": {
+            "name": "cache_read_input_tokens_delta",
+            "value": -88692,
+            "unit": "tokens",
+            "source": "derived",
+            "raw_artifact_reference": "B_clear_survival-q1-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "velra minus baseline; negative means Velra spent less"
+          },
+          "percentage_difference": {
+            "name": "cache_read_input_tokens_pct",
+            "value": -28.9955,
+            "unit": "percent",
+            "source": "derived",
+            "raw_artifact_reference": "B_clear_survival-q1-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "relative to the baseline arm"
+          }
+        },
+        "cache_creation_input_tokens": {
+          "baseline": {
+            "name": "cache_creation_input_tokens",
+            "value": 22473,
+            "unit": "tokens",
+            "source": "structured_usage",
+            "raw_artifact_reference": "B_clear_survival-q1-baseline/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "summed over 1 structured usage records"
+          },
+          "velra": {
+            "name": "cache_creation_input_tokens",
+            "value": 19252,
+            "unit": "tokens",
+            "source": "structured_usage",
+            "raw_artifact_reference": "B_clear_survival-q1-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "summed over 1 structured usage records"
+          },
+          "absolute_difference": {
+            "name": "cache_creation_input_tokens_delta",
+            "value": -3221,
+            "unit": "tokens",
+            "source": "derived",
+            "raw_artifact_reference": "B_clear_survival-q1-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "velra minus baseline; negative means Velra spent less"
+          },
+          "percentage_difference": {
+            "name": "cache_creation_input_tokens_pct",
+            "value": -14.3328,
+            "unit": "percent",
+            "source": "derived",
+            "raw_artifact_reference": "B_clear_survival-q1-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "relative to the baseline arm"
+          }
+        },
+        "output_tokens": {
+          "baseline": {
+            "name": "output_tokens",
+            "value": 4945,
+            "unit": "tokens",
+            "source": "structured_usage",
+            "raw_artifact_reference": "B_clear_survival-q1-baseline/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "summed over 1 structured usage records"
+          },
+          "velra": {
+            "name": "output_tokens",
+            "value": 2979,
+            "unit": "tokens",
+            "source": "structured_usage",
+            "raw_artifact_reference": "B_clear_survival-q1-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "summed over 1 structured usage records"
+          },
+          "absolute_difference": {
+            "name": "output_tokens_delta",
+            "value": -1966,
+            "unit": "tokens",
+            "source": "derived",
+            "raw_artifact_reference": "B_clear_survival-q1-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "velra minus baseline; negative means Velra spent less"
+          },
+          "percentage_difference": {
+            "name": "output_tokens_pct",
+            "value": -39.7573,
+            "unit": "percent",
+            "source": "derived",
+            "raw_artifact_reference": "B_clear_survival-q1-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "relative to the baseline arm"
+          }
+        }
+      },
+      "effort": {
+        "turns": {
+          "baseline": {
+            "name": "turns",
+            "value": 1,
+            "unit": "turns",
+            "source": "structured_usage",
+            "raw_artifact_reference": "B_clear_survival-q1-baseline/stream.jsonl",
+            "measurement_status": "measured",
+            "note": ""
+          },
+          "velra": {
+            "name": "turns",
+            "value": 1,
+            "unit": "turns",
+            "source": "structured_usage",
+            "raw_artifact_reference": "B_clear_survival-q1-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": ""
+          },
+          "absolute_difference": {
+            "name": "turns_delta",
+            "value": 0,
+            "unit": "turns",
+            "source": "derived",
+            "raw_artifact_reference": "B_clear_survival-q1-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "velra minus baseline"
+          }
+        },
+        "tool_calls": {
+          "baseline": {
+            "name": "tool_calls",
+            "value": 16,
+            "unit": "calls",
+            "source": "structured_usage",
+            "raw_artifact_reference": "B_clear_survival-q1-baseline/stream.jsonl",
+            "measurement_status": "measured",
+            "note": ""
+          },
+          "velra": {
+            "name": "tool_calls",
+            "value": 6,
+            "unit": "calls",
+            "source": "structured_usage",
+            "raw_artifact_reference": "B_clear_survival-q1-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": ""
+          },
+          "absolute_difference": {
+            "name": "tool_calls_delta",
+            "value": -10,
+            "unit": "calls",
+            "source": "derived",
+            "raw_artifact_reference": "B_clear_survival-q1-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "velra minus baseline"
+          }
+        },
+        "file_reads": {
+          "baseline": {
+            "name": "file_reads",
+            "value": 9,
+            "unit": "reads",
+            "source": "structured_usage",
+            "raw_artifact_reference": "B_clear_survival-q1-baseline/stream.jsonl",
+            "measurement_status": "measured",
+            "note": ""
+          },
+          "velra": {
+            "name": "file_reads",
+            "value": 2,
+            "unit": "reads",
+            "source": "structured_usage",
+            "raw_artifact_reference": "B_clear_survival-q1-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": ""
+          },
+          "absolute_difference": {
+            "name": "file_reads_delta",
+            "value": -7,
+            "unit": "reads",
+            "source": "derived",
+            "raw_artifact_reference": "B_clear_survival-q1-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "velra minus baseline"
+          }
+        },
+        "searches": {
+          "baseline": {
+            "name": "searches",
+            "value": 1,
+            "unit": "searches",
+            "source": "structured_usage",
+            "raw_artifact_reference": "B_clear_survival-q1-baseline/stream.jsonl",
+            "measurement_status": "measured",
+            "note": ""
+          },
+          "velra": {
+            "name": "searches",
+            "value": 0,
+            "unit": "searches",
+            "source": "structured_usage",
+            "raw_artifact_reference": "B_clear_survival-q1-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": ""
+          },
+          "absolute_difference": {
+            "name": "searches_delta",
+            "value": -1,
+            "unit": "searches",
+            "source": "derived",
+            "raw_artifact_reference": "B_clear_survival-q1-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "velra minus baseline"
+          }
+        },
+        "steps_to_first_correct_action": {
+          "baseline": {
+            "name": "steps_to_first_correct_action",
+            "value": 4,
+            "unit": "steps",
+            "source": "structured_usage",
+            "raw_artifact_reference": "B_clear_survival-q1-baseline/stream.jsonl",
+            "measurement_status": "measured",
+            "note": ""
+          },
+          "velra": {
+            "name": "steps_to_first_correct_action",
+            "value": 2,
+            "unit": "steps",
+            "source": "structured_usage",
+            "raw_artifact_reference": "B_clear_survival-q1-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": ""
+          },
+          "absolute_difference": {
+            "name": "steps_to_first_correct_action_delta",
+            "value": -2,
+            "unit": "steps",
+            "source": "derived",
+            "raw_artifact_reference": "B_clear_survival-q1-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "velra minus baseline"
+          }
+        }
+      },
+      "thresholds": {
+        "material_burden_change_pct": 25.0,
+        "material_effort_change_steps": 2
+      },
+      "burden_change_pct": -27.9918,
+      "burden_comparable": true,
+      "verdict": "VELRA_WIN",
+      "basis": "burden+correctness",
+      "why": "the Velra arm was correct and spent 28.0% less total input than the baseline"
+    },
+    {
+      "pair_id": "B_clear_survival#q2",
+      "benchmark": "B_clear_survival",
+      "scenario": "B_clear_survival",
+      "pair_key": {
+        "benchmark": "B_clear_survival",
+        "scenario": "B_clear_survival",
+        "pair_id": "B_clear_survival#q2",
+        "fixture_seed": "a070849ef9ae109d",
+        "model": "sonnet",
+        "claude_version": "2.1.280 (Claude Code)",
+        "git_head": "51b96cb5fd03e1bcba9e4c5a5140727ddbe8055c",
+        "turn_script_hash": "8656331d0e9dd957",
+        "permission_mode": "bypassPermissions",
+        "context_ladder_rung": 250000
+      },
+      "arms": {
+        "baseline": {
+          "trial": "B_clear_survival-q2-baseline",
+          "source_session": "1ce90b36-53a8-41ad-aa83-5e5b697a84ca",
+          "destination_session": "1165333f-43fd-45c2-bc03-a4677c88c6d7",
+          "telemetry_source": "structured_usage",
+          "measurement_status": "measured",
+          "cache_condition": "HIT",
+          "final_correctness": false,
+          "causal_validity": "INCOMPLETE"
+        },
+        "velra": {
+          "trial": "B_clear_survival-q2-velra",
+          "source_session": "44458106-4af0-4251-b7de-29b4a016897e",
+          "destination_session": "c19e170f-e0f7-4b3c-b44b-99074f78f3bb",
+          "telemetry_source": "structured_usage",
+          "measurement_status": "measured",
+          "cache_condition": "HIT",
+          "final_correctness": true,
+          "causal_validity": "DEFERRED"
+        }
+      },
+      "burden": {
+        "total_input_tokens": {
+          "baseline": {
+            "name": "total_input_tokens",
+            "value": 481550,
+            "unit": "tokens",
+            "source": "derived",
+            "raw_artifact_reference": "B_clear_survival-q2-baseline/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "uncached input + cache reads + cache creation"
+          },
+          "velra": {
+            "name": "total_input_tokens",
+            "value": 327286,
+            "unit": "tokens",
+            "source": "derived",
+            "raw_artifact_reference": "B_clear_survival-q2-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "uncached input + cache reads + cache creation"
+          },
+          "absolute_difference": {
+            "name": "total_input_tokens_delta",
+            "value": -154264,
+            "unit": "tokens",
+            "source": "derived",
+            "raw_artifact_reference": "B_clear_survival-q2-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "velra minus baseline; negative means Velra spent less"
+          },
+          "percentage_difference": {
+            "name": "total_input_tokens_pct",
+            "value": -32.0349,
+            "unit": "percent",
+            "source": "derived",
+            "raw_artifact_reference": "B_clear_survival-q2-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "relative to the baseline arm"
+          }
+        },
+        "input_tokens": {
+          "baseline": {
+            "name": "input_tokens",
+            "value": 16,
+            "unit": "tokens",
+            "source": "structured_usage",
+            "raw_artifact_reference": "B_clear_survival-q2-baseline/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "summed over 1 structured usage records"
+          },
+          "velra": {
+            "name": "input_tokens",
+            "value": 16,
+            "unit": "tokens",
+            "source": "structured_usage",
+            "raw_artifact_reference": "B_clear_survival-q2-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "summed over 1 structured usage records"
+          },
+          "absolute_difference": {
+            "name": "input_tokens_delta",
+            "value": 0,
+            "unit": "tokens",
+            "source": "derived",
+            "raw_artifact_reference": "B_clear_survival-q2-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "velra minus baseline; negative means Velra spent less"
+          },
+          "percentage_difference": {
+            "name": "input_tokens_pct",
+            "value": 0.0,
+            "unit": "percent",
+            "source": "derived",
+            "raw_artifact_reference": "B_clear_survival-q2-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "relative to the baseline arm"
+          }
+        },
+        "cache_read_input_tokens": {
+          "baseline": {
+            "name": "cache_read_input_tokens",
+            "value": 432426,
+            "unit": "tokens",
+            "source": "structured_usage",
+            "raw_artifact_reference": "B_clear_survival-q2-baseline/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "summed over 1 structured usage records"
+          },
+          "velra": {
+            "name": "cache_read_input_tokens",
+            "value": 305807,
+            "unit": "tokens",
+            "source": "structured_usage",
+            "raw_artifact_reference": "B_clear_survival-q2-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "summed over 1 structured usage records"
+          },
+          "absolute_difference": {
+            "name": "cache_read_input_tokens_delta",
+            "value": -126619,
+            "unit": "tokens",
+            "source": "derived",
+            "raw_artifact_reference": "B_clear_survival-q2-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "velra minus baseline; negative means Velra spent less"
+          },
+          "percentage_difference": {
+            "name": "cache_read_input_tokens_pct",
+            "value": -29.2811,
+            "unit": "percent",
+            "source": "derived",
+            "raw_artifact_reference": "B_clear_survival-q2-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "relative to the baseline arm"
+          }
+        },
+        "cache_creation_input_tokens": {
+          "baseline": {
+            "name": "cache_creation_input_tokens",
+            "value": 49108,
+            "unit": "tokens",
+            "source": "structured_usage",
+            "raw_artifact_reference": "B_clear_survival-q2-baseline/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "summed over 1 structured usage records"
+          },
+          "velra": {
+            "name": "cache_creation_input_tokens",
+            "value": 21463,
+            "unit": "tokens",
+            "source": "structured_usage",
+            "raw_artifact_reference": "B_clear_survival-q2-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "summed over 1 structured usage records"
+          },
+          "absolute_difference": {
+            "name": "cache_creation_input_tokens_delta",
+            "value": -27645,
+            "unit": "tokens",
+            "source": "derived",
+            "raw_artifact_reference": "B_clear_survival-q2-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "velra minus baseline; negative means Velra spent less"
+          },
+          "percentage_difference": {
+            "name": "cache_creation_input_tokens_pct",
+            "value": -56.2943,
+            "unit": "percent",
+            "source": "derived",
+            "raw_artifact_reference": "B_clear_survival-q2-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "relative to the baseline arm"
+          }
+        },
+        "output_tokens": {
+          "baseline": {
+            "name": "output_tokens",
+            "value": 5699,
+            "unit": "tokens",
+            "source": "structured_usage",
+            "raw_artifact_reference": "B_clear_survival-q2-baseline/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "summed over 1 structured usage records"
+          },
+          "velra": {
+            "name": "output_tokens",
+            "value": 3683,
+            "unit": "tokens",
+            "source": "structured_usage",
+            "raw_artifact_reference": "B_clear_survival-q2-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "summed over 1 structured usage records"
+          },
+          "absolute_difference": {
+            "name": "output_tokens_delta",
+            "value": -2016,
+            "unit": "tokens",
+            "source": "derived",
+            "raw_artifact_reference": "B_clear_survival-q2-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "velra minus baseline; negative means Velra spent less"
+          },
+          "percentage_difference": {
+            "name": "output_tokens_pct",
+            "value": -35.3746,
+            "unit": "percent",
+            "source": "derived",
+            "raw_artifact_reference": "B_clear_survival-q2-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "relative to the baseline arm"
+          }
+        }
+      },
+      "effort": {
+        "turns": {
+          "baseline": {
+            "name": "turns",
+            "value": 1,
+            "unit": "turns",
+            "source": "structured_usage",
+            "raw_artifact_reference": "B_clear_survival-q2-baseline/stream.jsonl",
+            "measurement_status": "measured",
+            "note": ""
+          },
+          "velra": {
+            "name": "turns",
+            "value": 1,
+            "unit": "turns",
+            "source": "structured_usage",
+            "raw_artifact_reference": "B_clear_survival-q2-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": ""
+          },
+          "absolute_difference": {
+            "name": "turns_delta",
+            "value": 0,
+            "unit": "turns",
+            "source": "derived",
+            "raw_artifact_reference": "B_clear_survival-q2-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "velra minus baseline"
+          }
+        },
+        "tool_calls": {
+          "baseline": {
+            "name": "tool_calls",
+            "value": 17,
+            "unit": "calls",
+            "source": "structured_usage",
+            "raw_artifact_reference": "B_clear_survival-q2-baseline/stream.jsonl",
+            "measurement_status": "measured",
+            "note": ""
+          },
+          "velra": {
+            "name": "tool_calls",
+            "value": 9,
+            "unit": "calls",
+            "source": "structured_usage",
+            "raw_artifact_reference": "B_clear_survival-q2-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": ""
+          },
+          "absolute_difference": {
+            "name": "tool_calls_delta",
+            "value": -8,
+            "unit": "calls",
+            "source": "derived",
+            "raw_artifact_reference": "B_clear_survival-q2-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "velra minus baseline"
+          }
+        },
+        "file_reads": {
+          "baseline": {
+            "name": "file_reads",
+            "value": 11,
+            "unit": "reads",
+            "source": "structured_usage",
+            "raw_artifact_reference": "B_clear_survival-q2-baseline/stream.jsonl",
+            "measurement_status": "measured",
+            "note": ""
+          },
+          "velra": {
+            "name": "file_reads",
+            "value": 3,
+            "unit": "reads",
+            "source": "structured_usage",
+            "raw_artifact_reference": "B_clear_survival-q2-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": ""
+          },
+          "absolute_difference": {
+            "name": "file_reads_delta",
+            "value": -8,
+            "unit": "reads",
+            "source": "derived",
+            "raw_artifact_reference": "B_clear_survival-q2-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "velra minus baseline"
+          }
+        },
+        "searches": {
+          "baseline": {
+            "name": "searches",
+            "value": 0,
+            "unit": "searches",
+            "source": "structured_usage",
+            "raw_artifact_reference": "B_clear_survival-q2-baseline/stream.jsonl",
+            "measurement_status": "measured",
+            "note": ""
+          },
+          "velra": {
+            "name": "searches",
+            "value": 1,
+            "unit": "searches",
+            "source": "structured_usage",
+            "raw_artifact_reference": "B_clear_survival-q2-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": ""
+          },
+          "absolute_difference": {
+            "name": "searches_delta",
+            "value": 1,
+            "unit": "searches",
+            "source": "derived",
+            "raw_artifact_reference": "B_clear_survival-q2-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "velra minus baseline"
+          }
+        },
+        "steps_to_first_correct_action": {
+          "baseline": {
+            "name": "steps_to_first_correct_action",
+            "value": 5,
+            "unit": "steps",
+            "source": "structured_usage",
+            "raw_artifact_reference": "B_clear_survival-q2-baseline/stream.jsonl",
+            "measurement_status": "measured",
+            "note": ""
+          },
+          "velra": {
+            "name": "steps_to_first_correct_action",
+            "value": 4,
+            "unit": "steps",
+            "source": "structured_usage",
+            "raw_artifact_reference": "B_clear_survival-q2-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": ""
+          },
+          "absolute_difference": {
+            "name": "steps_to_first_correct_action_delta",
+            "value": -1,
+            "unit": "steps",
+            "source": "derived",
+            "raw_artifact_reference": "B_clear_survival-q2-velra/stream.jsonl",
+            "measurement_status": "measured",
+            "note": "velra minus baseline"
+          }
+        }
+      },
+      "thresholds": {
+        "material_burden_change_pct": 25.0,
+        "material_effort_change_steps": 2
+      },
+      "burden_change_pct": -32.0349,
+      "burden_comparable": true,
+      "verdict": "VELRA_WIN",
+      "basis": "burden+correctness",
+      "why": "the Velra arm was correct and spent 32.0% less total input than the baseline"
+    }
+  ],
+  "pooled": {
+    "groups": {
+      "A_cold_continuation": {
+        "n_pairs": 2,
+        "n_decided": 1,
+        "verdict_counts": {
+          "VELRA_WIN": 1,
+          "BASELINE_WIN": 0,
+          "TIE": 0,
+          "INCONCLUSIVE": 1
+        },
+        "failure_classes": {},
+        "total_input_tokens_pct_change": {
+          "n_measured_pairs": 2,
+          "median": -6.156,
+          "values": [
+            -25.673,
+            13.362
+          ],
+          "note": "median over every pair whose Velra mechanism held (no unusable capture, no broken precondition link) and whose total was measured on both arms, whatever its verdict; other pairs are excluded and counted in n_pairs"
+        },
+        "total_input_tokens_absolute_delta": {
+          "n_measured_pairs": 2,
+          "median": -30761.0,
+          "values": [
+            -94954,
+            33432
+          ]
+        },
+        "correctness": {
+          "baseline_correct": 0,
+          "velra_correct": 2,
+          "of": 2
+        }
+      },
+      "B_clear_survival": {
+        "n_pairs": 2,
+        "n_decided": 2,
+        "verdict_counts": {
+          "VELRA_WIN": 2,
+          "BASELINE_WIN": 0,
+          "TIE": 0,
+          "INCONCLUSIVE": 0
+        },
+        "failure_classes": {},
+        "total_input_tokens_pct_change": {
+          "n_measured_pairs": 2,
+          "median": -30.013,
+          "values": [
+            -27.992,
+            -32.035
+          ],
+          "note": "median over every pair whose Velra mechanism held (no unusable capture, no broken precondition link) and whose total was measured on both arms, whatever its verdict; other pairs are excluded and counted in n_pairs"
+        },
+        "total_input_tokens_absolute_delta": {
+          "n_measured_pairs": 2,
+          "median": -123090.5,
+          "values": [
+            -91917,
+            -154264
+          ]
+        },
+        "correctness": {
+          "baseline_correct": 0,
+          "velra_correct": 2,
+          "of": 2
+        }
+      }
+    },
+    "overall_verdict_counts": {
+      "VELRA_WIN": 3,
+      "BASELINE_WIN": 0,
+      "TIE": 0,
+      "INCONCLUSIVE": 1
+    },
+    "n_pairs": 4,
+    "preregistration_id": "velra-tokenburn",
+    "preregistration_version": "1.1.0",
+    "preregistration_sha256": "c13150b6da58a0861a6319986b7a18c0e0d3659c043adba8ac44c6af326ffcd2"
+  },
+  "scored_by": {
+    "git_head": "5fb1fe739982b59a9c1553b56c9d4b10a48770f7",
+    "pipeline_dirty": false
+  },
+  "preregistration_id": "velra-tokenburn",
+  "preregistration_version": "1.1.0",
+  "preregistration_sha256": "c13150b6da58a0861a6319986b7a18c0e0d3659c043adba8ac44c6af326ffcd2"
+}

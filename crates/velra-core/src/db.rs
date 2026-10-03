@@ -1,9 +1,10 @@
 //! SQLite storage: connection roles, schema, forward-only migrations and
 //! corruption recovery (§10).
 
+use rusqlite::config::DbConfig;
 use rusqlite::{Connection, ErrorCode, OpenFlags, OptionalExtension};
 use std::path::{Path, PathBuf};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 /// Schema version stored in `PRAGMA user_version`.
 pub const SCHEMA_VERSION: i64 = 3;
@@ -286,10 +287,25 @@ fn make_private(_path: &Path) {}
 impl Db {
     /// Opens (creating and migrating if needed) with the role's settings.
     /// A corrupt file is renamed to `velra.db.corrupt-{ts}` and recreated.
+    ///
+    /// Many hooks can meet the same corrupt file at once. Rotation is done
+    /// by one of them at a time, under [`rotation_lock`], and only when the
+    /// file is still corrupt once the lock is held: a process that saw the
+    /// old file used to rename whatever was at the path by the time it got
+    /// there -- the fresh database another had just created and written to
+    /// (reproduced on Linux, DECISIONS D137).
     pub fn open(path: &Path, role: Role) -> Result<Db> {
         match Self::open_once(path, role) {
             Err(DbError::Sqlite(e)) if is_corrupt(&e) => {
+                let _lock = rotation_lock(path, role.busy_timeout())?;
+                match Self::open_once(path, role) {
+                    Err(DbError::Sqlite(e)) if is_corrupt(&e) => {}
+                    // Rotated and recreated by another process meanwhile.
+                    other => return other,
+                }
                 let rotated = rotate_corrupt(path)?;
+                // Still under the lock, so a process that saw the old file
+                // finds this one when it looks again.
                 let mut db = Self::open_once(path, role)?;
                 db.rotated_corrupt = Some(rotated);
                 Ok(db)
@@ -298,33 +314,65 @@ impl Db {
         }
     }
 
+    /// [`open_once_at`], again when the file at `path` was replaced while it
+    /// was being opened.
     fn open_once(path: &Path, role: Role) -> Result<Db> {
+        for _ in 0..3 {
+            if let Some(db) = Self::open_once_at(path, role)? {
+                return Ok(db);
+            }
+        }
+        Err(DbError::Busy)
+    }
+
+    /// Opens `path`, or `None` when the file there changed between the
+    /// open and the first read (POSIX only).
+    ///
+    /// SQLite pairs a database with its `-wal` by *name*. A hook that opened
+    /// `velra.db` just before another rotated it aside kept a descriptor to
+    /// the old file, found the new database's `-wal` beside the path, read a
+    /// valid page 1 from it -- and on closing checkpointed that journal into
+    /// the old file and reset it, leaving the new database empty; the next
+    /// hook rotated that too (reproduced on Linux, D137). So the first read
+    /// is taken with checkpoint-on-close off, the path is checked to still
+    /// be the file that was opened, and nothing is written before it is.
+    /// Windows refuses to rename an open database, so the case cannot arise
+    /// there.
+    fn open_once_at(path: &Path, role: Role) -> Result<Option<Db>> {
+        let before = file_id(path);
         let conn = Connection::open_with_flags(
             path,
             OpenFlags::SQLITE_OPEN_READ_WRITE
                 | OpenFlags::SQLITE_OPEN_CREATE
                 | OpenFlags::SQLITE_OPEN_NO_MUTEX,
         )?;
+        conn.set_db_config(DbConfig::SQLITE_DBCONFIG_NO_CKPT_ON_CLOSE, true)?;
         // Before `migrate` turns on WAL: SQLite derives the -wal and -shm modes
         // from the database file, so tightening it here makes them private too.
         make_private(path);
-        conn.busy_timeout(role.busy_timeout())?;
+        set_busy_budget(&conn, role.busy_timeout())?;
         conn.execute_batch(
             "PRAGMA synchronous = NORMAL; PRAGMA temp_store = MEMORY; PRAGMA foreign_keys = OFF; \
              PRAGMA journal_size_limit = 67108864;",
         )?;
         let version = user_version(&conn)?;
+        // A path that was empty when looked at cannot have held the old file
+        // since: a rotated file never returns to it.
+        if before.is_some() && file_id(path) != before {
+            return Ok(None);
+        }
+        conn.set_db_config(DbConfig::SQLITE_DBCONFIG_NO_CKPT_ON_CLOSE, false)?;
         if version > SCHEMA_VERSION {
             return Err(DbError::NewerSchema(version));
         }
         if version < SCHEMA_VERSION {
             migrate(&conn, version, role)?;
         }
-        Ok(Db {
+        Ok(Some(Db {
             conn,
             path: path.to_path_buf(),
             rotated_corrupt: None,
-        })
+        }))
     }
 
     /// Read-only open for diagnostics; never creates or migrates.
@@ -333,12 +381,127 @@ impl Db {
             path,
             OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX,
         )?;
-        conn.busy_timeout(Role::Cli.busy_timeout())?;
+        set_busy_budget(&conn, Role::Cli.busy_timeout())?;
         Ok(Db {
             conn,
             path: path.to_path_buf(),
             rotated_corrupt: None,
         })
+    }
+}
+
+/// Waits on a lock for at most `budget` of elapsed time.
+///
+/// `busy_timeout` installs SQLite's own handler, which sleeps a schedule of
+/// short delays (1, 2, 5, 10 ms, …) and stops once the delays it *asked for*
+/// add up to the timeout. Windows rounds every sleep up to its timer tick
+/// (15.6 ms, measured: `measure_sqlite_sleep_against_its_busy_schedule`), so
+/// a 100 ms hook budget cost 171 ms of waiting, 50 ms cost 109 ms. This
+/// handler keeps the same schedule and counts the clock instead: it overruns
+/// by at most the one sleep in progress at the deadline.
+pub fn set_busy_budget(conn: &Connection, budget: Duration) -> rusqlite::Result<()> {
+    // A handler is a plain `fn`, so each budget in use has its own.
+    let handler: fn(i32) -> bool = match budget.as_millis() {
+        50 => busy::<50>,
+        100 => busy::<100>,
+        200 => busy::<200>,
+        1_000 => busy::<1_000>,
+        5_000 => busy::<5_000>,
+        _ => return conn.busy_timeout(budget),
+    };
+    conn.busy_handler(Some(handler))
+}
+
+fn busy<const MS: u64>(count: i32) -> bool {
+    busy_wait(count, Duration::from_millis(MS))
+}
+
+thread_local! {
+    /// When the wait in progress on this thread began. A busy handler runs
+    /// inside the call that met the lock, so a thread has one at a time.
+    static BUSY_SINCE: std::cell::Cell<Option<Instant>> = const { std::cell::Cell::new(None) };
+}
+
+/// SQLite's delay schedule (`sqliteDefaultBusyCallback`).
+const BUSY_STEPS_MS: [u64; 12] = [1, 2, 5, 10, 15, 20, 25, 25, 25, 50, 50, 100];
+
+/// `count` is how many times SQLite has already called the handler for this
+/// lock; 0 starts a new wait.
+fn busy_wait(count: i32, budget: Duration) -> bool {
+    let now = Instant::now();
+    let since = BUSY_SINCE.with(|c| {
+        let since = match c.get() {
+            Some(t) if count > 0 => t,
+            _ => now,
+        };
+        c.set(Some(since));
+        since
+    });
+    let sleep = busy_step(count, since, now, budget);
+    #[cfg(test)]
+    busy_trace::record(count, since, now, sleep);
+    match sleep {
+        Some(d) => {
+            std::thread::sleep(d);
+            true
+        }
+        None => false,
+    }
+}
+
+/// What the handler decides on its `count`th call of a wait that began at
+/// `since`, called at `now`: how long to sleep before SQLite retries, or
+/// `None` to give up.
+///
+/// Every decision is taken against the clock, so this never asks for a sleep
+/// that ends past the deadline, and gives up at the first call on or after
+/// it. How late the OS then wakes the thread is not decided here: on a loaded
+/// or virtualised runner a sleep can end tens of milliseconds after it was
+/// asked to, and that lateness is the whole of any overrun (D146).
+fn busy_step(count: i32, since: Instant, now: Instant, budget: Duration) -> Option<Duration> {
+    let left = budget.saturating_sub(now.duration_since(since));
+    if left.is_zero() {
+        return None;
+    }
+    let step = BUSY_STEPS_MS[usize::try_from(count)
+        .unwrap_or(0)
+        .min(BUSY_STEPS_MS.len() - 1)];
+    Some(left.min(Duration::from_millis(step)))
+}
+
+/// Every busy-handler call on this thread, as decided, for the tests that
+/// hold the handler to its budget against the real clock.
+#[cfg(test)]
+mod busy_trace {
+    use std::cell::RefCell;
+    use std::time::{Duration, Instant};
+
+    #[derive(Debug, Clone, Copy)]
+    pub struct Call {
+        pub count: i32,
+        pub since: Instant,
+        pub at: Instant,
+        pub sleep: Option<Duration>,
+    }
+
+    thread_local! {
+        static CALLS: RefCell<Vec<Call>> = const { RefCell::new(Vec::new()) };
+    }
+
+    pub fn record(count: i32, since: Instant, at: Instant, sleep: Option<Duration>) {
+        CALLS.with(|c| {
+            c.borrow_mut().push(Call {
+                count,
+                since,
+                at,
+                sleep,
+            })
+        });
+    }
+
+    /// The calls recorded since the last `take`.
+    pub fn take() -> Vec<Call> {
+        CALLS.with(|c| std::mem::take(&mut *c.borrow_mut()))
     }
 }
 
@@ -353,7 +516,7 @@ pub fn journal_mode(conn: &Connection) -> rusqlite::Result<String> {
 fn migrate(conn: &Connection, from: i64, role: Role) -> Result<()> {
     // Hooks may migrate only if they get the lock within 200 ms (§10.5).
     if role.is_hook() {
-        conn.busy_timeout(Duration::from_millis(200))?;
+        set_busy_budget(conn, Duration::from_millis(200))?;
     }
     if from == 0 {
         // Persistent; issued only when the database is created (§10.2).
@@ -382,17 +545,65 @@ fn migrate(conn: &Connection, from: i64, role: Role) -> Result<()> {
             return Err(e);
         }
     }
-    conn.busy_timeout(role.busy_timeout())?;
+    set_busy_budget(conn, role.busy_timeout())?;
     Ok(())
 }
 
+/// Which file `path` names now: device and inode on POSIX. `None` when there
+/// is none -- and always on Windows, which does not let an open database be
+/// renamed.
+#[cfg(unix)]
+fn file_id(path: &Path) -> Option<(u64, u64)> {
+    use std::os::unix::fs::MetadataExt;
+    std::fs::metadata(path).ok().map(|m| (m.dev(), m.ino()))
+}
+
+#[cfg(not(unix))]
+fn file_id(_path: &Path) -> Option<(u64, u64)> {
+    None
+}
+
+/// The lock that serializes rotating a corrupt database: an OS lock on
+/// `<db>.rotate-lock`, which the system releases when its holder exits, so
+/// a hook killed mid-rotation leaves nothing to clean up. The file itself is
+/// never deleted: unlinking a lock file others may be opening lets two of
+/// them lock two different files.
+///
+/// Waits up to `budget`, the role's lock budget; `Busy` after that, which a
+/// hook treats like any other busy database (it spools).
+fn rotation_lock(path: &Path, budget: Duration) -> Result<std::fs::File> {
+    let mut name = path.as_os_str().to_owned();
+    name.push(".rotate-lock");
+    let file = std::fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create(true)
+        .truncate(false)
+        .open(PathBuf::from(name))?;
+    let deadline = Instant::now() + budget;
+    loop {
+        match file.try_lock() {
+            Ok(()) => return Ok(file),
+            Err(std::fs::TryLockError::WouldBlock) if Instant::now() < deadline => {
+                std::thread::sleep(Duration::from_millis(5));
+            }
+            Err(std::fs::TryLockError::WouldBlock) => return Err(DbError::Busy),
+            Err(std::fs::TryLockError::Error(e)) => return Err(DbError::Io(e)),
+        }
+    }
+}
+
 /// Renames a corrupt database (and its WAL/SHM files) aside.
+///
+/// The WAL and SHM go first. Once the main file is gone, the next open
+/// creates a fresh database -- and its own `-wal` -- at the same path; moving
+/// the side files after that took the new database's journal with the old
+/// one, and left the live file malformed (reproduced on Linux, D137).
 pub fn rotate_corrupt(path: &Path) -> Result<PathBuf> {
     let ts = crate::time::now_ms();
     let mut target = path.as_os_str().to_owned();
     target.push(format!(".corrupt-{ts}"));
     let target = PathBuf::from(target);
-    std::fs::rename(path, &target)?;
     for suffix in ["-wal", "-shm"] {
         let mut side = path.as_os_str().to_owned();
         side.push(suffix);
@@ -403,6 +614,7 @@ pub fn rotate_corrupt(path: &Path) -> Result<PathBuf> {
             let _ = std::fs::rename(&side, PathBuf::from(t));
         }
     }
+    std::fs::rename(path, &target)?;
     Ok(target)
 }
 
@@ -420,6 +632,251 @@ pub fn cursor(conn: &Connection) -> rusqlite::Result<i64> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Runs the handler's rules for one wait on a simulated clock, where the
+    /// `i`th sleep asked for `d` really lasts `wake(i, d)`. Returns how long
+    /// the wait took and how late the sleep that crossed the deadline woke.
+    fn simulate(
+        budget: Duration,
+        wake: impl Fn(usize, Duration) -> Duration,
+    ) -> (Duration, Duration) {
+        let since = Instant::now();
+        let (mut now, mut count, mut last_late) = (since, 0i32, Duration::ZERO);
+        while let Some(d) = busy_step(count, since, now, budget) {
+            assert!(
+                now + d <= since + budget,
+                "call {count} asked to sleep past the deadline"
+            );
+            let slept = wake(count as usize, d);
+            assert!(slept >= d, "a simulated sleep never ends early");
+            last_late = slept - d;
+            now += slept;
+            count += 1;
+            assert!(count < 10_000, "the wait ends");
+        }
+        (now - since, last_late)
+    }
+
+    /// The handler's rules, independent of any real clock: it gives up at
+    /// the first call on or after the deadline, never before, and never asks
+    /// to sleep past it -- so the only overrun is how late the OS woke the
+    /// thread from its last sleep. Before D133 the budget was the sum of the
+    /// sleeps *requested*, which a 15.625 ms timer tick turned into 171 ms.
+    #[test]
+    fn the_busy_budget_is_kept_against_the_clock_however_late_sleeps_wake() {
+        let ms = Duration::from_millis;
+        for budget in [ms(50), ms(100), ms(200), ms(1_000), ms(5_000)] {
+            // Exact sleeps: SQLite's schedule, cut off at the deadline.
+            let (took, _) = simulate(budget, |_, d| d);
+            assert_eq!(took, budget);
+
+            // Windows: every sleep rounded up to a 15.625 ms tick.
+            let tick = Duration::from_micros(15_625);
+            let (took, late) = simulate(budget, |_, d| {
+                let ticks = d.as_nanos().div_ceil(tick.as_nanos()).max(1);
+                tick * u32::try_from(ticks).unwrap()
+            });
+            assert!(took >= budget && took - budget <= late && late < tick);
+
+            // A loaded or virtualised runner: any sleep can wake very late.
+            for bad in 0..12 {
+                for extra in [ms(3), ms(40), ms(250)] {
+                    let (took, late) =
+                        simulate(budget, |i, d| if i == bad { d + extra } else { d });
+                    assert!(took >= budget, "{budget:?}: gave up early");
+                    assert!(
+                        took - budget <= late,
+                        "{budget:?}, sleep {bad} +{extra:?}: overran by {:?}, woke {late:?} late",
+                        took - budget
+                    );
+                }
+            }
+        }
+        let schedule: Vec<u64> = {
+            let since = Instant::now();
+            let (mut now, mut out) = (since, Vec::new());
+            while let Some(d) = busy_step(out.len() as i32, since, now, ms(100)) {
+                out.push(d.as_millis() as u64);
+                now += d;
+            }
+            out
+        };
+        assert_eq!(schedule, [1, 2, 5, 10, 15, 20, 25, 22], "SQLite's schedule");
+    }
+
+    /// A call with `count` 0 starts a new wait; any other continues the one
+    /// in progress on this thread.
+    #[test]
+    fn each_statement_starts_its_own_wait() {
+        busy_trace::take();
+        let budget = Duration::from_secs(10);
+        for count in [0, 1, 0, 1] {
+            assert!(busy_wait(count, budget));
+        }
+        let calls = busy_trace::take();
+        assert_eq!(calls.len(), 4);
+        assert_eq!(calls[0].since, calls[0].at);
+        assert_eq!(calls[1].since, calls[0].at, "count 1 continues the wait");
+        assert_eq!(calls[2].since, calls[2].at, "count 0 starts a new one");
+        assert!(calls[2].since > calls[0].since);
+        assert_eq!(calls[3].since, calls[2].at);
+    }
+
+    /// A role's lock budget is elapsed time, held against the real clock and
+    /// real SQLite. With SQLite's own handler it was the sum of the sleeps
+    /// requested: on Windows, where each is rounded up to a 15.6 ms tick, the
+    /// 50 ms pre-compact budget waited 109 ms and the 100 ms hook budget
+    /// 171 ms (measured, D133).
+    ///
+    /// Every wait is checked against the handler's own record of it: one
+    /// wait per statement, no call gives up before the deadline, none asks to
+    /// sleep past it, and the first call on or after it gives up. What is left
+    /// of the elapsed time once the budget and the OS's lateness in waking the
+    /// thread from its last sleep are taken away is SQLite's own work around
+    /// the wait, and that is bounded. The lateness itself is not: a macOS CI
+    /// runner overran the old `budget + 25 ms` bound on the median of five
+    /// waits (D146), and no code in this process decides it.
+    #[test]
+    fn a_locked_database_is_waited_on_for_the_role_budget_and_no_longer() {
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path().join("v.db");
+        drop(Db::open(&p, Role::Cli).unwrap());
+        let holder = Db::open(&p, Role::Cli).unwrap();
+        holder.conn.execute_batch("BEGIN IMMEDIATE").unwrap();
+        for (role, budget_ms) in [(Role::PreCompact, 50u64), (Role::HookAppend, 100)] {
+            let budget = Duration::from_millis(budget_ms);
+            let db = Db::open(&p, role).unwrap();
+            let mut own: Vec<Duration> = Vec::new();
+            let mut report: Vec<String> = Vec::new();
+            for _ in 0..5 {
+                busy_trace::take();
+                let started = Instant::now();
+                let r = db.conn.execute_batch("BEGIN IMMEDIATE");
+                let waited = started.elapsed();
+                let calls = busy_trace::take();
+                assert!(r.is_err(), "the lock is held");
+                assert!(calls.len() >= 2, "{role:?}: the handler waited: {calls:?}");
+                let (first, last) = (calls[0], calls[calls.len() - 1]);
+                let deadline = first.since + budget;
+                for (i, c) in calls.iter().enumerate() {
+                    assert_eq!(c.count, i as i32, "{role:?}: one wait: {calls:?}");
+                    assert_eq!(c.since, first.at, "{role:?}: one wait: {calls:?}");
+                }
+                assert!(
+                    calls[..calls.len() - 1].iter().all(|c| c.sleep.is_some()),
+                    "{role:?} gave up before its deadline: {calls:?}"
+                );
+                assert!(last.sleep.is_none(), "{role:?}: the last call gives up");
+                assert!(last.at >= deadline, "{role:?} gave up early: {calls:?}");
+                for c in &calls {
+                    if let Some(d) = c.sleep {
+                        assert!(
+                            c.at + d <= deadline,
+                            "{role:?} asked to sleep past its deadline: {calls:?}"
+                        );
+                    }
+                }
+                assert!(waited >= budget, "{role:?} returned early: {waited:?}");
+                // Everything past the last wake-up the handler asked for.
+                let prev = calls[calls.len() - 2];
+                let asked = prev.at + prev.sleep.unwrap();
+                let late = last.at.saturating_duration_since(asked);
+                own.push(waited.saturating_sub(budget + late));
+                report.push(format!(
+                    "waited {:.1} ms, last wake-up {:.1} ms late, {} calls",
+                    waited.as_secs_f64() * 1e3,
+                    late.as_secs_f64() * 1e3,
+                    calls.len()
+                ));
+            }
+            own.sort_unstable();
+            assert!(
+                own[2] < Duration::from_millis(25),
+                "{role:?} waited past its {budget_ms} ms budget by more than the OS \
+                 accounts for: {report:#?}"
+            );
+        }
+        holder.conn.execute_batch("ROLLBACK").unwrap();
+    }
+
+    /// Measurement, not a check: for `VELRA_MEASURE_WAITS` waits (default 40)
+    /// on a held write lock under the 100 ms hook budget, how long each took,
+    /// how late the OS woke the thread from the handler's last sleep, and what
+    /// is left. Run it on a starved CPU to see which part grows.
+    #[test]
+    #[ignore]
+    fn measure_busy_waits_against_the_clock() {
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path().join("v.db");
+        drop(Db::open(&p, Role::Cli).unwrap());
+        let holder = Db::open(&p, Role::Cli).unwrap();
+        holder.conn.execute_batch("BEGIN IMMEDIATE").unwrap();
+        let db = Db::open(&p, Role::HookAppend).unwrap();
+        let n: usize = std::env::var("VELRA_MEASURE_WAITS")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(40);
+        let ms = |d: Duration| d.as_secs_f64() * 1e3;
+        let (mut waited, mut late, mut own) = (Vec::new(), Vec::new(), Vec::new());
+        for _ in 0..n {
+            busy_trace::take();
+            let started = Instant::now();
+            assert!(db.conn.execute_batch("BEGIN IMMEDIATE").is_err());
+            let w = started.elapsed();
+            let calls = busy_trace::take();
+            let prev = calls[calls.len() - 2];
+            let l = calls[calls.len() - 1]
+                .at
+                .saturating_duration_since(prev.at + prev.sleep.unwrap());
+            waited.push(ms(w));
+            late.push(ms(l));
+            own.push(ms(w.saturating_sub(Duration::from_millis(100) + l)));
+        }
+        holder.conn.execute_batch("ROLLBACK").unwrap();
+        let summary = |mut v: Vec<f64>| {
+            v.sort_by(f64::total_cmp);
+            format!(
+                "p50 {:.1} p90 {:.1} max {:.1}",
+                v[v.len() / 2],
+                v[v.len() * 9 / 10],
+                v[v.len() - 1]
+            )
+        };
+        let medians_over: usize = waited
+            .chunks(5)
+            .filter(|c| {
+                let mut c = c.to_vec();
+                c.sort_by(f64::total_cmp);
+                c[c.len() / 2] >= 125.0
+            })
+            .count();
+        println!(
+            "{n} waits, budget 100 ms: waited {}; last wake-up late {}; own {}; \
+             5-wait groups whose median is >= 125 ms (the old bound): {medians_over} of {}",
+            summary(waited),
+            summary(late),
+            summary(own),
+            n / 5
+        );
+    }
+
+    /// A lock released during the wait is taken.
+    #[test]
+    fn a_lock_released_during_the_wait_is_taken() {
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path().join("v.db");
+        drop(Db::open(&p, Role::Cli).unwrap());
+        let holder = Db::open(&p, Role::Cli).unwrap();
+        holder.conn.execute_batch("BEGIN IMMEDIATE").unwrap();
+        let path = p.clone();
+        let waiter = std::thread::spawn(move || {
+            let db = Db::open(&path, Role::Reduce).unwrap();
+            db.conn.execute_batch("BEGIN IMMEDIATE; ROLLBACK")
+        });
+        std::thread::sleep(Duration::from_millis(100));
+        holder.conn.execute_batch("ROLLBACK").unwrap();
+        assert!(waiter.join().unwrap().is_ok());
+    }
 
     #[test]
     fn creates_schema_in_wal_mode_and_reopens() {

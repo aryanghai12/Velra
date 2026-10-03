@@ -8,8 +8,10 @@ the hash of the turn script, the permission mode and the context-ladder rung,
 and every one of them has to agree or the two sessions were not run under the
 same conditions and their difference is not attributable to Velra.
 
-A pair that half-exists, or whose invariants disagree, is **dropped whole and
-named**. It is never repaired by taking the arm that is present, and the
+A pair that half-exists, or whose invariants disagree, or that contains a trial
+which declared itself invalid (`isolation.trial_validity`: a memory channel,
+or a source session that did not leave the scenario's handoff state), is
+**dropped whole and named**. It is never repaired by taking the arm that is present, and the
 dropped pairs appear in the aggregate so the denominator stays honest.
 """
 
@@ -80,6 +82,18 @@ def pair_up(evaluations: Sequence[dict]) -> dict:
     dropped: list[dict] = []
     for pair_id in sorted(by_pair):
         slot = by_pair[pair_id]
+        # First, because it is the most specific statement about the pair:
+        # whatever else is true of it, an invalid trial means its comparison
+        # would not be about the scenario.
+        invalid = {arm: (slot[arm].get("trial_validity") or {})
+                   .get("invalidation_reason") or "invalid"
+                   for arm in ARMS if arm in slot
+                   and (slot[arm].get("trial_validity") or {}).get("valid") is False}
+        if invalid:
+            dropped.append({"pair_id": pair_id, "reason": "INVALID_TRIAL",
+                            "invalid_arms": invalid,
+                            "present": sorted(slot)})
+            continue
         missing = [arm for arm in ARMS if arm not in slot]
         if missing:
             dropped.append({"pair_id": pair_id, "reason": "INCOMPLETE_PAIR",

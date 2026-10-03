@@ -166,6 +166,11 @@ pub enum SettingsError {
     NotAnObject(PathBuf),
     Verify(String),
     Concurrent,
+    /// The edited file could not be put in place; the file is as it was.
+    Replace {
+        path: PathBuf,
+        source: std::io::Error,
+    },
     Io(std::io::Error),
 }
 
@@ -192,6 +197,20 @@ impl std::fmt::Display for SettingsError {
                 f,
                 "the settings file was modified concurrently; no changes made"
             ),
+            SettingsError::Replace { path, source } => {
+                let why = if crate::atomic::is_read_only(path) {
+                    " (the file is read-only)"
+                } else if cfg!(windows) && matches!(source.raw_os_error(), Some(5 | 32 | 33)) {
+                    " (another program has it open)"
+                } else {
+                    ""
+                };
+                write!(
+                    f,
+                    "Could not replace {}: {source}{why}. The file is unchanged.",
+                    path.display()
+                )
+            }
             SettingsError::Io(e) => write!(f, "{e}"),
         }
     }
@@ -709,6 +728,12 @@ type KeepSpec = (&'static str, Option<&'static str>, &'static [&'static str]);
 
 /// One removal pass: drops the first Velra handler matching `keep`'s
 /// complement, collapsing empty groups, arrays and the `hooks` object.
+///
+/// A kept registration is kept once: its first handler in document order --
+/// the one [`upsert`] updates -- and any later copy of it (a hand edit, two
+/// machines' dotfiles merged) is removed like a stale one. Otherwise Claude
+/// Code runs the same Velra hook several times per event, and `enable`
+/// reported the file as already correct.
 fn remove_one(
     text: &str,
     keep: Option<&[KeepSpec]>,
@@ -723,6 +748,7 @@ fn remove_one(
     let Some(events) = hooks_prop.value.as_object() else {
         return Ok(None);
     };
+    let mut seen: Vec<(String, Option<String>, Vec<String>)> = Vec::new();
     for event_prop in &events.properties {
         let event_name = event_prop.name.as_str().to_string();
         let Some(array) = event_prop.value.as_array() else {
@@ -750,7 +776,9 @@ fn remove_one(
                     let wanted = keep.iter().any(|(event, m, args)| {
                         *event == event_name && m.map(str::to_string) == matcher && role == *args
                     });
-                    if wanted {
+                    let key = (event_name.clone(), matcher.clone(), role);
+                    if wanted && !seen.contains(&key) {
+                        seen.push(key);
                         continue;
                     }
                 }
@@ -1006,6 +1034,20 @@ pub struct Outcome {
     pub target: PathBuf,
 }
 
+/// A UTF-8 byte order mark. Windows PowerShell 5 (`Out-File -Encoding utf8`,
+/// `Set-Content -Encoding UTF8`) and older Notepad write one; JSON parsers,
+/// ours included, reject it as an unexpected token at line 1, column 1.
+const BOM: &str = "\u{feff}";
+
+/// `text` without a leading byte order mark, and the mark, so that an edit
+/// can put back exactly what it read.
+pub fn split_bom(text: &str) -> (&str, &str) {
+    match text.strip_prefix(BOM) {
+        Some(rest) => (BOM, rest),
+        None => ("", text),
+    }
+}
+
 fn read_or_empty(path: &Path) -> std::io::Result<(String, bool)> {
     match std::fs::read_to_string(path) {
         Ok(t) => Ok((t, false)),
@@ -1028,7 +1070,10 @@ fn backup(home: &Path, target: &Path, bytes: &[u8]) -> std::io::Result<PathBuf> 
         path = dir.join(format!("{base}.{stamp}-{n}.bak"));
         n += 1;
     }
-    crate::atomic::write_synced(&path, bytes)?;
+    // Replaced atomically like the file it backs up: written in place, a
+    // run killed mid-write left a truncated `.bak` that looked like any
+    // other, and a backup is what someone restores from (D144).
+    crate::atomic::write(&path, bytes)?;
     prune_backups(&dir, &base, 10);
     Ok(path)
 }
@@ -1054,22 +1099,52 @@ fn prune_backups(dir: &Path, base: &str, keep: usize) {
 
 /// Applies an edit to the settings file with backup, verification, atomic
 /// replacement and concurrent-modification retry (§6.2 steps 2–8).
+///
+/// `on_disk` is the file as read, `None` when there was none; `base` is what
+/// the edit was computed from, which differs from it for a blank file (read
+/// as `{}`). The backup and the concurrency check are about the file, so
+/// they use `on_disk`: comparing the disk with `base` failed every time for a
+/// blank file, and the backup recorded a `{}` the file never held. A file
+/// that did not exist has nothing to back up.
 fn write_change(
     target: &Path,
     home: &Path,
-    original: &str,
+    on_disk: Option<&str>,
+    base: &str,
     updated: &str,
-    created_file: bool,
-) -> Result<PathBuf> {
-    verify_semantics(if created_file { "{}" } else { original }, updated)?;
-    let backup_path = backup(home, target, original.as_bytes())?;
-    if !created_file {
-        let current = std::fs::read_to_string(target).unwrap_or_default();
-        if current != original {
-            return Err(SettingsError::Concurrent);
-        }
+    bom: &str,
+) -> Result<Option<PathBuf>> {
+    verify_semantics(base, updated)?;
+    let backup_path = match on_disk {
+        Some(original) => Some(backup(home, target, original.as_bytes())?),
+        None => None,
+    };
+    // Checked with the new file already written and synced, just before it
+    // replaces the old one (D143). A file that was not there must still not
+    // be: one created meanwhile is someone else's.
+    let mut read_error = None;
+    let unchanged = || match on_disk {
+        Some(original) => match std::fs::read_to_string(target) {
+            Ok(current) => Ok(current == original),
+            Err(e) => {
+                let kind = e.kind();
+                read_error = Some(e);
+                Err(std::io::Error::from(kind))
+            }
+        },
+        None => Ok(!target.exists()),
+    };
+    let replaced = crate::atomic::write_if(target, format!("{bom}{updated}").as_bytes(), unchanged);
+    if let Some(e) = read_error {
+        return Err(SettingsError::Io(e));
     }
-    crate::atomic::write(target, updated.as_bytes())?;
+    let replaced = replaced.map_err(|source| SettingsError::Replace {
+        path: target.to_path_buf(),
+        source,
+    })?;
+    if !replaced {
+        return Err(SettingsError::Concurrent);
+    }
     Ok(backup_path)
 }
 
@@ -1084,10 +1159,11 @@ pub fn enable(
     let target = resolve_target(settings);
     for attempt in 0..3 {
         let (original, missing) = read_or_empty(&target)?;
-        let base = if missing || original.trim().is_empty() {
+        let (bom, body) = split_bom(&original);
+        let base = if missing || body.trim().is_empty() {
             "{}\n".to_string()
         } else {
-            original.clone()
+            body.to_string()
         };
         let (updated, changes) = apply_enable(&base, bin, features, &target)?;
         let mut outcome = Outcome {
@@ -1106,9 +1182,10 @@ pub fn enable(
         if !outcome.changed {
             return Ok(outcome);
         }
-        match write_change(&target, home, &base, &updated, missing) {
+        let on_disk = (!missing).then_some(original.as_str());
+        match write_change(&target, home, on_disk, &base, &updated, bom) {
             Ok(path) => {
-                outcome.backup = Some(path);
+                outcome.backup = path;
                 return Ok(outcome);
             }
             Err(SettingsError::Concurrent) if attempt < 2 => continue,
@@ -1134,24 +1211,25 @@ pub fn disable(
                 ..Default::default()
             });
         }
-        let (updated, changes) = apply_disable(&original, remove_hooks_key, &target)?;
+        let (bom, body) = split_bom(&original);
+        let (updated, changes) = apply_disable(body, remove_hooks_key, &target)?;
         let mut outcome = Outcome {
-            changed: updated != original,
+            changed: updated != body,
             changes,
-            hooks_existed_before: has_hooks_key(&original),
+            hooks_existed_before: has_hooks_key(body),
             target: target.clone(),
             ..Default::default()
         };
         if dry_run {
-            outcome.diff = Some(diff(&original, &updated, &target));
+            outcome.diff = Some(diff(body, &updated, &target));
             return Ok(outcome);
         }
         if !outcome.changed {
             return Ok(outcome);
         }
-        match write_change(&target, home, &original, &updated, false) {
+        match write_change(&target, home, Some(&original), body, &updated, bom) {
             Ok(path) => {
-                outcome.backup = Some(path);
+                outcome.backup = path;
                 return Ok(outcome);
             }
             Err(SettingsError::Concurrent) if attempt < 2 => continue,
@@ -1166,6 +1244,7 @@ pub type InstalledHandler = (String, Vec<String>, Option<String>);
 
 /// Velra handlers currently registered in a settings file.
 pub fn installed_handlers(text: &str) -> Vec<InstalledHandler> {
+    let text = split_bom(text).1;
     let Ok(result) = parse_to_ast(text, &CollectOptions::default(), &parse_options()) else {
         return Vec::new();
     };
@@ -1207,6 +1286,97 @@ pub fn installed_handlers(text: &str) -> Vec<InstalledHandler> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// §6.2's concurrency check: a file changed by someone else after it was
+    /// read is never replaced with an edit computed from the old text.
+    #[test]
+    fn a_file_changed_after_it_was_read_is_not_overwritten() {
+        let dir = tempfile::tempdir().unwrap();
+        let home = dir.path().join("home");
+        let target = dir.path().join("settings.json");
+        let read_earlier = "{\"model\": \"a\"}\n";
+        let features = Features::for_version(crate::compat::Version::parse("2.1.268"));
+        let (updated, _) = apply_enable(read_earlier, "/bin/velra", &features, &target).unwrap();
+        // Another writer lands between the read and the write.
+        std::fs::write(&target, "{\"model\": \"b\"}\n").unwrap();
+        let err = write_change(
+            &target,
+            &home,
+            Some(read_earlier),
+            read_earlier,
+            &updated,
+            "",
+        )
+        .unwrap_err();
+        assert!(matches!(err, SettingsError::Concurrent), "{err}");
+        assert_eq!(
+            std::fs::read_to_string(&target).unwrap(),
+            "{\"model\": \"b\"}\n"
+        );
+        // Its backup is of what was read, so nothing the other writer wrote
+        // is lost either way.
+        let backups: Vec<_> = std::fs::read_dir(crate::home::backups_dir(&home))
+            .unwrap()
+            .flatten()
+            .collect();
+        assert_eq!(backups.len(), 1);
+        assert_eq!(
+            std::fs::read_to_string(backups[0].path()).unwrap(),
+            read_earlier
+        );
+    }
+
+    /// Phase 11 (D143): another program saves the file after Velra has
+    /// written and synced its replacement but before it renames it into
+    /// place. The check ran before the temp file was written, so that save
+    /// was replaced by an edit of the older text. It is now the last thing
+    /// before the rename; the save is seen, the edit is recomputed from it,
+    /// and both survive.
+    #[test]
+    fn a_save_landing_while_the_replacement_is_written_is_kept() {
+        let dir = tempfile::tempdir().unwrap();
+        let home = dir.path().join("home");
+        let target = dir.path().join("settings.json");
+        std::fs::write(&target, "{\n  \"model\": \"a\"\n}\n").unwrap();
+        let features = Features::for_version(crate::compat::Version::parse("2.1.268"));
+        let saved = target.clone();
+        crate::atomic::BEFORE_CHECK.with(|h| {
+            *h.borrow_mut() = Some(Box::new(move || {
+                std::fs::write(&saved, "{\n  \"model\": \"a\",\n  \"theme\": \"dark\"\n}\n")
+                    .unwrap();
+            }));
+        });
+        let outcome = enable(&target, &home, "/bin/velra", &features, false).unwrap();
+        assert!(outcome.changed);
+        let text = std::fs::read_to_string(&target).unwrap();
+        assert!(
+            text.contains("\"theme\": \"dark\""),
+            "the other save was lost:\n{text}"
+        );
+        assert!(text.contains("\"hook\""), "{text}");
+        // And a file that did not exist when it was read, created meanwhile,
+        // is someone else's: it is not replaced.
+        let fresh = dir.path().join("new-settings.json");
+        let created = fresh.clone();
+        let (updated, _) = apply_enable("{}\n", "/bin/velra", &features, &fresh).unwrap();
+        crate::atomic::BEFORE_CHECK.with(|h| {
+            *h.borrow_mut() = Some(Box::new(move || {
+                std::fs::write(&created, "{\"model\": \"theirs\"}").unwrap();
+            }));
+        });
+        let err = write_change(&fresh, &home, None, "{}\n", &updated, "").unwrap_err();
+        assert!(matches!(err, SettingsError::Concurrent), "{err}");
+        assert_eq!(
+            std::fs::read_to_string(&fresh).unwrap(),
+            "{\"model\": \"theirs\"}"
+        );
+        let leftovers: Vec<_> = std::fs::read_dir(dir.path())
+            .unwrap()
+            .flatten()
+            .filter(|e| e.file_name().to_string_lossy().contains("velra-tmp"))
+            .collect();
+        assert!(leftovers.is_empty(), "{leftovers:?}");
+    }
 
     /// Every shipped registration filters git commands inside the binary
     /// rather than through an `if` rule (D58). The rule machinery is kept

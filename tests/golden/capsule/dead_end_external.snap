@@ -10,7 +10,7 @@ increase the retry count and see whether the suite stabilises
 [WORKSPACE_STATE]
 no git | 1 edits this task | last test run: none
 [REVERTED_EDITS] (OBSERVED)
-- src/config.ts | 1 edit(s) | changed outside the agent at 10:04
+- src/config.ts | 1 edit(s) | reverted by an unidentified change at 10:04
     - export const retries = 1;
     + export const retries = 5;
 [FILE_ACTIVITY] (OBSERVED)

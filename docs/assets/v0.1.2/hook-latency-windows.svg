@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="446" viewBox="0 0 760 446" role="img" aria-labelledby="t d">
+<title id="t">Hook wall time on the final build, Windows 11, built-in timer</title>
+<desc id="d">Horizontal bars, p50 and p99 milliseconds per hook: PostToolUse, 2 KiB read p50 8.21 ms, p99 22.51 ms; PostToolUse, 50 KiB edit p50 13.02 ms, p99 26.44 ms; PreToolUse, edit p50 8.91 ms, p99 23.25 ms; UserPromptSubmit p50 16.06 ms, p99 28.98 ms; PreCompact p50 19.56 ms, p99 37.85 ms; PostToolUse, 8 MiB output p50 27.22 ms, p99 42.94 ms; Kill switch (process floor) p50 3.84 ms, p99 5.31 ms.</desc>
+<rect width="760" height="446" rx="8" fill="#fcfcfb"/>
+<text x="24.0" y="34.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" fill="#0b0b0b" text-anchor="start" font-weight="600">Hook wall time, spawn to exit, against a 100,000-event database</text>
+<text x="24.0" y="56.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" fill="#52514e" text-anchor="start" font-weight="normal">Final build · Windows 11 10.0.26200 AMD64 · n = 500 runs per hook · Python built-in timer (indicative, includes process start)</text>
+<text x="24.0" y="430.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#76756f" text-anchor="start" font-weight="normal">Source: bench/results/v0.1.2-final/latency/ (run.sh, spawn_floor.py) · budget: §4 p50 / p99 ms; run.sh allows 15 ms on Windows</text>
+<rect x="24.0" y="74.0" width="12" height="12" rx="2" fill="#2a78d6"/>
+<text x="42.0" y="84.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" fill="#52514e" text-anchor="start" font-weight="normal">p50</text>
+<rect x="75.6" y="74.0" width="12" height="12" rx="2" fill="#eb6834"/>
+<text x="93.6" y="84.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" fill="#52514e" text-anchor="start" font-weight="normal">p99</text>
+<line x1="210.0" y1="104.0" x2="210.0" y2="376.0" stroke="#e4e3df" stroke-width="1"/>
+<text x="210.0" y="392.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#76756f" text-anchor="middle" font-weight="normal">0 ms</text>
+<line x1="296.0" y1="104.0" x2="296.0" y2="376.0" stroke="#e4e3df" stroke-width="1"/>
+<text x="296.0" y="392.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#76756f" text-anchor="middle" font-weight="normal">10 ms</text>
+<line x1="382.0" y1="104.0" x2="382.0" y2="376.0" stroke="#e4e3df" stroke-width="1"/>
+<text x="382.0" y="392.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#76756f" text-anchor="middle" font-weight="normal">20 ms</text>
+<line x1="468.0" y1="104.0" x2="468.0" y2="376.0" stroke="#e4e3df" stroke-width="1"/>
+<text x="468.0" y="392.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#76756f" text-anchor="middle" font-weight="normal">30 ms</text>
+<line x1="554.0" y1="104.0" x2="554.0" y2="376.0" stroke="#e4e3df" stroke-width="1"/>
+<text x="554.0" y="392.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#76756f" text-anchor="middle" font-weight="normal">40 ms</text>
+<line x1="640.0" y1="104.0" x2="640.0" y2="376.0" stroke="#e4e3df" stroke-width="1"/>
+<text x="640.0" y="392.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#76756f" text-anchor="middle" font-weight="normal">50 ms</text>
+<text x="736.0" y="98.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#76756f" text-anchor="end" font-weight="normal">budget</text>
+<text x="200.0" y="130.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" fill="#0b0b0b" text-anchor="end" font-weight="normal">PostToolUse, 2 KiB read</text>
+<path d="M210.0,115.0 H276.6 Q280.6,115.0 280.6,119.0 V123.0 Q280.6,127.0 276.6,127.0 H210.0 Z" fill="#2a78d6"/>
+<path d="M210.0,129.0 H399.6 Q403.6,129.0 403.6,133.0 V137.0 Q403.6,141.0 399.6,141.0 H210.0 Z" fill="#eb6834"/>
+<text x="286.6" y="125.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#0b0b0b" text-anchor="start" font-weight="normal">8.21</text>
+<text x="409.6" y="139.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#0b0b0b" text-anchor="start" font-weight="normal">22.51</text>
+<text x="736.0" y="132.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" fill="#52514e" text-anchor="end" font-weight="normal">2 / 5</text>
+<text x="200.0" y="168.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" fill="#0b0b0b" text-anchor="end" font-weight="normal">PostToolUse, 50 KiB edit</text>
+<path d="M210.0,153.0 H318.0 Q322.0,153.0 322.0,157.0 V161.0 Q322.0,165.0 318.0,165.0 H210.0 Z" fill="#2a78d6"/>
+<path d="M210.0,167.0 H433.4 Q437.4,167.0 437.4,171.0 V175.0 Q437.4,179.0 433.4,179.0 H210.0 Z" fill="#eb6834"/>
+<text x="328.0" y="163.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#0b0b0b" text-anchor="start" font-weight="normal">13.02</text>
+<text x="443.4" y="177.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#0b0b0b" text-anchor="start" font-weight="normal">26.44</text>
+<text x="736.0" y="170.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" fill="#52514e" text-anchor="end" font-weight="normal">3 / 6</text>
+<text x="200.0" y="206.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" fill="#0b0b0b" text-anchor="end" font-weight="normal">PreToolUse, edit</text>
+<path d="M210.0,191.0 H282.6 Q286.6,191.0 286.6,195.0 V199.0 Q286.6,203.0 282.6,203.0 H210.0 Z" fill="#2a78d6"/>
+<path d="M210.0,205.0 H406.0 Q410.0,205.0 410.0,209.0 V213.0 Q410.0,217.0 406.0,217.0 H210.0 Z" fill="#eb6834"/>
+<text x="292.6" y="201.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#0b0b0b" text-anchor="start" font-weight="normal">8.91</text>
+<text x="416.0" y="215.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#0b0b0b" text-anchor="start" font-weight="normal">23.25</text>
+<text x="736.0" y="208.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" fill="#52514e" text-anchor="end" font-weight="normal">3 / 6</text>
+<text x="200.0" y="244.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" fill="#0b0b0b" text-anchor="end" font-weight="normal">UserPromptSubmit</text>
+<path d="M210.0,229.0 H344.1 Q348.1,229.0 348.1,233.0 V237.0 Q348.1,241.0 344.1,241.0 H210.0 Z" fill="#2a78d6"/>
+<path d="M210.0,243.0 H455.2 Q459.2,243.0 459.2,247.0 V251.0 Q459.2,255.0 455.2,255.0 H210.0 Z" fill="#eb6834"/>
+<text x="354.1" y="239.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#0b0b0b" text-anchor="start" font-weight="normal">16.06</text>
+<text x="465.2" y="253.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#0b0b0b" text-anchor="start" font-weight="normal">28.98</text>
+<text x="736.0" y="246.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" fill="#52514e" text-anchor="end" font-weight="normal">2 / 4</text>
+<text x="200.0" y="282.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" fill="#0b0b0b" text-anchor="end" font-weight="normal">PreCompact</text>
+<path d="M210.0,267.0 H374.2 Q378.2,267.0 378.2,271.0 V275.0 Q378.2,279.0 374.2,279.0 H210.0 Z" fill="#2a78d6"/>
+<path d="M210.0,281.0 H531.5 Q535.5,281.0 535.5,285.0 V289.0 Q535.5,293.0 531.5,293.0 H210.0 Z" fill="#eb6834"/>
+<text x="384.2" y="277.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#0b0b0b" text-anchor="start" font-weight="normal">19.56</text>
+<text x="541.5" y="291.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#0b0b0b" text-anchor="start" font-weight="normal">37.85</text>
+<text x="736.0" y="284.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" fill="#52514e" text-anchor="end" font-weight="normal">6 / 10</text>
+<text x="200.0" y="320.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" fill="#0b0b0b" text-anchor="end" font-weight="normal">PostToolUse, 8 MiB output</text>
+<path d="M210.0,305.0 H440.1 Q444.1,305.0 444.1,309.0 V313.0 Q444.1,317.0 440.1,317.0 H210.0 Z" fill="#2a78d6"/>
+<path d="M210.0,319.0 H575.3 Q579.3,319.0 579.3,323.0 V327.0 Q579.3,331.0 575.3,331.0 H210.0 Z" fill="#eb6834"/>
+<text x="450.1" y="315.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#0b0b0b" text-anchor="start" font-weight="normal">27.22</text>
+<text x="585.3" y="329.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#0b0b0b" text-anchor="start" font-weight="normal">42.94</text>
+<text x="736.0" y="322.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" fill="#52514e" text-anchor="end" font-weight="normal">25 / 25</text>
+<text x="200.0" y="358.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" fill="#0b0b0b" text-anchor="end" font-weight="normal">Kill switch (process floor)</text>
+<path d="M210.0,343.0 H239.0 Q243.0,343.0 243.0,347.0 V351.0 Q243.0,355.0 239.0,355.0 H210.0 Z" fill="#2a78d6"/>
+<path d="M210.0,357.0 H251.7 Q255.7,357.0 255.7,361.0 V365.0 Q255.7,369.0 251.7,369.0 H210.0 Z" fill="#eb6834"/>
+<text x="249.0" y="353.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#0b0b0b" text-anchor="start" font-weight="normal">3.84</text>
+<text x="261.7" y="367.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#0b0b0b" text-anchor="start" font-weight="normal">5.31</text>
+<text x="736.0" y="360.0" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" fill="#52514e" text-anchor="end" font-weight="normal">—</text>
+<line x1="210.0" y1="104.0" x2="210.0" y2="376.0" stroke="#76756f" stroke-width="1"/>
+</svg>

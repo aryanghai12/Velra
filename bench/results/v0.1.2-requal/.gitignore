@@ -1,0 +1,11 @@
+# Written by bench/tokenburn/runroot.py. Raw session captures are regenerated
+# by every run and are not evidence; derived measurements are.
+trials/*/stream.jsonl
+trials/*/source_stream.jsonl
+trials/*/transcript.jsonl
+trials/*/velra_home/
+trials/*/memory_quarantine-*/
+quarantine/*/*/stream.jsonl
+quarantine/*/*/source_stream.jsonl
+quarantine/*/*/transcript.jsonl
+quarantine/*/*/velra_home/

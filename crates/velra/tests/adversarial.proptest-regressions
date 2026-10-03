@@ -1,0 +1,11 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 8ada5ce9095a29c8635f9f0e2903e69b191cc7cb977551aeae1e7d68fccf2cac # shrinks to rel = "a.rs", windows_root = false, dialect = Posix, knobs = (21, 0, 0, 0, 0, 4)
+cc fddbe6fb4499fdc3af090e8b6efbce29a54ea3fcc63dbc5c665743f9f2a4dcb8 # shrinks to (text, body) = ("--token AA00A0aa00A0aA", "AA00A0aa00A0aA"), pre = "", b = "\"", a = " ", post = ""
+cc 2989dc0360fbeb0ff3a225586ff5dfd59b454913dec3c48bf6ec237753dc9da7 # shrinks to (text, body) = ("https://ci:A0Aa00AAa0aAa0@example.com/x", "A0Aa00AAa0aAa0"), pre = "", b = "%3D", a = " ", post = ""
+cc 1517207160fdc26aa2d44c24c7773d38646f891fcb6d83be245d20e011a1e7c1 # shrinks to (text, body) = ("AKIA00A0A00A0AA0A0AA", "00A0A00A0AA0A0AA"), pre = "", b = " ", a = "", post = "é"
+cc b65c92d41eb9f494e206d3f73c69a4526da9aafba7131b5d1c78ba88cf25fb96 # shrinks to (text, body) = ("AKIA0AA00000AA00A0AA", "0AA00000AA00A0AA"), pre = "", b = " ", a = "", post = "a"

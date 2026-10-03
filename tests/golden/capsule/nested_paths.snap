@@ -13,7 +13,7 @@ no git | 1 edits this task | last test run: none
 - src/deeply/nested/module/handler.rs | +1/-1 lines | 10:04 | afterward: no test run yet
 [FILE_ACTIVITY] (OBSERVED)
 - src/deeply/nested/module/handler.rs | edited 1x, read 0x
-[FAILURE_LOCATION] (INFERRED | last-active-edit)
+[NEXT_TARGET] (INFERRED | last-active-edit)
 src/deeply/nested/module/handler.rs
 [RECORD_DETAIL]
 Full detail for any section: `velra inspect --section <name>`

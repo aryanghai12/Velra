@@ -47,12 +47,18 @@ fn append(path: &Path, line: &str) {
     }
 }
 
+/// One log line, redacted before it is written like everything else Velra
+/// persists. The messages are Velra's own and do not quote hook input
+/// today, but the panic hook logs whatever a panic says and an error's
+/// `Display` is whatever its source chose; neither is checked here, so the
+/// line is redacted rather than trusted.
 fn line(level: &str, subcommand: &str, session: Option<&str>, msg: &str) -> String {
+    let msg = msg.replace('\n', " ");
     format!(
         "{} {level} {subcommand} {} {}",
         velra_core::time::rfc3339_utc(velra_core::time::now_ms()),
         session.unwrap_or("-"),
-        msg.replace('\n', " ")
+        velra_core::redact::redact(&msg)
     )
 }
 
@@ -121,6 +127,36 @@ pub fn tail_errors(home: &Path, n: usize) -> Vec<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Phase 9: whatever a message quotes -- the panic hook logs `panic:
+    /// {info}` as it is -- is redacted before it reaches the file.
+    #[test]
+    fn a_logged_message_is_redacted_before_it_is_written() {
+        let dir = tempfile::tempdir().unwrap();
+        let home = dir.path();
+        let secret = "ghp_16C7e42F292c6912E7710c838347Ae178B4a";
+        let message = format!("injected panic in `git push https://{secret}@github.com/o/r`");
+        error(
+            Some(home),
+            "hook post-tool-use",
+            Some("s1"),
+            format!("panic: {message}"),
+        );
+        warn(
+            Some(home),
+            "hook stop",
+            None,
+            format!("reconcile: token={secret}"),
+        );
+        let written =
+            std::fs::read_to_string(crate::home::logs_dir(home).join("errors.log")).unwrap();
+        assert!(!written.contains(secret), "{written}");
+        assert_eq!(written.matches("[REDACTED:").count(), 2, "{written}");
+        // `debug` writes the same `line`; it is gated on an env var this
+        // test does not set, since tests share the process.
+        let debug_line = line("DEBUG", "reduce", None, &format!("token={secret}"));
+        assert!(!debug_line.contains(secret), "{debug_line}");
+    }
 
     #[test]
     fn writes_and_rotates() {

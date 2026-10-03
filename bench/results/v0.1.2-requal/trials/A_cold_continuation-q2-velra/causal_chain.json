@@ -1,0 +1,306 @@
+{
+  "links": {
+    "A_large_state": {
+      "status": "pass",
+      "why": "17 source turns with a recorded context load",
+      "evidence": {
+        "source_session_turns": 17,
+        "target_context_size": 250000,
+        "synthetic_context_size": 250728,
+        "actual_observed_context_size": null,
+        "context_generation_method": "programmatic synthetic build/test logs, read by the session as part of its turn script",
+        "reason_if_target_not_reached": null,
+        "size_basis": "synthetic_fixture"
+      }
+    },
+    "B_absent_natively": {
+      "status": "pass",
+      "why": "no surface an agent can read carries the state",
+      "evidence": {
+        "surfaces_scanned": [
+          "tree",
+          "filenames",
+          "git_history",
+          "git_refs",
+          "claude_md",
+          "project_memory",
+          "auto_memory",
+          "environment",
+          "post_prompt",
+          "pre_prompts"
+        ],
+        "hits_by_surface": {
+          "pre_prompts": 6
+        },
+        "fatal_hits": [],
+        "terms": [
+          "outside the loop",
+          "before the loop",
+          "once per request",
+          "hoist",
+          "move the key",
+          "compute the key once",
+          "pure function of the request",
+          "no process-wide state",
+          "process-wide state",
+          "incident last quarter",
+          "memoise",
+          "memoize",
+          "module-level dict",
+          "_memo",
+          "the active task",
+          "currently working on",
+          "next action"
+        ]
+      }
+    },
+    "C_retained": {
+      "status": "pass",
+      "why": "every declared marker was in the ledger before the capsule was built",
+      "evidence": {
+        "markers_present": [
+          "src/payments/retry.py",
+          "test_retry_preserves_idempotency_key",
+          "retry_backoff"
+        ],
+        "markers_missing": [],
+        "measured_on": "staged_capsule",
+        "ledger_scan": {
+          "available": true,
+          "markers_present": [
+            "src/payments/retry.py",
+            "test_retry_preserves_idempotency_key",
+            "retry_backoff"
+          ],
+          "markers_missing": [],
+          "rows": {
+            "src/payments/retry.py": [
+              "intents:2",
+              "commands:7",
+              "commands:8",
+              "file_stats:7",
+              "edits:1",
+              "edits:2",
+              "dead_ends:1"
+            ],
+            "test_retry_preserves_idempotency_key": [
+              "commands:2",
+              "commands:9",
+              "commands:10"
+            ],
+            "retry_backoff": [
+              "intents:16"
+            ]
+          }
+        },
+        "source_session_id": "5ca39c24-66f5-45d4-a399-42f65b592559",
+        "restore_exit": 0
+      }
+    },
+    "D_staged": {
+      "status": "pass",
+      "why": "a startup-eligible capsule was staged for this workspace",
+      "evidence": {
+        "staged_path": "C:\\Users\\aryan\\Videos\\Velra\\bench\\results\\v0.1.2-requal\\trials\\A_cold_continuation-q2-velra\\velra_home\\staged\\8357314d2702dcff\\staged_capsule",
+        "workspace_id": "8357314d2702dcff",
+        "expected_workspace_id": "8357314d2702dcff",
+        "intent": "new_session",
+        "deliver_on": [
+          "startup"
+        ],
+        "source_session_id": "5ca39c24-66f5-45d4-a399-42f65b592559",
+        "tokens": 737,
+        "content_hash": "e0f060409462395d80065d92776f1f69",
+        "stale": false,
+        "age_ms": 28
+      }
+    },
+    "E_delivered": {
+      "status": "pass",
+      "why": "SessionStart(startup) emitted the capsule",
+      "evidence": {
+        "attempts": [],
+        "claimed_count": 0,
+        "startup_deliveries": [
+          {
+            "stream_index": 2,
+            "hook_name": "SessionStart:startup",
+            "hook_event": "SessionStart",
+            "session_start_source": null,
+            "exit_code": 0,
+            "chars": 1525,
+            "system_message": "\u26a1 Velra restored: objective, 2 failing tests, 1 dead end, 8 files \u2014 from session 5ca39c24 (737 tokens)",
+            "on_startup": true
+          }
+        ],
+        "all_deliveries": [
+          {
+            "stream_index": 2,
+            "hook_name": "SessionStart:startup",
+            "hook_event": "SessionStart",
+            "session_start_source": null,
+            "exit_code": 0,
+            "chars": 1525,
+            "system_message": "\u26a1 Velra restored: objective, 2 failing tests, 1 dead end, 8 files \u2014 from session 5ca39c24 (737 tokens)",
+            "on_startup": true
+          }
+        ]
+      }
+    },
+    "F_received": {
+      "status": "pass",
+      "why": "one bounded capsule, in a genuinely new session",
+      "evidence": {
+        "delivery_count": 1,
+        "capsule_chars": 1525,
+        "markers_found": [
+          "src/payments/retry.py",
+          "test_retry_preserves_idempotency_key",
+          "retry_backoff"
+        ],
+        "markers_missing": [],
+        "source_session_id": "5ca39c24-66f5-45d4-a399-42f65b592559",
+        "destination_session_id": "bc87e8db-c816-4a33-989f-526b9e7437ce",
+        "capsule_token_ceiling": 800,
+        "old_transcript_replayed": false
+      }
+    },
+    "G_used": {
+      "status": "pass",
+      "why": "the destination acted on the restored state",
+      "evidence": {
+        "identified_items": 2,
+        "declared_items": 4,
+        "per_item": {
+          "current_task": {
+            "declared": true,
+            "identified": false,
+            "markers": [
+              "test_retry_preserves_idempotency_key",
+              "idempotency key",
+              "retry"
+            ],
+            "markers_found": [
+              "test_retry_preserves_idempotency_key",
+              "retry"
+            ],
+            "markers_missing": [
+              "idempotency key"
+            ],
+            "coverage": 0.6666666666666666
+          },
+          "active_failure": {
+            "declared": true,
+            "identified": true,
+            "markers": [
+              "test_retry_preserves_idempotency_key",
+              "idempotency"
+            ],
+            "markers_found": [
+              "test_retry_preserves_idempotency_key",
+              "idempotency"
+            ],
+            "markers_missing": [],
+            "coverage": 1.0
+          },
+          "relevant_files": {
+            "declared": true,
+            "identified": true,
+            "markers": [
+              "src/payments/retry.py",
+              "src/payments/idempotency.py"
+            ],
+            "markers_found": [
+              "src/payments/retry.py",
+              "src/payments/idempotency.py"
+            ],
+            "markers_missing": [],
+            "coverage": 1.0
+          },
+          "next_action": {
+            "declared": true,
+            "identified": false,
+            "markers": [
+              "retry_backoff",
+              "src/payments/retry.py"
+            ],
+            "markers_found": [
+              "src/payments/retry.py"
+            ],
+            "markers_missing": [
+              "retry_backoff"
+            ],
+            "coverage": 0.5
+          }
+        },
+        "first_correct_action": {
+          "declared": true,
+          "found": true,
+          "steps": 2,
+          "action_index": 3,
+          "tool": "Read",
+          "target": "C:\\Users\\aryan\\AppData\\Local\\Temp\\velra-tokenburn-fixtures\\A_cold_continuation-q2-velra\\src\\payments\\retry.py",
+          "dead_end_touched_first": false
+        }
+      }
+    },
+    "H_correct": {
+      "status": "pass",
+      "why": "the task was completed correctly",
+      "evidence": {
+        "checks": {
+          "required_final_state": {
+            "declared": true,
+            "ok": true,
+            "files": [
+              {
+                "file": "src/payments/retry.py",
+                "ok": true,
+                "missing": [],
+                "forbidden_present": []
+              }
+            ]
+          },
+          "target_test": {
+            "declared": true,
+            "ok": true,
+            "node_id": "tests/test_retry.py::test_retry_preserves_idempotency_key",
+            "exit": 0,
+            "tail": [
+              ".                                                                        [100%]",
+              "1 passed in 0.01s"
+            ]
+          },
+          "no_regression": {
+            "declared": true,
+            "ok": true,
+            "suite_failures": 2,
+            "ceiling": 2,
+            "suite_exit": 1
+          },
+          "invariant": {
+            "declared": true,
+            "file": "src/payments/retry.py",
+            "ok": true,
+            "missing": [],
+            "forbidden_present": []
+          },
+          "dead_end_avoided": {
+            "declared": true,
+            "ok": true,
+            "touched": []
+          }
+        },
+        "declared_checks": 5
+      }
+    },
+    "I_burden_reduced": {
+      "status": "deferred",
+      "why": "'reduced' needs two arms; resolved by the pair verdict",
+      "evidence": {}
+    }
+  },
+  "first_broken_link": null,
+  "causal_validity": "DEFERRED",
+  "summary": "A_large_state=pass; B_absent_natively=pass; C_retained=pass; D_staged=pass; E_delivered=pass; F_received=pass; G_used=pass; H_correct=pass; I_burden_reduced=deferred"
+}

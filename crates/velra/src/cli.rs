@@ -6,11 +6,162 @@ use crate::inspect::{self, Section};
 use crate::restore as restore_ui;
 use crate::settings;
 use clap::{Parser, Subcommand};
-use std::io::IsTerminal;
+use std::io::{IsTerminal, Write};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 use velra_core::db::{Db, Role};
 use velra_core::reducer;
+
+// ------------------------------------------------------------ stdout
+
+/// Stdout has gone away: the reader closed it (`velra doctor | head -1`), or
+/// a write failed. Nothing more is written to it.
+static STDOUT_CLOSED: AtomicBool = AtomicBool::new(false);
+
+/// A write to stdout failed for a reason other than its reader leaving.
+static STDOUT_FAILED: AtomicBool = AtomicBool::new(false);
+
+/// Every line this module prints goes through here, by way of the `println!`
+/// and `print!` below, which shadow std's in this module.
+///
+/// std's `println!` panics when the write fails -- `failed printing to
+/// stdout`, on stderr, exit 101 -- and a closed pipe makes it fail on every
+/// platform, because Rust ignores SIGPIPE. A reader that stops reading is
+/// the end of the output, not an error. Any other failure (a full disk under
+/// a redirect) is reported once the command is done, and makes it fail.
+fn emit(args: std::fmt::Arguments<'_>) {
+    if STDOUT_CLOSED.load(Ordering::Relaxed) {
+        return;
+    }
+    let mut out = std::io::stdout().lock();
+    if let Err(e) = out.write_fmt(args).and_then(|()| out.flush()) {
+        STDOUT_CLOSED.store(true, Ordering::Relaxed);
+        if e.kind() != std::io::ErrorKind::BrokenPipe {
+            STDOUT_FAILED.store(true, Ordering::Relaxed);
+        }
+    }
+}
+
+macro_rules! println {
+    () => {
+        emit(format_args!("\n"))
+    };
+    ($($arg:tt)*) => {
+        emit(format_args!("{}\n", format_args!($($arg)*)))
+    };
+}
+
+macro_rules! print {
+    ($($arg:tt)*) => {
+        emit(format_args!($($arg)*))
+    };
+}
+
+/// A `--json` document: pretty-printed, and ASCII only -- every other
+/// character is written as a `\u` escape. The values are the same; what
+/// changes is that no shell can misread them. PowerShell decodes a program's
+/// output with the console code page (437 on a default US install), so a
+/// workspace root `proj é 日本` reached `ConvertFrom-Json` as other text
+/// (reproduced under PowerShell 7.6 and 5.1).
+fn json_text<T: serde::Serialize + ?Sized>(value: &T) -> serde_json::Result<String> {
+    let mut out = Vec::new();
+    let formatter = AsciiPretty(serde_json::ser::PrettyFormatter::new());
+    value.serialize(&mut serde_json::Serializer::with_formatter(
+        &mut out, formatter,
+    ))?;
+    Ok(String::from_utf8_lossy(&out).into_owned())
+}
+
+/// [`serde_json::ser::PrettyFormatter`] with non-ASCII string content
+/// escaped.
+struct AsciiPretty<'a>(serde_json::ser::PrettyFormatter<'a>);
+
+impl serde_json::ser::Formatter for AsciiPretty<'_> {
+    fn write_string_fragment<W: ?Sized + std::io::Write>(
+        &mut self,
+        w: &mut W,
+        fragment: &str,
+    ) -> std::io::Result<()> {
+        let mut rest = fragment;
+        while let Some(at) = rest.find(|c: char| !c.is_ascii()) {
+            w.write_all(&rest.as_bytes()[..at])?;
+            let c = rest[at..].chars().next().unwrap_or_default();
+            for unit in c.encode_utf16(&mut [0; 2]) {
+                write!(w, "\\u{unit:04x}")?;
+            }
+            rest = &rest[at + c.len_utf8()..];
+        }
+        w.write_all(rest.as_bytes())
+    }
+
+    fn begin_array<W: ?Sized + std::io::Write>(&mut self, w: &mut W) -> std::io::Result<()> {
+        self.0.begin_array(w)
+    }
+
+    fn end_array<W: ?Sized + std::io::Write>(&mut self, w: &mut W) -> std::io::Result<()> {
+        self.0.end_array(w)
+    }
+
+    fn begin_array_value<W: ?Sized + std::io::Write>(
+        &mut self,
+        w: &mut W,
+        first: bool,
+    ) -> std::io::Result<()> {
+        self.0.begin_array_value(w, first)
+    }
+
+    fn end_array_value<W: ?Sized + std::io::Write>(&mut self, w: &mut W) -> std::io::Result<()> {
+        self.0.end_array_value(w)
+    }
+
+    fn begin_object<W: ?Sized + std::io::Write>(&mut self, w: &mut W) -> std::io::Result<()> {
+        self.0.begin_object(w)
+    }
+
+    fn end_object<W: ?Sized + std::io::Write>(&mut self, w: &mut W) -> std::io::Result<()> {
+        self.0.end_object(w)
+    }
+
+    fn begin_object_key<W: ?Sized + std::io::Write>(
+        &mut self,
+        w: &mut W,
+        first: bool,
+    ) -> std::io::Result<()> {
+        self.0.begin_object_key(w, first)
+    }
+
+    fn begin_object_value<W: ?Sized + std::io::Write>(&mut self, w: &mut W) -> std::io::Result<()> {
+        self.0.begin_object_value(w)
+    }
+
+    fn end_object_value<W: ?Sized + std::io::Write>(&mut self, w: &mut W) -> std::io::Result<()> {
+        self.0.end_object_value(w)
+    }
+}
+
+/// A failure that ends the command, exit 1. The human line goes to stdout
+/// (`docs/CLI.md`); with `--json` the document stdout carries is
+/// `{"error": "<message>"}`, so a JSON reader never gets a line of prose.
+fn fail(json: bool, message: impl std::fmt::Display) -> i32 {
+    if json {
+        let value = serde_json::json!({ "error": message.to_string() });
+        println!("{}", json_text(&value).unwrap_or_default());
+    } else {
+        println!("{} {message}", fail_mark());
+    }
+    1
+}
+
+/// A warning that does not stop the command. With `--json` it goes to
+/// stderr: stdout is the document, and a line ahead of it makes it unreadable.
+fn remark(json: bool, message: impl std::fmt::Display) {
+    if json {
+        let _ = writeln!(std::io::stderr(), "{} {message}", warn_mark());
+    } else {
+        println!("{} {message}", warn_mark());
+    }
+}
 
 pub const VERSION: &str = concat!(
     env!("CARGO_PKG_VERSION"),
@@ -25,7 +176,7 @@ pub const VERSION: &str = concat!(
 #[command(
     name = "velra",
     version = VERSION,
-    about = "Lossless compaction for Claude Code: your task survives /compact.",
+    about = "Local-first, deterministic continuation for Claude Code: clear the context, keep the state, continue working.",
     max_term_width = 100
 )]
 struct Cli {
@@ -58,7 +209,7 @@ enum Command {
         #[arg(long)]
         json: bool,
     },
-    /// Show what would survive a /compact right now.
+    /// Preview the capsule Velra would render for a session right now.
     Inspect {
         /// Session to inspect (defaults to this project's most recent).
         #[arg(long)]
@@ -72,6 +223,11 @@ enum Command {
         /// Full detail for one section: dead-ends, failure, files, attempts.
         #[arg(long)]
         section: Option<String>,
+        /// Trace a string (a test name, symbol, path) through every layer from
+        /// the recorded events to the capsule, and report where it was lost.
+        /// Repeatable.
+        #[arg(long, value_name = "MARKER")]
+        trace: Vec<String>,
         #[arg(long)]
         json: bool,
     },
@@ -202,7 +358,19 @@ fn path_entry_resolving_to(canonical: &Path) -> Option<PathBuf> {
 // ---------------------------------------------------------------- commands
 
 pub fn run() -> i32 {
-    match Cli::parse().command {
+    let code = dispatch(Cli::parse().command);
+    if STDOUT_FAILED.load(Ordering::Relaxed) {
+        let _ = writeln!(
+            std::io::stderr(),
+            "velra: could not write the output to stdout"
+        );
+        return code.max(1);
+    }
+    code
+}
+
+fn dispatch(command: Command) -> i32 {
+    match command {
         Command::Enable { dry_run } => cmd_enable(dry_run),
         Command::Disable {
             purge,
@@ -215,8 +383,9 @@ pub fn run() -> i32 {
             last,
             checkpoint,
             section,
+            trace,
             json,
-        } => cmd_inspect(session, last, checkpoint, section, json),
+        } => cmd_inspect(session, last, checkpoint, section, trace, json),
         Command::Doctor { json } => cmd_doctor(json),
         Command::Restore {
             session,
@@ -228,21 +397,38 @@ pub fn run() -> i32 {
     }
 }
 
-fn require_home() -> Option<PathBuf> {
+fn require_home(json: bool) -> Option<PathBuf> {
     match home::velra_home() {
         Some(h) => Some(h),
         None => {
-            println!(
-                "{} Could not determine your home directory. Set VELRA_HOME and retry.",
-                fail_mark()
+            fail(
+                json,
+                "Could not determine your home directory. Set VELRA_HOME and retry.",
             );
             None
         }
     }
 }
 
+/// `inspect` and `restore` without a database. Human output keeps its
+/// second line of advice; `--json` gets one error.
+fn no_database(json: bool, home: &Path) -> i32 {
+    let message = format!(
+        "No Velra database yet at {}.",
+        home::db_path(home).display()
+    );
+    if json {
+        return fail(true, message);
+    }
+    println!("{} {message}", warn_mark());
+    println!("  Start Claude Code with Velra enabled and try again.");
+    1
+}
+
 fn cmd_enable(dry_run: bool) -> i32 {
-    let Some(home) = require_home() else { return 1 };
+    let Some(home) = require_home(false) else {
+        return 1;
+    };
     let Some(settings_path) = settings::settings_path() else {
         println!(
             "{} Could not determine the Claude Code settings path.",
@@ -250,9 +436,13 @@ fn cmd_enable(dry_run: bool) -> i32 {
         );
         return 1;
     };
-    if let Err(e) = home::ensure_home(&home) {
-        println!("{} Could not create {}: {e}", fail_mark(), home.display());
-        return 1;
+    // A dry run writes nothing: not even `$VELRA_HOME`, which creating (or
+    // tightening the mode of) is a write.
+    if !dry_run {
+        if let Err(e) = home::ensure_home(&home) {
+            println!("{} Could not create {}: {e}", fail_mark(), home.display());
+            return 1;
+        }
     }
     // §6.2 step 1: create the settings directory if Claude Code is absent.
     let mut claude_missing = false;
@@ -332,7 +522,7 @@ fn cmd_enable(dry_run: bool) -> i32 {
             }
             println!();
             println!("Nothing else required. Keep coding normally.");
-            println!("Tip: run `velra inspect` any time to see what would survive a /compact.");
+            println!("Tip: `velra restore` carries a session's state into your next one; `velra inspect` previews it.");
             0
         }
         Err(e) => {
@@ -357,7 +547,9 @@ fn confirm(prompt: &str) -> bool {
 }
 
 fn cmd_disable(purge: bool, yes: bool, dry_run: bool) -> i32 {
-    let Some(home) = require_home() else { return 1 };
+    let Some(home) = require_home(false) else {
+        return 1;
+    };
     let Some(settings_path) = settings::settings_path() else {
         println!(
             "{} Could not determine the Claude Code settings path.",
@@ -446,7 +638,11 @@ struct Installed {
 
 fn read_installed() -> Installed {
     let path = settings::settings_path().map(|p| settings::resolve_target(&p));
-    let text = path.as_ref().and_then(|p| std::fs::read_to_string(p).ok());
+    // Without its byte order mark, which `enable` keeps but no parser takes.
+    let text = path
+        .as_ref()
+        .and_then(|p| std::fs::read_to_string(p).ok())
+        .map(|t| settings::split_bom(&t).1.to_string());
     let handlers = text
         .as_deref()
         .map(settings::installed_handlers)
@@ -466,7 +662,9 @@ fn open_db_ro(home: &Path) -> Option<Db> {
 }
 
 fn cmd_status(json: bool) -> i32 {
-    let Some(home) = require_home() else { return 1 };
+    let Some(home) = require_home(json) else {
+        return 1;
+    };
     let installed = read_installed();
     let detection = compat::detect(Duration::from_secs(3));
     let features = Features::for_version(detection.version());
@@ -481,11 +679,22 @@ fn cmd_status(json: bool) -> i32 {
         .unwrap_or(false);
     let enabled = !installed.handlers.is_empty();
 
-    let db = open_db_ro(&home);
+    // A database the hooks cannot use -- a newer schema, a migration that
+    // cannot complete -- means every hook is a no-op that spools; status is
+    // not healthy then, whatever the settings say (DECISIONS D118).
+    let (db, database_error) = if home::db_path(&home).exists() {
+        match Db::open(&home::db_path(&home), Role::Cli) {
+            Ok(db) => (Some(db), None),
+            Err(e) => (None, Some(e.to_string())),
+        }
+    } else {
+        (None, None)
+    };
     let mut sessions = 0i64;
     let mut events = 0i64;
     let mut last_event_ms = 0i64;
     let mut live: Vec<(String, String)> = Vec::new();
+    let mut latest: Option<velra_core::continuation::Latest> = None;
     if let Some(db) = &db {
         sessions = db
             .conn
@@ -508,13 +717,59 @@ fn cmd_status(json: bool) -> i32 {
                 live = rows.flatten().collect();
             }
         }
+        latest = velra_core::continuation::latest(&db.conn).ok().flatten();
     }
     let db_size = std::fs::metadata(home::db_path(&home))
         .map(|m| m.len())
         .unwrap_or(0);
-    let healthy = enabled && bin_ok && installed.handlers.len() >= expected.min(1);
+    let healthy = enabled
+        && bin_ok
+        && installed.handlers.len() >= expected.min(1)
+        && database_error.is_none();
+    // A staged capsule is invisible everywhere else — it is one file outside
+    // the repository — so `status` is where a user finds out that their next
+    // session in this workspace is going to start with restored state.
+    let (workspace_id, workspace_root) = workspace_for_cwd(db.as_ref().map(|d| &d.conn));
+    let staged_dir = velra_core::staging::staged_dir(&home, &workspace_id);
+    let slot = velra_core::staging::slot(&staged_dir, velra_core::time::now_ms());
+    let legacy = velra_core::staging::has_legacy(&staged_dir);
 
     if json {
+        // The same slot the human output reports, in the same terms: a claim
+        // is not a delivery, and an interrupted one may or may not have been.
+        let capsule_json = |c: &velra_core::staging::StagedCapsule| {
+            serde_json::json!({
+                "source_session_id": c.source_session_id,
+                "tokens": c.tokens,
+                "summary": c.summary,
+                "deliver_on": c.deliver_on,
+            })
+        };
+        let staged = match &slot {
+            velra_core::staging::Slot::Empty => serde_json::json!({ "state": "empty" }),
+            velra_core::staging::Slot::Staged(c) => serde_json::json!({
+                "state": "staged",
+                "capsule": capsule_json(c),
+                "meaning": "delivered on the next matching SessionStart in this workspace",
+            }),
+            velra_core::staging::Slot::Claimed {
+                capsule,
+                interrupted: true,
+            } => serde_json::json!({
+                "state": "claimed_interrupted",
+                "capsule": capsule.as_ref().map(capsule_json),
+                "meaning": "claimed by a session start that did not finish; it may already have been delivered and will not be delivered again",
+            }),
+            velra_core::staging::Slot::Claimed { capsule, .. } => serde_json::json!({
+                "state": "claimed",
+                "capsule": capsule.as_ref().map(capsule_json),
+                "meaning": "being delivered to a session that is starting now; not yet known to have been received",
+            }),
+            velra_core::staging::Slot::Unreadable => serde_json::json!({
+                "state": "unreadable",
+                "meaning": "will not be delivered; `velra restore --clear` removes it",
+            }),
+        };
         let value = serde_json::json!({
             "enabled": enabled,
             "handlers": installed.handlers.len(),
@@ -528,12 +783,21 @@ fn cmd_status(json: bool) -> i32 {
             "events": events,
             "last_event_age": (last_event_ms > 0).then(|| velra_core::time::human_age(velra_core::time::now_ms() - last_event_ms)),
             "live_continuations": live.iter().map(|(s, st)| serde_json::json!({"session": s, "state": st})).collect::<Vec<_>>(),
+            "latest_continuation": latest.as_ref().map(|l| serde_json::json!({
+                "session": l.session_id,
+                "checkpoint": l.checkpoint_id,
+                "state": l.state,
+                "channel": l.attached_channel,
+                "attach_count": l.attach_count,
+                "meaning": velra_core::continuation::meaning(&l.state),
+            })),
+            "database_error": database_error,
+            "workspace_root": workspace_root,
+            "staged": staged,
+            "legacy_staged": legacy,
             "healthy": healthy,
         });
-        println!(
-            "{}",
-            serde_json::to_string_pretty(&value).unwrap_or_default()
-        );
+        println!("{}", json_text(&value).unwrap_or_default());
         return i32::from(!healthy);
     }
 
@@ -555,11 +819,18 @@ fn cmd_status(json: bool) -> i32 {
         ),
         (None, _) => println!("  Binary:      (not recorded; run `velra enable`)"),
     }
-    println!(
-        "  Database:    {} ({} KiB)",
-        home::db_path(&home).display(),
-        db_size / 1024
-    );
+    match &database_error {
+        None => println!(
+            "  Database:    {} ({} KiB)",
+            home::db_path(&home).display(),
+            db_size / 1024
+        ),
+        Some(e) => println!(
+            "{} Database:    {} will not open: {e}. Hooks record nothing until it does; see `velra doctor`.",
+            fail_mark(),
+            home::db_path(&home).display()
+        ),
+    }
     println!("  Tracking:    {sessions} session(s), {events} event(s)");
     if last_event_ms > 0 {
         println!(
@@ -576,39 +847,69 @@ fn cmd_status(json: bool) -> i32 {
             println!("  Continuation: {session} {state}");
         }
     }
-    // A staged capsule is invisible everywhere else — it is one file outside
-    // the repository — so `status` is where a user finds out that their next
-    // session in this workspace is going to start with restored state.
-    if let Some((workspace_id, _)) = workspace_for_cwd() {
-        if let Some(c) = velra_core::staging::peek(&restore_ui::staged_path(&home, &workspace_id)) {
+    // The last one in any state: whether the previous `/compact` was written
+    // out, and what that does and does not establish (DECISIONS D113).
+    if let Some(l) = &latest {
+        println!(
+            "  Last continuation: {} {}{} \u{2014} {}",
+            l.session_id.chars().take(8).collect::<String>(),
+            l.state,
+            l.attached_channel
+                .as_deref()
+                .map(|c| format!(" on {c}"))
+                .unwrap_or_default(),
+            velra_core::continuation::meaning(&l.state)
+        );
+    }
+    let summary = |c: &velra_core::staging::StagedCapsule| {
+        format!(
+            "{} ({} tokens) from session {}",
+            if c.summary.is_empty() {
+                "task state"
+            } else {
+                &c.summary
+            },
+            c.tokens,
+            c.source_session_id.chars().take(8).collect::<String>()
+        )
+    };
+    match &slot {
+        velra_core::staging::Slot::Empty => {}
+        velra_core::staging::Slot::Staged(c) => {
+            println!("  Staged:      {}", summary(c));
             println!(
-                "  Staged:      {} ({} tokens) from session {}",
-                if c.summary.is_empty() {
-                    "task state"
-                } else {
-                    &c.summary
-                },
-                c.tokens,
-                c.source_session_id.chars().take(8).collect::<String>()
-            );
-            println!(
-                "               delivered on SessionStart({}) \u{2014} start a new session to pick it up",
+                "               delivered on SessionStart({}) \u{2014} start a new session in {workspace_root} to pick it up",
                 c.deliver_on.join("|")
             );
         }
+        velra_core::staging::Slot::Claimed {
+            capsule,
+            interrupted: true,
+        } => {
+            println!(
+                "{} Staged:      {} was claimed by a session start that did not finish.",
+                warn_mark(),
+                capsule.as_ref().map_or("a capsule".to_string(), summary)
+            );
+            println!(
+                "               It may already have been delivered, so it will not be delivered again; run `velra restore` to stage it again."
+            );
+        }
+        velra_core::staging::Slot::Claimed { .. } => {
+            println!("  Staged:      being delivered to a session that is starting now");
+        }
+        velra_core::staging::Slot::Unreadable => println!(
+            "{} Staged:      unreadable; it will not be delivered (`velra restore --clear` removes it)",
+            warn_mark()
+        ),
+    }
+    if legacy {
+        println!(
+            "{} Staged:      a capsule in an earlier development format is ignored; run `velra restore` again.",
+            warn_mark()
+        );
     }
     i32::from(!healthy)
-}
-
-fn project_id_for_cwd() -> Option<String> {
-    let cwd = std::env::current_dir().ok()?;
-    let root = velra_core::git::find_repo_root(&cwd).unwrap_or(cwd);
-    let canonical = velra_core::paths::canonical(&root).unwrap_or(root);
-    let normalized = velra_core::paths::normalize_abs(&canonical.to_string_lossy());
-    Some(velra_core::hash::hex_prefix(
-        velra_core::paths::identity(&normalized).as_bytes(),
-        16,
-    ))
 }
 
 fn cmd_inspect(
@@ -616,35 +917,39 @@ fn cmd_inspect(
     last: bool,
     checkpoint: Option<String>,
     section: Option<String>,
+    trace: Vec<String>,
     json: bool,
 ) -> i32 {
-    let Some(home) = require_home() else { return 1 };
+    let Some(home) = require_home(json) else {
+        return 1;
+    };
     let section = match section.as_deref().map(Section::parse) {
         Some(None) => {
-            println!(
-                "{} Unknown section. Use dead-ends, failure, files or attempts.",
-                fail_mark()
+            return fail(
+                json,
+                "Unknown section. Use dead-ends, failure, files or attempts.",
             );
-            return 1;
         }
         other => other.flatten(),
     };
     let Some(mut db) = open_db_ro(&home) else {
-        println!(
-            "{} No Velra database yet at {}.",
-            warn_mark(),
-            home::db_path(&home).display()
-        );
-        println!("  Start Claude Code with Velra enabled and try again.");
-        return 1;
+        return no_database(json, &home);
     };
     let config = Config::load(&home);
     let tz = velra_core::time::local_offset_secs(velra_core::time::now_ms());
+    // `--section` is prose; with `--json` it is carried as a string.
+    let print_section = |section: Section, text: String| {
+        if json {
+            let value = serde_json::json!({ "section": section.name(), "detail": text });
+            println!("{}", json_text(&value).unwrap_or_default());
+        } else {
+            println!("{text}");
+        }
+    };
 
     if let Some(id) = checkpoint {
         let Ok(Some(stored)) = velra_core::checkpoint::load(&db.conn, &id) else {
-            println!("{} No checkpoint {id}.", fail_mark());
-            return 1;
+            return fail(json, format!("No checkpoint {id}."));
         };
         if let Some(section) = section {
             match inspect::section_detail(
@@ -655,19 +960,15 @@ fn cmd_inspect(
                 section,
                 tz,
             ) {
-                Ok(text) => println!("{text}"),
-                Err(e) => {
-                    println!("{} {e}", fail_mark());
-                    return 1;
-                }
+                Ok(text) => print_section(section, text),
+                Err(e) => return fail(json, e),
             }
             return 0;
         }
         if json {
             println!(
                 "{}",
-                serde_json::to_string_pretty(&inspect::checkpoint_json(&stored))
-                    .unwrap_or_default()
+                json_text(&inspect::checkpoint_json(&stored)).unwrap_or_default()
             );
         } else {
             println!("{}", stored.capsule);
@@ -677,17 +978,36 @@ fn cmd_inspect(
 
     // Live preview: run a reducer pass first, but never create a checkpoint.
     if let Err(e) = reducer::reduce_all(&mut db.conn, Some(&home::spool_dir(&home))) {
-        println!("{} Could not catch up the reducer: {e}", warn_mark());
+        remark(json, format!("Could not catch up the reducer: {e}"));
     }
     let session_id = match session {
-        Some(s) => Some(s),
+        // A session the ledger never saw has nothing to preview. Rendering
+        // one anyway printed an empty record, exit 0 -- a typo read as "this
+        // session has no state".
+        // A unique prefix is accepted too: it is how a restored capsule
+        // names the session it came from.
+        Some(s) => match inspect::resolve_session(&db.conn, &s) {
+            Ok(inspect::SessionMatch::One(id)) => Some(id),
+            Ok(inspect::SessionMatch::None) => {
+                return fail(json, format!("No session {s} is recorded."))
+            }
+            Ok(inspect::SessionMatch::Ambiguous(ids)) => {
+                return fail(
+                    json,
+                    format!(
+                        "Session {s} is ambiguous; it begins {}. Give more of the id.",
+                        ids.join(", ")
+                    ),
+                )
+            }
+            Err(e) => return fail(json, e),
+        },
         None if last => inspect::latest_session(&db.conn).ok().flatten(),
         None => {
-            let by_project = project_id_for_cwd().and_then(|pid| {
-                inspect::latest_session_for_project(&db.conn, &pid)
-                    .ok()
-                    .flatten()
-            });
+            let (pid, _) = workspace_for_cwd(Some(&db.conn));
+            let by_project = inspect::latest_session_for_project(&db.conn, &pid)
+                .ok()
+                .flatten();
             match by_project {
                 Some(s) => Some(s),
                 None => inspect::latest_session(&db.conn).ok().flatten(),
@@ -695,24 +1015,37 @@ fn cmd_inspect(
         }
     };
     let Some(session_id) = session_id else {
+        if json {
+            return fail(true, "No sessions recorded yet.");
+        }
         println!("{} No sessions recorded yet.", warn_mark());
         return 1;
     };
     let now = velra_core::time::now_ms();
+    if !trace.is_empty() {
+        return match inspect::trace(&db.conn, &home, &session_id, now, &config.render(), &trace) {
+            Ok(traces) => {
+                if json {
+                    let all: Vec<serde_json::Value> = traces.iter().map(|t| t.to_json()).collect();
+                    println!("{}", json_text(&all).unwrap_or_default());
+                } else {
+                    for t in &traces {
+                        println!("{}", t.report());
+                    }
+                }
+                0
+            }
+            Err(e) => fail(json, e),
+        };
+    }
     let snapshot = match inspect::preview(&db.conn, &session_id, now) {
         Ok(s) => s,
-        Err(e) => {
-            println!("{} {e}", fail_mark());
-            return 1;
-        }
+        Err(e) => return fail(json, e),
     };
     if let Some(section) = section {
         match inspect::section_detail(&db.conn, &session_id, snapshot.epoch, now, section, tz) {
-            Ok(text) => println!("{text}"),
-            Err(e) => {
-                println!("{} {e}", fail_mark());
-                return 1;
-            }
+            Ok(text) => print_section(section, text),
+            Err(e) => return fail(json, e),
         }
         return 0;
     }
@@ -720,7 +1053,7 @@ fn cmd_inspect(
     if json {
         println!(
             "{}",
-            serde_json::to_string_pretty(&inspect::snapshot_json(
+            json_text(&inspect::snapshot_json(
                 &snapshot,
                 &rendered.text,
                 rendered.tokens
@@ -771,53 +1104,58 @@ fn on_network_fs(path: &Path) -> bool {
 
 /// The workspace the current directory belongs to: `(project_id, root)`.
 ///
-/// Derived exactly as the hook derives it ([`crate::hook`]), because the two
-/// must agree on what "this workspace" means or restore would look for state
-/// under an id nothing was ever recorded against.
-fn workspace_for_cwd() -> Option<(String, String)> {
-    Some(velra_core::workspace::resolve(None))
+/// The hook's mapping (`velra_core::workspace::resolve`), except that inside a
+/// repository the nearest directory the ledger recorded a session in wins
+/// (`resolve_recorded`): Claude Code started in a subdirectory records it
+/// as the workspace, and a terminal there has no `CLAUDE_PROJECT_DIR` to say
+/// so. Without a ledger it is the plain mapping.
+fn workspace_for_cwd(conn: Option<&rusqlite::Connection>) -> (String, String) {
+    velra_core::workspace::resolve_recorded(None, |id| {
+        conn.is_some_and(|c| velra_core::restore::is_recorded_workspace(c, id))
+    })
 }
 
 fn cmd_restore(session: Option<String>, list: bool, dry_run: bool, clear: bool, json: bool) -> i32 {
-    let Some(home) = require_home() else { return 1 };
-    let Some((workspace_id, workspace_root)) = workspace_for_cwd() else {
-        println!("{} Could not determine the current workspace.", fail_mark());
+    let Some(home) = require_home(json) else {
         return 1;
     };
     let now = velra_core::time::now_ms();
 
     if clear {
-        let path = restore_ui::staged_path(&home, &workspace_id);
-        let existed = path.exists();
-        let _ = std::fs::remove_file(&path);
-        velra_core::staging::sweep(&home, &workspace_id, now);
+        let (workspace_id, workspace_root) =
+            workspace_for_cwd(open_db_ro(&home).as_ref().map(|d| &d.conn));
+        let removed = velra_core::staging::clear(&home, &workspace_id);
+        if json {
+            let value = serde_json::json!({
+                "cleared": removed > 0,
+                "workspace_id": workspace_id,
+                "workspace_root": workspace_root,
+            });
+            println!("{}", json_text(&value).unwrap_or_default());
+            return 0;
+        }
         println!(
             "{} {}",
             ok_mark(),
-            if existed {
-                "Discarded the staged capsule."
+            if removed > 0 {
+                format!("Discarded the staged capsule for {workspace_root}.")
             } else {
-                "Nothing was staged."
+                format!("Nothing was staged for {workspace_root}.")
             }
         );
         return 0;
     }
 
     let Some(mut db) = open_db_ro(&home) else {
-        println!(
-            "{} No Velra database yet at {}.",
-            warn_mark(),
-            home::db_path(&home).display()
-        );
-        println!("  Start Claude Code with Velra enabled and try again.");
-        return 1;
+        return no_database(json, &home);
     };
     // Restore reads projections, so the log has to be caught up first, exactly
     // as `inspect` does. A spooled event that has not been reduced is state
     // the user would otherwise silently lose.
     if let Err(e) = reducer::reduce_all(&mut db.conn, Some(&home::spool_dir(&home))) {
-        println!("{} Could not catch up the reducer: {e}", warn_mark());
+        remark(json, format!("Could not catch up the reducer: {e}"));
     }
+    let (workspace_id, workspace_root) = workspace_for_cwd(Some(&db.conn));
     // Clear out anything abandoned by an earlier run before writing.
     velra_core::staging::sweep(&home, &workspace_id, now);
 
@@ -844,7 +1182,7 @@ fn cmd_restore(session: Option<String>, list: bool, dry_run: bool, clear: bool, 
                 .collect();
             println!(
                 "{}",
-                serde_json::to_string_pretty(&serde_json::json!({
+                json_text(&serde_json::json!({
                     "workspace_id": workspace_id,
                     "workspace_root": workspace_root,
                     "sessions": rows,
@@ -853,7 +1191,7 @@ fn cmd_restore(session: Option<String>, list: bool, dry_run: bool, clear: bool, 
             );
         } else if candidates.is_empty() {
             println!(
-                "{} No previous sessions found for this workspace.",
+                "{} No previous sessions found for this workspace ({workspace_root}).",
                 warn_mark()
             );
         } else {
@@ -870,12 +1208,13 @@ fn cmd_restore(session: Option<String>, list: bool, dry_run: bool, clear: bool, 
         None => {
             if candidates.is_empty() {
                 println!(
-                    "{} No previous sessions found for this workspace.",
+                    "{} No previous sessions found for this workspace ({workspace_root}).",
                     warn_mark()
                 );
                 println!(
                     "  Velra records a session once Claude Code runs here with its hooks enabled."
                 );
+                println!("  Run `velra restore` from the directory Claude Code was started in.");
                 return 1;
             }
             let restorable = candidates.iter().filter(|c| c.restorable()).count();
@@ -915,8 +1254,8 @@ fn cmd_restore(session: Option<String>, list: bool, dry_run: bool, clear: bool, 
     let staged = match velra_core::restore::build(&db.conn, &req, &config.render()) {
         Ok(s) => s,
         Err(e) => {
-            println!("{} {e}", fail_mark());
-            if matches!(e, velra_core::restore::RestoreError::UnknownSession { .. }) {
+            fail(json, &e);
+            if !json && matches!(e, velra_core::restore::RestoreError::UnknownSession { .. }) {
                 println!("  Run `velra restore --list` to see this workspace's sessions.");
             }
             return 1;
@@ -927,7 +1266,7 @@ fn cmd_restore(session: Option<String>, list: bool, dry_run: bool, clear: bool, 
         if json {
             println!(
                 "{}",
-                serde_json::to_string_pretty(&serde_json::json!({
+                json_text(&serde_json::json!({
                     "workspace_id": staged.workspace_id,
                     "source_session_id": staged.source_session_id,
                     "source_checkpoint_id": staged.source_checkpoint_id,
@@ -944,20 +1283,21 @@ fn cmd_restore(session: Option<String>, list: bool, dry_run: bool, clear: bool, 
         return 0;
     }
 
-    let path = restore_ui::staged_path(&home, &workspace_id);
     if let Err(e) = home::ensure_home(&home) {
-        println!("{} Could not create {}: {e}", fail_mark(), home.display());
-        return 1;
+        return fail(json, format!("Could not create {}: {e}", home.display()));
     }
-    if let Err(e) = velra_core::staging::stage(&path, &staged) {
-        println!("{} Could not stage the capsule: {e}", fail_mark());
-        return 1;
-    }
+    let path = match velra_core::staging::stage(
+        &velra_core::staging::staged_dir(&home, &workspace_id),
+        &staged,
+    ) {
+        Ok(p) => p,
+        Err(e) => return fail(json, format!("Could not stage the capsule: {e}")),
+    };
 
     if json {
         println!(
             "{}",
-            serde_json::to_string_pretty(&serde_json::json!({
+            json_text(&serde_json::json!({
                 "workspace_id": staged.workspace_id,
                 "source_session_id": staged.source_session_id,
                 "source_checkpoint_id": staged.source_checkpoint_id,
@@ -966,6 +1306,7 @@ fn cmd_restore(session: Option<String>, list: bool, dry_run: bool, clear: bool, 
                 "summary": staged.summary,
                 "staged": true,
                 "staged_path": path.to_string_lossy(),
+                "workspace_root": staged.workspace_root,
             }))
             .unwrap_or_default()
         );
@@ -984,12 +1325,17 @@ fn cmd_restore(session: Option<String>, list: bool, dry_run: bool, clear: bool, 
     );
     println!("  {} estimated tokens · {}", staged.tokens, path.display());
     println!();
-    println!("  Start a new Claude Code session in this workspace to pick it up.");
+    println!(
+        "  Start a new Claude Code session in {} to pick it up.",
+        staged.workspace_root
+    );
     0
 }
 
 fn cmd_doctor(json: bool) -> i32 {
-    let Some(home) = require_home() else { return 1 };
+    let Some(home) = require_home(json) else {
+        return 1;
+    };
     let mut checks: Vec<Check> = Vec::new();
     let installed = read_installed();
     let detection = compat::detect(Duration::from_secs(3));
@@ -1177,10 +1523,7 @@ fn cmd_doctor(json: bool) -> i32 {
             "checks": checks.iter().map(|c| serde_json::json!({"level": c.level(), "message": c.message()})).collect::<Vec<_>>(),
             "healthy": !failed,
         });
-        println!(
-            "{}",
-            serde_json::to_string_pretty(&value).unwrap_or_default()
-        );
+        println!("{}", json_text(&value).unwrap_or_default());
     } else {
         for c in &checks {
             c.print();

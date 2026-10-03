@@ -1,5 +1,12 @@
 # Velra v0.1 — empirical benchmark report
 
+> **Superseded historical benchmark — not part of the current release evidence.**
+> This is the v0.1 `/compact` benchmark (September 2026, Velra v0.1). Its
+> verdicts describe that version and that experiment only. The current
+> benchmark is the v0.1.2 requalification: [docs/BENCHMARK.md](docs/BENCHMARK.md),
+> evidence in [bench/results/v0.1.2-requal/](bench/results/v0.1.2-requal/).
+> This file is kept unchanged below this note for provenance.
+
 **Date:** 2026-09-14 · **Host:** Windows 11 Home Single Language (10.0.26200), x86_64, `x86_64-pc-windows-gnu`
 **Binary under test:** `velra 0.1.0 (e9f40151c, x86_64-pc-windows-gnu)`, release, 5,385,728 bytes
 **Agent under test:** Claude Code **2.1.270** (native binary shipped with the VS Code extension), model `claude-sonnet-5`

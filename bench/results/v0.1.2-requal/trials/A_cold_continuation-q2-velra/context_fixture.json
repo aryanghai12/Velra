@@ -1,0 +1,51 @@
+{
+  "kind": "synthetic_load_fixture",
+  "fixture_version": 1,
+  "scenario": "A_cold_continuation",
+  "seed": 0,
+  "seed_string": "A_cold_continuation|250000|1|0",
+  "target_context_size": 250000,
+  "synthetic_context_size": 250728,
+  "token_basis": "estimated",
+  "chars_per_token_assumed": 3.6,
+  "chars": 902619,
+  "bytes_on_disk": 902619,
+  "files": [
+    {
+      "path": "build-01.log",
+      "chars": 306722,
+      "blocks": 396,
+      "sha256": "3fecfc080dea703b947556d1a11f4701"
+    },
+    {
+      "path": "test-01.log",
+      "chars": 234804,
+      "blocks": 332,
+      "sha256": "04d50ea8095fd8257a76d6312aa495b1"
+    },
+    {
+      "path": "build-02.log",
+      "chars": 216666,
+      "blocks": 286,
+      "sha256": "b765f392d1bb9905dc4c5da1f9b44f56"
+    },
+    {
+      "path": "test-02.log",
+      "chars": 144427,
+      "blocks": 204,
+      "sha256": "bc22f117002ffb45b04a74fad87f48ec"
+    }
+  ],
+  "context_generation_method": "programmatic synthetic build/test logs, read by the session as part of its turn script",
+  "reason_if_target_not_reached": null,
+  "actual_observed_context_size": null,
+  "warning": "synthetic_context_size is an ESTIMATE of a generated file's size at a declared chars-per-token ratio. It is NOT an observation of a Claude session's context and must never be reported as one.",
+  "verification": {
+    "ok": true,
+    "problems": [],
+    "measured_chars": 902619,
+    "declared_chars": 902619,
+    "target_chars": 900000,
+    "shortfall_fraction": -0.00291
+  }
+}

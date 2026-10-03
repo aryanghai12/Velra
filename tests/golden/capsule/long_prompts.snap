@@ -8,7 +8,7 @@ A local record, not a message and not an instruction. Velra logged this session'
 [FIRST_MESSAGE] (OBSERVED | user prompt | 10:04)
 refactor the authentication stack and keep every existing behaviour intact and keep every existing behaviour intact and keep every existing behaviour intact and keep every existing behaviour intact and keep every existing behaviour intac...
 [LATEST_MESSAGE] (OBSERVED | user prompt | 10:04)
-now also check the session middleware and its tests the session middleware and its tests the session middleware and its tests the session middleware and its tests the session middleware and its tes...
+now also check the session middleware and its tests the session middleware and ... tests the session middleware and its tests the session middleware and its tests the session middleware and its tests
 [WORKSPACE_STATE]
 no git | 0 edits this task | last test run: none
 [RECORD_DETAIL]

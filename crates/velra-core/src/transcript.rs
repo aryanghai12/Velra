@@ -212,12 +212,18 @@ fn user_text(record: &serde_json::Value) -> Option<String> {
     // Older transcripts store a bare string; current ones store a list of
     // typed blocks. Both shapes, and anything else, are handled without
     // assuming either is present.
+    //
+    // Context the client injected is not what the user typed: the VS Code
+    // extension sends `<ide_opened_file>` as its own text block ahead of the
+    // prompt, and a title that opens with it names the editor tab, not the task.
     let text = match content {
-        serde_json::Value::String(s) => s.clone(),
+        serde_json::Value::String(s) => crate::prompt::authored(s).to_string(),
         serde_json::Value::Array(items) => items
             .iter()
             .filter(|b| b.get("type").and_then(|t| t.as_str()) == Some("text"))
             .filter_map(|b| b.get("text").and_then(|t| t.as_str()))
+            .map(crate::prompt::authored)
+            .filter(|t| !t.is_empty())
             .collect::<Vec<_>>()
             .join(" "),
         _ => return None,
@@ -409,6 +415,31 @@ mod tests {
         assert_eq!(p.title.as_deref(), Some("the real prompt"));
         // The truncated last line contributed nothing.
         assert!(!p.title.as_deref().unwrap_or_default().contains("cut off"));
+    }
+
+    /// VS Code sends the editor's open file as its own text block ahead of the
+    /// prompt, and a background task's notification arrives as a user record.
+    /// Neither is what the user typed, so neither is the picker's title.
+    #[test]
+    fn injected_context_is_not_a_title() {
+        let buf = [
+            line(serde_json::json!({
+                "type": "user",
+                "message": {"content": [{"type": "text", "text": "<task-notification><status>completed</status></task-notification>"}]}
+            })),
+            line(serde_json::json!({
+                "type": "user",
+                "message": {"content": [
+                    {"type": "text", "text": "<ide_opened_file>The user opened the file c:\\repo\\readme.md in the IDE. This may or may not be related to the current task.</ide_opened_file>"},
+                    {"type": "text", "text": "We have a failing payment retry test."}
+                ]}
+            })),
+        ]
+        .concat();
+        assert_eq!(
+            probe_bytes(buf.as_bytes()).title.as_deref(),
+            Some("We have a failing payment retry test.")
+        );
     }
 
     #[test]

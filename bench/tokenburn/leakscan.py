@@ -18,6 +18,8 @@ Surfaces
 ``git_refs``        branch, tag and ref names
 ``claude_md``       ``CLAUDE.md`` anywhere in the tree, at any depth
 ``project_memory``  ``.claude/`` directory contents
+``auto_memory``     Claude Code's per-project auto-memory directory,
+                    ``<config>/projects/<slug>/memory/`` -- outside the repo
 ``environment``     variables visible to the trial process
 ``post_prompt``     the continuation prompt, identical on both arms
 ``pre_prompts``     the turn script before the transition
@@ -37,7 +39,8 @@ from typing import Sequence
 
 #: A hit on any of these means the destination could read the answer.
 FATAL_SURFACES = ("tree", "filenames", "git_history", "git_refs", "claude_md",
-                  "project_memory", "environment", "post_prompt")
+                  "project_memory", "auto_memory", "environment",
+                  "post_prompt")
 
 ALL_SURFACES = FATAL_SURFACES + ("pre_prompts",)
 
@@ -155,6 +158,35 @@ def scan_agent_context(repo: pathlib.Path, terms: Sequence[str]) -> list[dict]:
     return out
 
 
+def scan_auto_memory(directory: pathlib.Path | None,
+                     terms: Sequence[str]) -> list[dict]:
+    """Claude Code's auto-memory for the fixture, paths and contents.
+
+    It lives outside the repository, which is why every other surface missed
+    it: in the v0.1.2 qualification it carried the scenario's unwritten
+    constraint into both arms' destination sessions. The trial harness also
+    requires the directory to be *empty* (`isolation.scan_memory`); term hits
+    here are the evidence of what a leak said.
+    """
+    out: list[dict] = []
+    if directory is None or not pathlib.Path(directory).is_dir():
+        return out
+    directory = pathlib.Path(directory)
+    for path in sorted(directory.rglob("*")):
+        rel = str(path.relative_to(directory)).replace("\\", "/")
+        out.extend(_hits(rel, terms, "auto_memory", f"memory/{rel}"))
+        if not path.is_file() or path.suffix.lower() in SKIP_SUFFIXES:
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except (UnicodeDecodeError, OSError):
+            continue
+        for number, line in enumerate(text.splitlines(), 1):
+            out.extend(_hits(line.strip(), terms, "auto_memory",
+                             f"memory/{rel}:{number}"))
+    return out
+
+
 def scan_prompts(turns: Sequence[str], continuation: str,
                  terms: Sequence[str]) -> list[dict]:
     out: list[dict] = []
@@ -175,12 +207,14 @@ def scan_environment(terms: Sequence[str], env: dict | None = None) -> list[dict
 
 
 def scan(repo: pathlib.Path, turns: Sequence[str], continuation: str,
-         terms: Sequence[str], env: dict | None = None) -> dict:
+         terms: Sequence[str], env: dict | None = None,
+         memory_dir: pathlib.Path | None = None) -> dict:
     """Every surface at once. ``clean`` is false when any fatal surface hits."""
     repo = pathlib.Path(repo)
     hits = (scan_tree(repo, terms)
             + scan_git(repo, terms)
             + scan_agent_context(repo, terms)
+            + scan_auto_memory(memory_dir, terms)
             + scan_prompts(turns, continuation, terms)
             + scan_environment(terms, env))
     fatal = [h for h in hits if h["surface"] in FATAL_SURFACES]
@@ -191,6 +225,7 @@ def scan(repo: pathlib.Path, turns: Sequence[str], continuation: str,
         "clean": not fatal,
         "terms": list(terms),
         "surfaces_scanned": list(ALL_SURFACES),
+        "auto_memory_dir": str(memory_dir) if memory_dir else None,
         "fatal_surfaces": list(FATAL_SURFACES),
         "hits_by_surface": by_surface,
         "fatal_hits": fatal,

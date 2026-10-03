@@ -1,5 +1,11 @@
 # Velra v0.1 — handoff
 
+> **Historical working notes (v0.1).** Written for picking up the v0.1 build
+> cold; the status, test counts and benchmark conclusions below describe v0.1,
+> not the current release. Current documentation: [README](README.md),
+> [docs/](docs/), [CONTRIBUTING.md](CONTRIBUTING.md). The toolchain notes
+> still apply.
+
 Everything a new session needs to continue this work without re-deriving it.
 
 ---
@@ -141,7 +147,7 @@ elsewhere just uses whatever host toolchain that machine already has.
 usually works from cache; release needs `dlltool.exe`):
 
 ```bash
-export PATH="/c/Users/aryan/AppData/Local/Programs/winlibs-mingw64/mingw64/bin:$PATH"
+export PATH="$LOCALAPPDATA/Programs/winlibs-mingw64/mingw64/bin:$PATH"
 ```
 
 PowerShell equivalent:

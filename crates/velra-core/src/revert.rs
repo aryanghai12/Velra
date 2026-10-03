@@ -31,8 +31,15 @@ pub struct ActiveEdit {
 /// when the new hash differs from the latest version and equals an earlier
 /// one, every ACTIVE edit whose post-edit version lies strictly between that
 /// earlier version and now is reverted. Returns the reverted edit ids (sorted).
+///
+/// Only a state that equality can identify is returned to: a digest of the
+/// bytes, or `absent` -- the path not existing is one state, and a file the
+/// session created and that is gone again has returned to it. `unreadable`
+/// and a large file's size-and-mtime fingerprint (`hash::is_digest`) are
+/// equal without the content being the same, and prove no return.
 pub fn detect_revert(history: &[Version], new_hash: &str, active: &[ActiveEdit]) -> Vec<i64> {
-    if new_hash == crate::hash::UNREADABLE || active.is_empty() {
+    let identifies = crate::hash::is_digest(new_hash) || new_hash == crate::hash::ABSENT;
+    if !identifies || active.is_empty() {
         return Vec::new();
     }
     // Collapse runs of equal hashes, remembering post_edit event ids per run.
@@ -69,7 +76,12 @@ pub fn detect_revert(history: &[Version], new_hash: &str, active: &[ActiveEdit])
 /// Whether a git restore-family command discarded the file's ACTIVE edits
 /// (§13.3). The file counts as touched when its hash changed across the
 /// command (`git_pre` → `git_post`), or — without a pre observation — when it
-/// no longer matches the last post-edit hash.
+/// no longer matches the last post-edit hash. (An `unreadable` pre
+/// observation therefore decides nothing: the result is the post hash against
+/// the last post-edit hash, as without one.)
+///
+/// The caller decides first whether the command could have reached the file
+/// at all (`shell::reaches`); this only reads the hashes.
 pub fn is_discarded(
     last_post_edit: Option<&str>,
     git_pre: Option<&str>,
@@ -131,9 +143,17 @@ pub fn is_settled_source(source: VersionSource) -> bool {
 ///
 /// Two guards keep a stale observation from resurrecting a change that is
 /// really gone: the observation must describe a settled state
-/// ([`is_settled_source`]), and it must not predate the dead end itself.
+/// ([`is_settled_source`]), and it must not predate the dead end itself. And
+/// only a digest of the bytes can show the content is back
+/// ([`crate::hash::is_digest`]).
+///
+/// What this establishes is a fact about the file -- the discarded content is
+/// in it again -- not about who put it there: equal bytes are the same state
+/// whether an edit, a `git checkout`, a copy or a generator wrote them. The
+/// dead end stops being an open route because the route is live again; no
+/// conclusion about the cause is recorded.
 pub fn reapplied(obs: &Observation<'_>, open: &[OpenDeadEnd]) -> Vec<i64> {
-    if !is_settled_source(obs.source) || !crate::hash::is_content(obs.hash) {
+    if !is_settled_source(obs.source) || !crate::hash::is_digest(obs.hash) {
         return Vec::new();
     }
     open.iter()
@@ -144,10 +164,21 @@ pub fn reapplied(obs: &Observation<'_>, open: &[OpenDeadEnd]) -> Vec<i64> {
 }
 
 /// Mechanism for a revert, from the observation that produced the new hash.
-pub fn mechanism_for(source: VersionSource, tool_name: Option<&str>) -> crate::model::Mechanism {
+///
+/// A `git_post` observation is taken for every file the session edited, not
+/// only those the command names; `git_reached` says whether one of the line's
+/// restore-family calls could have changed this file (`shell::reaches`). A
+/// file it could not reach, or might not have, changed by some other means
+/// the line does not identify -- another subcommand, a formatter, the user --
+/// and is recorded with the mechanism that claims no cause.
+pub fn mechanism_for(
+    source: VersionSource,
+    tool_name: Option<&str>,
+    git_reached: bool,
+) -> crate::model::Mechanism {
     use crate::model::Mechanism;
     match source {
-        VersionSource::GitPost => Mechanism::GitCommand,
+        VersionSource::GitPost if git_reached => Mechanism::GitCommand,
         VersionSource::PostEdit if tool_name == Some("Write") => Mechanism::Rewrite,
         VersionSource::PostEdit => Mechanism::InverseEdit,
         _ => Mechanism::External,
@@ -159,10 +190,16 @@ mod tests {
     use super::*;
     use VersionSource::*;
 
+    /// A digest standing for the content named `name`: revert and
+    /// reapplication only ever compare digests of bytes.
+    fn d(name: &str) -> String {
+        crate::hash::content_hash(name.as_bytes())
+    }
+
     fn v(id: i64, hash: &str, source: VersionSource, event_id: i64) -> Version {
         Version {
             id,
-            hash: hash.into(),
+            hash: d(hash),
             source,
             event_id,
             // Tests that do not care about ordering use the event id as the
@@ -182,13 +219,13 @@ mod tests {
         let active = vec![ActiveEdit {
             id: 1,
             event_id: 10,
-            post_hash: "B".into(),
+            post_hash: d("B"),
         }];
-        assert_eq!(detect_revert(&hist, "A", &active), vec![1]);
+        assert_eq!(detect_revert(&hist, &d("A"), &active), vec![1]);
         // Same hash as the latest version: nothing.
-        assert!(detect_revert(&hist, "B", &active).is_empty());
+        assert!(detect_revert(&hist, &d("B"), &active).is_empty());
         // Unknown hash: nothing.
-        assert!(detect_revert(&hist, "C", &active).is_empty());
+        assert!(detect_revert(&hist, &d("C"), &active).is_empty());
     }
 
     #[test]
@@ -203,9 +240,9 @@ mod tests {
         let active = vec![ActiveEdit {
             id: 2,
             event_id: 20,
-            post_hash: "A".into(),
+            post_hash: d("A"),
         }];
-        assert!(detect_revert(&hist, "A", &active).is_empty());
+        assert!(detect_revert(&hist, &d("A"), &active).is_empty());
     }
 
     #[test]
@@ -222,20 +259,34 @@ mod tests {
             ActiveEdit {
                 id: 1,
                 event_id: 10,
-                post_hash: "B".into(),
+                post_hash: d("B"),
             },
             ActiveEdit {
                 id: 3,
                 event_id: 30,
-                post_hash: "C".into(),
+                post_hash: d("C"),
             },
         ];
-        assert_eq!(detect_revert(&hist, "A", &active), vec![3]);
+        assert_eq!(detect_revert(&hist, &d("A"), &active), vec![3]);
     }
 
     #[test]
     fn discard_rules() {
         assert!(is_discarded(Some("B"), Some("B"), "A", true));
+        // An unreadable pre observation decides nothing: the post hash
+        // against the last post-edit hash does.
+        assert!(!is_discarded(
+            Some("B"),
+            Some(crate::hash::UNREADABLE),
+            "B",
+            true
+        ));
+        assert!(is_discarded(
+            Some("B"),
+            Some(crate::hash::UNREADABLE),
+            "A",
+            true
+        ));
         assert!(!is_discarded(Some("B"), Some("B"), "B", true));
         // Changed outside the agent before git ran, but git did not touch it.
         assert!(!is_discarded(Some("B"), Some("C"), "C", true));
@@ -255,39 +306,39 @@ mod tests {
     fn reapplication() {
         let open = vec![OpenDeadEnd {
             id: 7,
-            post_hashes: vec!["B".into()],
+            post_hashes: vec![d("B")],
             resolved_ms: 100,
         }];
-        assert_eq!(reapplied(&obs("B", PostEdit, 200), &open), vec![7]);
-        assert!(reapplied(&obs("C", PostEdit, 200), &open).is_empty());
+        assert_eq!(reapplied(&obs(&d("B"), PostEdit, 200), &open), vec![7]);
+        assert!(reapplied(&obs(&d("C"), PostEdit, 200), &open).is_empty());
     }
 
     #[test]
     fn a_pre_state_observation_never_reapplies() {
         let open = vec![OpenDeadEnd {
             id: 7,
-            post_hashes: vec!["B".into()],
+            post_hashes: vec![d("B")],
             resolved_ms: 100,
         }];
         // The `git_pre` snapshot of the command that discarded the change
         // carries the discarded content by construction.
-        assert!(reapplied(&obs("B", GitPre, 200), &open).is_empty());
-        assert!(reapplied(&obs("B", PreEdit, 200), &open).is_empty());
-        assert!(reapplied(&obs("B", Original, 200), &open).is_empty());
+        assert!(reapplied(&obs(&d("B"), GitPre, 200), &open).is_empty());
+        assert!(reapplied(&obs(&d("B"), PreEdit, 200), &open).is_empty());
+        assert!(reapplied(&obs(&d("B"), Original, 200), &open).is_empty());
         // Settled sources still count.
-        assert_eq!(reapplied(&obs("B", GitPost, 200), &open), vec![7]);
-        assert_eq!(reapplied(&obs("B", TurnScan, 200), &open), vec![7]);
+        assert_eq!(reapplied(&obs(&d("B"), GitPost, 200), &open), vec![7]);
+        assert_eq!(reapplied(&obs(&d("B"), TurnScan, 200), &open), vec![7]);
     }
 
     #[test]
     fn an_observation_older_than_the_dead_end_never_reapplies() {
         let open = vec![OpenDeadEnd {
             id: 7,
-            post_hashes: vec!["B".into()],
+            post_hashes: vec![d("B")],
             resolved_ms: 100,
         }];
-        assert!(reapplied(&obs("B", TurnScan, 99), &open).is_empty());
-        assert_eq!(reapplied(&obs("B", TurnScan, 100), &open), vec![7]);
+        assert!(reapplied(&obs(&d("B"), TurnScan, 99), &open).is_empty());
+        assert_eq!(reapplied(&obs(&d("B"), TurnScan, 100), &open), vec![7]);
     }
 
     /// Only real content can show a change coming back: `absent` and
@@ -308,5 +359,93 @@ mod tests {
             resolved_ms: 100,
         }];
         assert!(reapplied(&obs(crate::hash::ABSENT, TurnScan, 200), &open).is_empty());
+    }
+
+    /// A large file's fingerprint is size and mtime, and `large:{n}:0` is the
+    /// same for every file of that size whose mtime was not read. Equal
+    /// fingerprints make neither a revert nor a reapplication.
+    #[test]
+    fn a_large_file_fingerprint_proves_no_return() {
+        let fp = "large:5000000:0";
+        let hist = vec![
+            Version {
+                id: 1,
+                hash: fp.into(),
+                source: PreEdit,
+                event_id: 10,
+                ts_ms: 10,
+            },
+            Version {
+                id: 2,
+                hash: "large:5000100:0".into(),
+                source: PostEdit,
+                event_id: 10,
+                ts_ms: 10,
+            },
+        ];
+        let active = vec![ActiveEdit {
+            id: 1,
+            event_id: 10,
+            post_hash: "large:5000100:0".into(),
+        }];
+        assert!(detect_revert(&hist, fp, &active).is_empty());
+        let open = vec![OpenDeadEnd {
+            id: 7,
+            post_hashes: vec![fp.to_string()],
+            resolved_ms: 100,
+        }];
+        assert!(reapplied(&obs(fp, PostEdit, 200), &open).is_empty());
+        assert!(reapplied(&obs(fp, TurnScan, 200), &open).is_empty());
+    }
+
+    /// A file the session created and that is gone again has returned to the
+    /// state before the creation: `absent` is one state. It never shows the
+    /// content coming back.
+    #[test]
+    fn deleting_a_created_file_reverts_the_creation() {
+        let hist = vec![
+            Version {
+                id: 1,
+                hash: crate::hash::ABSENT.into(),
+                source: PreEdit,
+                event_id: 10,
+                ts_ms: 10,
+            },
+            v(2, "B", PostEdit, 10),
+        ];
+        let active = vec![ActiveEdit {
+            id: 1,
+            event_id: 10,
+            post_hash: d("B"),
+        }];
+        assert_eq!(detect_revert(&hist, crate::hash::ABSENT, &active), vec![1]);
+        // Unreadable is not a state it can return to.
+        assert!(detect_revert(&hist, crate::hash::UNREADABLE, &active).is_empty());
+    }
+
+    #[test]
+    fn a_git_observation_names_git_only_for_files_the_call_reached() {
+        use crate::model::Mechanism;
+        assert_eq!(
+            mechanism_for(GitPost, Some("Bash"), true),
+            Mechanism::GitCommand
+        );
+        assert_eq!(
+            mechanism_for(GitPost, Some("Bash"), false),
+            Mechanism::External
+        );
+        assert_eq!(
+            mechanism_for(PostEdit, Some("Edit"), false),
+            Mechanism::InverseEdit
+        );
+        assert_eq!(
+            mechanism_for(PostEdit, Some("Write"), false),
+            Mechanism::Rewrite
+        );
+        assert_eq!(mechanism_for(TurnScan, None, true), Mechanism::External);
+        assert_eq!(
+            mechanism_for(GitPre, Some("Bash"), true),
+            Mechanism::External
+        );
     }
 }

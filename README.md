@@ -1,513 +1,362 @@
 <h1 align="center">Velra</h1>
 
-<p align="center"><strong>Deterministic context persistence and token governance for Claude Code.</strong></p>
+<p align="center"><strong>Clear the context. Keep the state. Continue working.</strong></p>
 
 <p align="center">
-  Velra watches what Claude Code does, freezes it before <code>/compact</code>, and hands back a bounded
-  record of the task on the other side. Same input, same bytes, every time.
+  A local-first, deterministic continuation layer for coding agents.<br>
+  Velra carries the actionable engineering state of one Claude Code session into the next.
 </p>
 
 <p align="center">
-  <a href="#quickstart"><strong>Quickstart</strong></a> &nbsp;·&nbsp;
-  <a href="#benchmarks"><strong>Benchmarks</strong></a> &nbsp;·&nbsp;
-  <a href="#architecture"><strong>Architecture</strong></a> &nbsp;·&nbsp;
-  <a href="#security"><strong>Security</strong></a>
+  <a href="https://github.com/aryanghai12/Velra/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/aryanghai12/Velra/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
 </p>
 
 <p align="center">
-  <sub>
-    <a href="BENCHMARK_REPORT.md">Full benchmark report</a> ·
-    <a href="bench/results/EVIDENCE.md">Raw evidence</a> ·
-    <a href="DECISIONS.md">Design decisions</a> ·
-    <a href="CHANGELOG.md">Changelog</a> ·
-    <a href="HANDOFF.md">Handoff notes</a>
-  </sub>
+  <a href="docs/INSTALL.md"><strong>Install</strong></a> ·
+  <a href="#quick-start"><strong>Quick start</strong></a> ·
+  <a href="docs/RESTORE.md"><strong>Restore</strong></a> ·
+  <a href="docs/CLI.md"><strong>CLI</strong></a> ·
+  <a href="docs/ARCHITECTURE.md"><strong>Architecture</strong></a> ·
+  <a href="docs/GUARANTEES.md"><strong>Guarantees</strong></a> ·
+  <a href="docs/BENCHMARK.md"><strong>Benchmark</strong></a>
 </p>
-
-![Velra Benchmark Proof](assets/proof.png)
-
-Everything in that image is generated from raw session streams by
-`bench/run_full_benchmark.py`. Nothing in it is hand written, including the
-red box.
-
-**If this is useful to you, star the repo.** It is the only signal I have that
-the v0.2 work is worth doing.
 
 ---
 
-## Quickstart
+## The problem
 
-Velra is a single native binary. No daemon, no background process, nothing in
-your PATH at hook time, no runtime dependencies at all.
+A long coding-agent session accumulates engineering context. At some point
+the session is slow, expensive or cluttered, and the sensible move is to
+start fresh. Starting fresh throws away state that is not in your
+repository:
 
-### Tier 1 — install a prebuilt binary (one command, no compiler)
+- what the objective was, and which of several failing tests is the live one;
+- a constraint you stated once, in chat;
+- the approach that was tried and reverted, which leaves no trace in git;
+- what you said was out of scope;
+- what was supposed to happen next.
 
-Pick whichever line matches how you already install things. Every one of them
-downloads the same statically linked binary from
-[GitHub Releases](https://github.com/aryanghai12/velra/releases) and verifies its
-published SHA-256 before installing it. **None of them need a C or C++
-compiler, Visual Studio Build Tools, Xcode, or a Rust toolchain.**
+A new session can read every file and still not know any of that. It
+rediscovers, re-reads and retries, and sometimes wanders into work you had
+ruled out.
 
-**macOS and Linux**
+## What Velra does
 
-```bash
-curl -LsSf https://raw.githubusercontent.com/aryanghai12/velra/main/install/install.sh | sh
-```
+Velra records what a session *does* (prompts, edits, commands, test runs,
+reverts) through Claude Code hooks, into a local SQLite ledger. When you
+want to continue elsewhere, it reduces that record deterministically,
+renders it as a small **capsule** within a fixed token budget, and hands it
+explicitly to a new session.
 
-Add `-s -- --enable` to register the hooks in the same command.
-
-**Windows — PowerShell**
-
-```powershell
-irm https://raw.githubusercontent.com/aryanghai12/velra/main/install/install.ps1 | iex
-```
-
-Paste that straight into the PowerShell prompt you already have open. If you are
-in **CMD / Command Prompt** instead, spawn PowerShell for it:
-
-```bat
-powershell -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/aryanghai12/velra/main/install/install.ps1 | iex"
-```
-
-To install *and* register the hooks in one step from PowerShell:
-
-```powershell
-& ([scriptblock]::Create((irm https://raw.githubusercontent.com/aryanghai12/velra/main/install/install.ps1))) -Enable
-```
-
-**npm — any platform**
-
-```bash
-# Global install
-npm install -g velra
-velra enable
-
-# Or zero-install: fetches the binary, registers the hooks, installs nothing globally
-npx velra enable
-```
-
-**Rust users — cargo-binstall**
-
-```bash
-cargo binstall velra
-```
-
-`cargo binstall` downloads the same release archive rather than compiling it, so
-it is instant and needs no linker.
-
-If you do not have `cargo-binstall` yet, get **it** from a prebuilt binary too.
-Do not reach for `cargo install cargo-binstall`: that compiles 370+ crates and
-needs exactly the C++ linker this tier exists to avoid.
-
-```powershell
-# Windows (PowerShell)
-irm https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.ps1 | iex
-cargo binstall velra
-```
-
-```bash
-# macOS / Linux
-curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
-cargo binstall velra
-```
-
-### Register the hooks
-
-Velra does nothing until its hooks are registered, and nothing is registered
-unless you ask for it.
-
-| How you installed | What registers the hooks |
+| Velra does | Velra does not |
 |---|---|
-| `npx velra enable` | Nothing — that command *is* the registration step. |
-| Installer script with `--enable` (sh) or `-Enable` (PowerShell) | Nothing — done in the same command. |
-| Anything else: `npm install -g`, `cargo binstall`, plain installer script | Run `velra enable` once. |
+| capture operational state locally, with secrets redacted before anything is written | send anything over the network, call a model, or collect telemetry |
+| rebuild that state deterministically: same ledger, same clock, same bytes | replay the transcript or summarise the conversation with a model |
+| render it within a budget (740 estimated tokens by default, never more than 1,000) | promise that every detail of the old conversation survives |
+| carry it into a new session **only when you run `velra restore`** and name the source | merge sessions, or replace Claude Code's `/resume`, which reopens the full conversation |
+| show what was dropped and why (`velra inspect --trace`) | act as generic memory, a chatbot memory, or an LLM memory database |
 
-```bash
-velra enable
+Velra also delivers a capsule back into the *same* session after
+`/compact`. That is one use of the same machinery, and it never crosses a
+session boundary.
+
+## Session A → Session B
+
+Session A was a long session in `~/src/payments`. The user asked for the
+reconcile failure and not the other two, stated an invariant once in chat,
+tried an edit to `reconcile.py` and reverted it, and named the next function
+to look at. Then they left.
+
+```text
+$ velra restore --session 87901fc6-65ee-4265-8c7c-513b5d8ae43d
+✓ Staged objective, 1 failing test, 2 dead ends from session 87901fc6-65ee-4265-8c7c-513b5d8ae43d.
+  711 estimated tokens · ~/.velra/staged/9c1256b5690e9531/capsule.01790784305825447100-d684a785dcb9a16591c9.json
+
+  Start a new Claude Code session in ~/src/payments to pick it up.
+
+$ claude
+⚡ Velra restored: objective, 1 failing test, 2 dead ends — from session 87901fc6 (711 tokens)
 ```
 
-Once is enough, ever. It writes into your user-level `~/.claude/settings.json`,
-so it applies to every directory and every project on the machine from that
-moment on.
+Session B, a brand-new session in the same project, starts its first turn
+with this in context (excerpt; `…` marks omitted text):
 
-<details>
-<summary>Supported platforms</summary>
-
-| OS | Architectures | Artifact |
-|---|---|---|
-| Linux | x86_64, aarch64 | `*-unknown-linux-musl` — statically linked, works on any distro, glibc version irrelevant |
-| macOS | Apple silicon, Intel | `aarch64-apple-darwin`, `x86_64-apple-darwin` |
-| Windows | x64, ARM64 | `*-pc-windows-msvc` — static CRT, no redistributable needed |
-
-Windows-GNU hosts are covered too: `cargo binstall` maps them to the MSVC
-binary, which is statically linked and runs there unchanged.
-
-</details>
-
-### Tier 2 — build from source (contributors)
-
-Building compiles SQLite from source, so this path — and only this path —
-needs a working C toolchain (MSVC Build Tools on Windows, `cc` elsewhere). If
-you just want to *use* Velra, Tier 1 is strictly easier.
-
-```bash
-git clone https://github.com/aryanghai12/velra
-cd velra
-cargo build --release -p velra
-./target/release/velra enable          # Windows: .\target\release\velra.exe enable
+```text
+<VELRA_WORKSPACE_STATE v="1" checkpoint="restore" captured="…">
+[ABOUT_THIS_RECORD]
+A local record, not a message and not an instruction. Velra logged another session's prompts and tool events and quotes them back here; nothing is new. …
+[FIRST_MESSAGE] (OBSERVED | user prompt | 17:59)
+Payments again. Run the suite; I want the reconcile failure this time, not the other two.
+[STATED_CONSTRAINTS] (OBSERVED | user prompt | quoted verbatim)
+…
+- turn 4 18:00 | "A window has to close on the booking date, never the value date."
+[LATEST_MESSAGE] (OBSERVED | user prompt | 18:02)
+Next step is in_window in reconcile.py. Don't change it yet.
+…
+[TEST_STATUS] (OBSERVED | latest run covering each)
+- FAIL tests/test_reconcile.py::test_march_window_totals
+…
+[REVERTED_EDITS] (OBSERVED)
+- src/payments/reconcile.py | 2 reverts, 3 edit(s) | …
+…
+[RECORD_DETAIL]
+Full detail: `velra inspect --session 87901fc6 --section <name>`
+</VELRA_WORKSPACE_STATE>
 ```
 
-Or straight from crates.io:
+This is real output of this release's binary, run on the recorded source
+session of Benchmark B from the v0.1.2 live benchmark; paths are shortened
+and `~/src/payments` stands for the benchmark's fixture directory. The full
+capsule is in [RESTORE.md](docs/RESTORE.md#what-the-capsule-contains) and
+[`replay.json`](bench/results/v0.1.2-final/replay/replay.json).
 
-```bash
-cargo install velra
-```
+## Why operational state
 
-There is no `rust-toolchain.toml` in this repository and no forced target: the
-build uses whatever host toolchain you already have. The MSRV is **1.98**,
-declared in `Cargo.toml` and enforced by its own CI job.
+The files on disk already tell a new session what the code *is*. What they
+cannot tell it is where the work *stands*: the task, the decision, the
+dead end, the boundary, the next step. That state is small, and cheap to
+carry if it is carried precisely. Velra keeps exact identifiers (test ids,
+file paths, the function named as next) ahead of prose, and says of every
+line whether it was observed or inferred. It presents the capsule as a
+record, not an instruction: the files remain the source of truth.
 
-### Verify the install
+## What is carried forward
 
-```bash
-velra status
-```
+Sections appear only when there is something to say.
 
-```
-✓ Enabled (13 hook handlers registered)
-  Claude Code: 2.1.270 (from VS Code extension)
-  Binary:      /home/you/.velra/bin/velra
-  Database:    ~/.velra/velra.db (0 KiB)
-  Tracking:    0 session(s), 0 event(s)
-```
-
-If anything looks wrong, `doctor` tells you exactly what and exits non-zero:
-
-```bash
-velra doctor
-```
-
-```
-✓ settings parse: ~/.claude/settings.json
-✓ binary: /home/you/.velra/bin/velra
-✓ 13 hook handlers registered across 10 events
-✓ database: WAL, schema v2
-✓ no recent errors
-```
-
-### The actual workflow
-
-There isn't one. That is the point.
-
-1. Register the hooks once, as above. That is the entire setup.
-2. Keep using Claude Code exactly as you did before. Velra is invoked by Claude
-   Code when an event fires, does its work in a few milliseconds, and exits.
-   There is nothing running between invocations.
-3. When context fills up and `/compact` runs, Velra freezes a snapshot first
-   and injects a bounded continuation capsule into the session that follows.
-   You do not do anything.
-4. Curious what would survive right now? `velra inspect`. Want the detail
-   behind a line? `velra inspect --checkpoint <id> --section dead-ends`.
-
-Every hook exits 0. Always. If the database is locked, corrupt, read-only or
-missing, Claude Code never notices.
-
-### Uninstall
-
-```bash
-velra disable
-```
-
-That removes the hook registrations and restores `~/.claude/settings.json`
-**byte for byte** — comments, key order and trailing whitespace intact. It is
-tested, and it is the same guarantee whichever way you installed.
-
-To remove the rest: delete `~/.velra`, and `npm uninstall -g velra` or
-`rm ~/.velra/bin/velra` depending on how it got there.
-
-Add `--dry-run` to `enable` or `disable` to print the settings diff without
-writing anything.
-
----
-
-## What this actually is
-
-Long Claude Code sessions run out of context. `/compact` replaces the
-conversation with a model written summary, and that summary is a generated
-artifact: its length and its content both vary run to run. Across the eight
-sessions of this repo's four-replicate benchmark, the native summary ranged
-from **777 to 4,977 tokens** — and in one session Claude Code produced no
-compaction summary at all.
-
-Velra does not replace that summary and does not try to. It runs alongside it
-and adds one thing the summary cannot promise: a record that is **bounded**,
-**deterministic**, and **traceable to the tool calls that produced it**.
-
-| | Native compaction summary | Velra continuation capsule |
-|---|---|---|
-| Size | Varies: 777 to 4,977 tokens measured | Bounded: rendered to 745 estimated tokens, hard ceiling 1,000 |
-| Reproducibility | Regenerated by a model each time | Pure function of a SQLite snapshot, byte identical across platforms |
-| Provenance | Prose, no sourcing | Every line tagged `OBSERVED` or `INFERRED`, with `velra inspect` for the detail |
-| Failure mode | Can refuse, can drift, can omit | Fails open: hook exits 0, Claude Code proceeds as if Velra were absent |
-
-Across four replicates the delivered capsule measured **705, 715, 721 and 722
-real tokens** on Anthropic's own tokenizer — median **718**, a 78-token margin
-under the 800 ceiling — each with a validated zero-delta control.
-
----
-
-## The two problems it addresses
-
-### Compaction amnesia
-
-The thing a summary drops first is the negative result. What you *tried* and
-*abandoned* reads as unimportant next to what you built, so it gets compressed
-out. The agent then re-proposes the approach you already threw away, and you
-spend a turn explaining the thing you explained an hour ago.
-
-Velra tracks reverts structurally rather than semantically. When a file is
-edited and then restored through git, that is an event in a log, not a
-judgement call. The capsule carries a `[DEAD_ENDS]` section naming the file
-that was abandoned and the test result observed afterwards.
-
-Read the caveat before you trust that: Velra records *which file* was reverted,
-not *which idea* was tried. It derives everything from tool events and
-deliberately does not retain edit bodies, so the hypothesis itself is not in
-its data. See [§17 of the report](BENCHMARK_REPORT.md).
-
-### Unbounded and non deterministic continuation payloads
-
-A summary you cannot predict the size of is a summary you cannot budget for.
-The 777 to 4,977 range above is the whole problem: there is no number you can
-plan around, the large end costs real money on every resumed session, and in
-one of the eight sessions there was no summary produced at all.
-
-Velra's capsule has a truncation ladder with a hard ceiling. It gets smaller
-under pressure rather than larger, and it degrades in a defined order.
-
----
-
-## Benchmarks
-
-Two Claude Code sessions. Identical repository (88 files, one planted one cent
-rounding defect), identical 16 turn script, `/compact` at turn 14, measured on
-turn 15. The only difference between the arms is whether Velra's hooks were
-registered.
-
-Four replicates per arm, eight live sessions.
-
-| | Velra | Vanilla |
-|---|---|---|
-| Continuation payload | **705-722 real tokens**, tokenizer measured, control delta 0 | Native summary only, unbounded |
-| Source re-reads after compaction | 0/4 | 0/4 |
-| First edit landed on the defective symbol | 4/4 | 4/4 |
-| Re-explored the reverted dead end | 0/4 | 0/4 |
-| Test suite green at the end | 4/4 | 4/4 |
-| Tool calls on the measured turn | **2, 2, 2, 2** | 3, 2, 4, 3 |
-| Dead-end tracking | Deterministic, SQLite event log | Probabilistic, whatever the summary kept |
-| Hook safety | 481 invocations, 0 non-zero exits, 0 bytes to stderr | n/a |
-
-**Both arms solved the task, every time.** On this particular defect vanilla
-Claude Code did not need help, and the benchmark says so. A dedicated control
-measured Claude Code's own compaction as **not lossy on this task** — it cut
-context 22.1% and a canary planted nine turns earlier was still recalled
-verbatim — so H1 and H2 are reported as **INCONCLUSIVE**, not passed: with
-nothing forgotten, a capsule that prevents forgetting cannot be shown to help.
-What Velra demonstrated is that its record is bounded and deterministic, and
-that it closed the task in exactly 2 tool calls in all four runs against a
-baseline that varied between 2 and 4. A harder defect is the top item on the
-v0.2 list.
-
-### Verdicts
-
-| | Hypothesis | Result |
-|---|---|---|
-| H1 | Compaction amnesia elimination | **INCONCLUSIVE**, target met 4/4 in both arms; the control found compaction was not lossy, so recall was never tested |
-| H2 | Dead-end loop prevention | **INCONCLUSIVE**, `[DEAD_ENDS]` delivered 4/4 and re-explored 0/4 - but the baseline re-explored 0/4 too |
-| H3 | Continuation budget under 800 tokens | **PASSED**, 705-722 measured across 4 replicates |
-| H4 | Zero-overhead fail-open guarantee | **FAILED** |
-
-H4 fails and it stays in the table. The fail-open half is perfect: **481 hook
-invocations, 0 non-zero exits, 0 stderr bytes**. The latency half is not.
-Marginal p50 stays within budget on all nine hook cases (3.46-10.64 ms), but
-the p99 tail does not: worst marginal p99 is **163.31 ms**, and `PreCompact`
-carries the only systematic cost at **+10.64 ms marginal p50** against a 15 ms
-allowance, measured on a 38 MiB database with process spawn already
-subtracted. Two tempting explanations were chased and both were wrong, and
-[§17](BENCHMARK_REPORT.md) records why so nobody re-chases them.
-
----
-
-## Architecture
-
-**1. Hooks, not a wrapper.** Velra registers 13 handlers across 10 Claude Code
-hook events. It never wraps, proxies, or intercepts your session. It is invoked
-by Claude Code and gets out of the way.
-
-**2. An append only event log in SQLite.** `PostToolUse` records what a tool
-did: which file, what hash before and after, what a command printed. `PreToolUse`
-snapshots content before an edit or a git command so a revert can be detected
-later by comparing hashes rather than by asking a model what happened. Every
-event reaches the database or a file spool, never neither.
-
-**3. A reducer derives state.** A cursor walks the log and builds the things
-worth keeping: the objective, file version history, reverts, discards, the
-failing command. This runs at turn boundaries, outside the write lock.
-
-**4. `PreCompact` freezes a checkpoint.** When compaction is about to happen,
-Velra takes a snapshot, renders a capsule, and stores it. This is the barrier:
-after it, the conversation is gone, so whatever was not captured is lost.
-
-**5. A truncation ladder enforces the budget.** The renderer is a pure function
-of the snapshot. If the result exceeds the target it walks a fixed ladder of
-reductions in a defined order (fewer working files, fewer attempts, shorter
-excerpts) until it fits. The target is 745 estimated tokens: the spec's 800
-less a margin for the estimator's measured 6% under-read. A compile time
-assertion fails the build if that margin is narrowed.
-
-**6. `SessionStart` delivers it, exactly once.** A `PENDING -> ATTACHED ->
-CONFIRMED` state machine makes sure the capsule is injected on the first
-channel that fires after compaction and never a second time.
-
-Every hook exits 0. Always. If the database is locked, corrupt, read only, or
-missing, the hook still exits 0 with clean stdout and Claude Code never
-notices. That property has its own chaos test suite.
-
----
-
-## Commands
-
-| Command | What it does |
+| Section | Contents |
 |---|---|
-| `velra enable` | Register hooks in `~/.claude/settings.json`. Backs up first. |
-| `velra disable` | Remove them, restoring the file byte for byte. |
-| `velra status` | Enabled or not, versions, database size, live continuations. |
-| `velra inspect` | What would survive a `/compact` right now. |
-| `velra inspect --checkpoint <id> --section dead-ends` | Full detail behind any capsule line. |
-| `velra doctor` | Diagnose a broken install. Exits non-zero when something is wrong. |
+| `FIRST_MESSAGE`, `SUBTASK_MESSAGE`, `EARLIER_MESSAGE`, `LATEST_MESSAGE` | the objective and the latest direction, in the user's words |
+| `STATED_CONSTRAINTS`, `REJECTED_APPROACHES` | rules and rejections the user stated, quoted verbatim |
+| `WORKSPACE_STATE` | branch and commit, edit count, last test outcome |
+| `TEST_STATUS`, `TEST_RESULT` | per-test status by exact id; the latest test run |
+| `REVERTED_EDITS` | what was tried and undone, with a short excerpt |
+| `RECENT_EDITS`, `FILE_ACTIVITY` | where the work happened |
+| `FAILURE_LOCATION` or `NEXT_TARGET` | inferred: where the failing output points, or the last live edit |
+| `RECORD_DETAIL` | the command that shows full, untruncated detail |
 
-Add `--dry-run` to `enable` or `disable` to print the settings diff without
-writing it.
+Not carried: the assistant's prose or reasoning, whole files, or anything
+Velra did not observe.
 
----
+## How it works
+
+![Velra pipeline: hook events from a source session are captured, redacted and appended to a local ledger, reduced into task state, selected into a snapshot, rendered within a budget, staged by velra restore, claimed once by the next SessionStart(startup) and delivered to a new session](docs/assets/v0.1.2/velra-pipeline.svg)
+
+1. **Capture.** Each hook normalises its event, redacts it and appends it to
+   the ledger, or to a spool file when the database is busy.
+2. **Reduce.** A reducer folds events, in logical order, into task state:
+   objective, constraints, tests, edits, reverts.
+3. **Snapshot and render.** A pure renderer turns the selected state into
+   the capsule. If it is over budget, a fixed ladder removes regenerable
+   detail first and exact identifiers last.
+4. **Stage.** `velra restore` writes the capsule for the source session you
+   picked to `~/.velra/staged/<workspace_id>/`, outside every repository.
+5. **Deliver.** The next **new** session in that workspace
+   (`SessionStart` source `startup`) claims it once and receives it as
+   `additionalContext`.
+
+Full lifecycle, storage, ordering and fail-open design:
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
+## Restore workflow
+
+```bash
+velra restore                    # pick a previous session of this workspace
+velra restore --session <id>     # or name it by its full id (velra restore --list --json)
+velra status                     # the "Staged:" line shows what is waiting, and from which session
+claude                           # a new session in the same project receives it once
+```
+
+`/clear`, `--resume`, `/compact` and forked sessions leave a staged capsule
+alone. It expires after 7 days. Restore renders the source session's
+*current* epoch, so stage **before** you `/clear`. Everything else, step by
+step: [docs/RESTORE.md](docs/RESTORE.md).
+
+## Installation
+
+> **Release status (2026-09-30):** this repository is **0.1.2**. The latest
+> *published* release on GitHub Releases, npm and crates.io is **0.1.1**,
+> which predates `velra restore`. Until 0.1.2 is published,
+> [build from source](docs/INSTALL.md#build-from-source).
+
+From source (Rust 1.98+ and a C compiler for the bundled SQLite):
+
+```bash
+git clone https://github.com/aryanghai12/Velra.git && cd Velra
+cargo install --path crates/velra --locked
+```
+
+Prebuilt, checksum-verified installers (these fetch the latest **published**
+release):
+
+```bash
+curl -LsSf https://raw.githubusercontent.com/aryanghai12/velra/main/install/install.sh | sh   # macOS / Linux
+npm install -g velra                                                                         # any platform
+```
+
+```powershell
+irm https://raw.githubusercontent.com/aryanghai12/velra/main/install/install.ps1 | iex        # Windows
+```
+
+Every method, PATH setup, upgrades and uninstalling: [docs/INSTALL.md](docs/INSTALL.md).
+
+## Quick start
+
+```bash
+velra enable                # once per machine: register the hooks (your settings file is backed up)
+velra doctor                # every line ✓, or an explained !
+# work in Claude Code as usual; Velra records in the background
+velra restore               # when you leave a session: stage its state
+claude                      # the next new session in that project starts with it
+```
+
+## CLI
+
+| Command | Purpose |
+|---|---|
+| `velra enable [--dry-run]` | register the hooks in your user-level Claude Code settings |
+| `velra disable [--purge] [--yes] [--dry-run]` | remove them; the settings file is restored byte for byte |
+| `velra status [--json]` | enabled, tracking, staged capsule for this workspace; exit 1 if unhealthy |
+| `velra doctor [--json]` | diagnose the installation; exit 1 on a failed check |
+| `velra restore [--session ID] [--list] [--dry-run] [--clear] [--json]` | stage a previous session's state for the next new session |
+| `velra inspect [--session ID \| --last] [--checkpoint ID] [--section S] [--trace M]… [--json]` | preview the capsule, drill into a section, or trace where a fact was lost |
+
+Every flag, output and exit code: [docs/CLI.md](docs/CLI.md).
+
+## Workspaces and sessions
+
+A **workspace** is `$CLAUDE_PROJECT_DIR`, else the nearest ancestor holding
+`.git`, else the directory. It owns its sessions and at most one staged
+capsule. A **source session** stays a first-class identity; sessions are
+never merged. The **destination** session keeps its own identity and
+inherits only the capsule text. A capsule staged in one workspace is never
+delivered in another.
 
 ## Configuration
 
-Velra needs no configuration. To change the capsule size, create
-`~/.velra/config.toml`:
+None is required. `~/.velra/config.toml` accepts one key:
 
 ```toml
-# Target capsule size in estimated tokens (default 745, hard ceiling 1000).
-budget_tokens = 600
+budget_tokens = 600   # capsule target in estimated tokens (default 740; hard ceiling 1,000)
 ```
 
 | Variable | Effect |
 |---|---|
-| `VELRA_HOME` | State directory (default `~/.velra`). |
-| `VELRA_DISABLE=1` | Kill switch: every hook exits immediately, touching nothing. |
-| `VELRA_LOG=debug` | Per-invocation phase timing to `~/.velra/logs/debug.log`. |
-| `VELRA_CLAUDE_VERSION` | Assume this Claude Code version instead of detecting it. |
-| `CLAUDE_CONFIG_DIR` | Respected when locating `settings.json`. |
-| `CLAUDE_PROJECT_DIR` | Respected when resolving the project root. |
+| `VELRA_HOME` | state directory (default `~/.velra`) |
+| `VELRA_DISABLE=1` | every hook returns immediately (`~/.velra/disabled` does the same persistently) |
+| `VELRA_LOG=debug` | per-hook timing and delivery lines in `~/.velra/logs/debug.log` |
+| `VELRA_CLAUDE_VERSION` | assume this Claude Code version instead of detecting it |
 
-Install-time only, honoured by the installers and the npm launcher:
-`VELRA_VERSION`, `VELRA_DOWNLOAD_BASE`, `VELRA_NO_MODIFY_PATH`,
-`VELRA_BINARY`, `VELRA_NO_DOWNLOAD`.
+Files, hook table and version compatibility: [docs/CONFIGURATION.md](docs/CONFIGURATION.md).
 
----
+## Guarantees
 
-## Security
+Enforced by the implementation and checked by tests:
 
-Everything stays on your machine. There is **no network code in the hook
-path** — the only network access in the whole project is an installer
-downloading a release archive from GitHub, and CI fails the build if a
-network-capable crate ever enters the hook path's dependency graph.
+- hooks always exit 0, never write to stderr, and write at most one JSON object;
+- nothing leaves the machine, and nothing is written inside your repository;
+- known secret formats are redacted before anything is persisted;
+- a capsule never exceeds 1,000 estimated tokens or 9,500 characters;
+- the same ledger at the same clock renders byte-identical text;
+- only an explicit `velra restore` crosses sessions, only within one workspace;
+- a staged capsule is delivered **at most once**, and only to a new session.
 
-No accounts, no telemetry, no API keys, no LLM calls. Velra does not read your
-conversation transcript.
+"At most once" is exact: if a session start is killed after writing the
+capsule and before recording that, it is not delivered again, and you
+restage it. Every claim, with its test and its limits:
+[docs/GUARANTEES.md](docs/GUARANTEES.md).
 
-Redaction runs **before** anything is persisted, including the file spool.
-Files matching `.env`, `*.pem`, `id_rsa*`, and `.ssh/**` are stored as a path
-and a hash with no excerpt at all. Velra writes nothing inside your repository
-and never touches project level `.claude/settings*.json`.
+## Limitations
 
-Every download is checksum-verified against the SHA-256 published with the
-release, and release archives carry GitHub build provenance attestations. The
-npm package has zero dependencies and no postinstall script.
+- The capsule is a bounded rendering of **recorded operational state**,
+  not the conversation. Assistant reasoning is never captured, and the
+  budget ladder drops detail (your own wording before exact identifiers).
+- Velra only knows sessions it watched: enable it before the work you want
+  to carry.
+- A restore is a snapshot taken when you run it, not live state.
+- Claude Code's hook payloads and transcripts are not a stable public
+  interface. A future Claude Code change can require a Velra update.
+- Velra integrates with Claude Code only.
 
-Full detail, including exactly what is captured per tool event and the
-vulnerability reporting process: [SECURITY.md](SECURITY.md).
+## Security and privacy
 
----
+Local-first: no network code in the hook path (CI enforces it), no model
+calls, no accounts. State lives under `~/.velra` (`0700` on POSIX).
+Redaction is pattern-based, so an unusual secret format can pass through.
+A capsule quotes your prompts, so anything you typed can reach the next
+session in that workspace. Details and residual risks: [SECURITY.md](SECURITY.md).
 
-## Development
+## Benchmark
+
+Two kinds of v0.1.2 evidence, kept apart:
+
+| Evidence | What it shows |
+|---|---|
+| **Live qualification** (4 matched pairs, 8 trials, 16 Claude Code sessions; Claude Code 2.1.280, Sonnet; build `51b96cb`) | The mechanism held in 4/4 Velra trials. Velra destinations met the registered correctness criterion 4/4, baselines 0/4: every baseline fixed the target test but also edited code the earlier conversation had put out of scope. Total input was lower in 3 of 4 pairs (−25.7%, −28.0%, −32.0%) and higher in 1 (+13.4%). |
+| **Final-build replay** (this release's binary, offline) | The four frozen source ledgers from that run, verified by SHA-256, replayed through `velra restore` and `SessionStart` delivery: every declared marker (14/14) reached the delivered context, capsules were 710–721 estimated tokens, a second session start received nothing, and two independent replays matched. |
+
+![Total input tokens per matched pair in the v0.1.2 live qualification, baseline versus Velra destination sessions, n = 4 pairs](docs/assets/v0.1.2/requal-total-input.svg)
+
+The live run is qualification evidence, not an effect size. It predates
+this release's hardening, and its baseline is a fresh session, not
+`--resume`. Protocol, per-pair data, limitations and reproduction:
+[docs/BENCHMARK.md](docs/BENCHMARK.md).
+
+## Platform support
+
+Windows, macOS and Linux, x64 and ARM64, with Claude Code ≥ 1.0.62 for
+restore delivery (`SessionStart`). Automated coverage differs by platform,
+and macOS is not verified on this release tree. The exact status is in
+[docs/GUARANTEES.md → Platform support](docs/GUARANTEES.md#platform-support).
+
+## Testing and development
 
 ```bash
-cargo test --workspace --all-features                                  # 157 tests
+cargo build --release -p velra
+cargo test --workspace --all-features --no-fail-fast
 cargo clippy --workspace --all-targets --all-features -- -D warnings
-cargo fmt --all
-python scripts/smoke.py                                                # full product pass
-python -m pytest bench/tests -q                                        # the harness's own tests
-python bench/harness/selftest.py                                       # the benchmark pipeline, offline
-python bench/run_full_benchmark.py                                     # the v0.1 experiment
-python bench/run_efficacy_benchmark.py                                 # the v0.1.1 efficacy experiment
+cargo fmt --all -- --check
+python -m pytest bench/tests -q
+python scripts/smoke.py              # end to end against the release binary, offline
 ```
 
-The last one is the experiment the open problems above are blocking on. It runs
-three scenarios whose answers are **not recoverable from the repository**, with
-success criteria pre-registered in `bench/harness/preregistration.json` and
-hashed into every artifact. [`bench/README.md`](bench/README.md) explains the
-design and what each decision is a response to.
-
-Two tests are `#[cfg(unix)]` and do not compile on Windows, so the same tree
-reports 159 on Linux and 157 here. Nothing is missing when the count is lower.
-
-The repository pins no toolchain. CI runs `stable` on Linux, macOS and Windows,
-plus a separate job that compiles against the declared MSRV of 1.98. Building
-from source needs a C toolchain for the bundled SQLite; installing a release
-binary does not.
-
-[HANDOFF.md](HANDOFF.md) has the full picture for picking this up cold,
-including the toolchain notes and the gotchas that cost time.
-
----
+What each suite covers, platform coverage and known intermittent tests:
+[docs/TESTING.md](docs/TESTING.md). Toolchains, layout and the release
+build: [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
 
 ## Contributing
 
-This is v0.1 and it is honest about where it stands. The most useful things
-right now:
+Bug reports with `velra --version`, `velra doctor --json` and, for content
+problems, `velra inspect --trace "<fact>" --json` are the most useful thing
+you can send. A hook that exits non-zero or writes to stderr is a
+top-severity bug. Every behavioural decision gets a numbered row in
+[DECISIONS.md](DECISIONS.md). See [CONTRIBUTING.md](CONTRIBUTING.md).
 
-**Known open problems**, all documented with evidence:
+## Troubleshooting
 
-1. **The benchmark cannot currently test its own main claim.** The control
-   measured Claude Code's compaction as *not lossy* on this task, so H1 and H2
-   are INCONCLUSIVE. A fixture whose defect cannot be recovered from the
-   failing assertion alone is the blocking work. [§17](BENCHMARK_REPORT.md)
-2. **The capsule was rejected as a prompt injection in 1 of 3 replicates** on
-   2026-09-13. It did not recur in the four replicates of 2026-09-14 (**0/4**),
-   leaving 1/7 across every replicate ever run - too few samples to bound.
-   Reframing the block as passive workspace state is still the v0.2 plan.
-   [§18](BENCHMARK_REPORT.md)
-3. **The truncation ladder has a cliff.** `[WORKING_FILES]` goes from four files
-   to zero in one step, and across four replicates it was dropped **4/4** even
-   though every capsule came in 78+ tokens under the ceiling. A
-   `working_max = 2` rung fixes it.
-4. **`PreCompact` is over its latency budget**, +10.64 ms marginal p50 against
-   a 15 ms allowance and the only hook case with a systematic cost above 10 ms.
-5. **H1 needs a harder test.** Both arms solve the current defect in two to
-   four tool calls, so the task cannot separate them. A defect needing several
-   coordinated edits, or two competing plausible dead ends, would.
+| Symptom | Start with |
+|---|---|
+| `unrecognized subcommand 'restore'` | you have 0.1.1: `velra --version` |
+| "No previous sessions found for this workspace" | you are in a different workspace from the session: `velra restore --list --json` |
+| the new session received nothing | `velra status`: if `Staged:` is still there, the session was not a new one, or ran in another workspace |
+| a fact is missing from the capsule | `velra inspect --session <id> --trace "<fact>"` |
 
-**What helps most:** run it on a real long session and tell me what the capsule
-got wrong. Open an issue with the `velra inspect` output. Bug reports against
-the fail-open guarantee are especially welcome: if you ever see Velra produce a
-non-zero exit or write to stderr, that is a bug of the highest severity in this
-project and I want to know.
+The full matrix: [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md).
 
-Every resolved ambiguity gets a numbered row in [DECISIONS.md](DECISIONS.md),
-currently D1 to D63. If you change behaviour, add one.
+## Status
 
----
+Version **0.1.2**, unreleased. Changes and known limitations:
+[CHANGELOG.md](CHANGELOG.md). Release process: [docs/RELEASING.md](docs/RELEASING.md).
+
+## Historical evidence
+
+Earlier benchmarks and design notes are kept unchanged for provenance and
+are **not** current release evidence: the v0.1 `/compact` benchmark
+([BENCHMARK_REPORT.md](BENCHMARK_REPORT.md)), the v0.1 handoff notes
+([HANDOFF.md](HANDOFF.md)), and the result trees listed in
+[bench/results/README.md](bench/results/README.md). The documentation index
+separates current and historical material: [docs/README.md](docs/README.md).
 
 ## License
 

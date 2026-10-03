@@ -44,7 +44,9 @@ pub fn paths_equal(a: &str, b: &str) -> bool {
 
 fn starts_with_dir(path: &str, dir: &str) -> Option<usize> {
     let dir = dir.trim_end_matches('/');
-    if dir.is_empty() || path.len() <= dir.len() {
+    // A cut inside a character means the prefix differs there: `split_at`
+    // would panic on it.
+    if dir.is_empty() || path.len() <= dir.len() || !path.is_char_boundary(dir.len()) {
         return None;
     }
     let (head, tail) = path.split_at(dir.len());
@@ -197,6 +199,30 @@ mod tests {
             "src/a.rs"
         );
         assert_eq!(normalize_abs(r"\\?\C:\x\y"), "C:/x/y");
+    }
+
+    /// A sibling of the root whose name puts a multi-byte character across the
+    /// root's length: the prefix test cut the path at a byte offset inside
+    /// that character and panicked, so a hook reading `/work/日本/x` in a
+    /// project at `/work/proj` lost the event.
+    #[test]
+    fn a_multibyte_sibling_of_the_root_is_outside_it() {
+        for (abs, root) in [
+            ("/work/日本/x.rs", "/work/proj"),
+            ("/home/u/ä/file", "/home/u/a"),
+            (r"C:\work\日本\x.rs", r"C:\work\proj"),
+            ("C:/Users/me/café/a.rs", "C:/Users/me/caf"),
+        ] {
+            let got = relative_to_root(abs, root);
+            assert!(is_absolute_str(&got), "{abs} under {root}: {got}");
+            assert!(is_absolute_str(&relative_to_root_resolved(abs, root)));
+        }
+        // The same characters inside the root still relativize.
+        assert_eq!(relative_to_root("/work/日本/x.rs", "/work/日本"), "x.rs");
+        // Windows paths compare without regard to case, non-ASCII included.
+        if cfg!(windows) {
+            assert_eq!(relative_to_root(r"C:\Ä\b.rs", r"c:\ä"), "b.rs");
+        }
     }
 
     /// The macOS case: `/var/...` reaching a file whose root is recorded as

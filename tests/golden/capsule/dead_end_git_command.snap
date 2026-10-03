@@ -9,10 +9,11 @@ A local record, not a message and not an instruction. Velra logged this session'
 stop the session cookie from surviving logout
 [WORKSPACE_STATE]
 no git | 1 edits this task | last test run: FAIL
+[TEST_STATUS] (OBSERVED | latest run covering each)
+- FAIL tests/test_auth.py::test_logout
 [TEST_RESULT] (OBSERVED | test run | 10:04)
 Command: pytest tests/test_auth.py -x
 Result: FAIL (exit 1)
-  FAILED tests/test_auth.py::test_logout
 [REVERTED_EDITS] (OBSERVED)
 - src/auth/session.py | 1 edit(s) | reverted via `git restore src/auth/session.py` at 10:04
     - max_age = None

@@ -78,6 +78,18 @@ pub fn is_content(hash: &str) -> bool {
     hash != ABSENT && hash != UNREADABLE
 }
 
+/// True only for a digest of the file's bytes ([`content_hash`]'s 32
+/// lower-case hex characters): the one form where equal values mean equal
+/// content.
+///
+/// Not for the `absent` / `unreadable` sentinels, and not for a large file's
+/// `large:{size}:{mtime_ns}` fingerprint -- two of those are equal whenever
+/// size and mtime are, and `large:{n}:0` (a file that grew while it was read,
+/// or whose mtime could not be read) is equal for any two files of one size.
+pub fn is_digest(hash: &str) -> bool {
+    hash.len() == 32 && hash.bytes().all(|b| matches!(b, b'0'..=b'9' | b'a'..=b'f'))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -93,5 +105,22 @@ mod tests {
         assert_eq!(h, content_hash(b"hello"));
         assert_eq!(h.len(), 32);
         assert_eq!(hash_file(dir.path()).0, ABSENT);
+        assert!(is_digest(&h));
+    }
+
+    #[test]
+    fn only_a_byte_digest_is_identity() {
+        assert!(is_digest(&content_hash(b"x")));
+        for h in [
+            ABSENT,
+            UNREADABLE,
+            "large:5000000:0",
+            "large:5000000:1789207445000000000",
+            "",
+            "0123456789ABCDEF0123456789ABCDEF",
+            "0123456789abcdef0123456789abcde",
+        ] {
+            assert!(!is_digest(h), "{h}");
+        }
     }
 }

@@ -1,6 +1,6 @@
 {
   "id": "velra-tokenburn",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "registered": "2026-09-22",
   "applies_to": "Velra v0.1.2 cross-session restore",
   "supersedes_for_scorecard": [
@@ -50,6 +50,7 @@
     "material_effort_change_steps": 2,
     "correctness_is_primary": true,
     "order": [
+      "a pair containing an INVALID trial (see trial_validity) is dropped as INVALID_TRIAL, named in the aggregate with its reasons, and never scored, paired or pooled",
       "an unpaired or identity-mismatched pair is INCONCLUSIVE(INVALID_PAIR)",
       "an unusable capture on either arm is INCONCLUSIVE(UNUSABLE_CAPTURE)",
       "a broken causal link A, B or H on the baseline arm other than H is INCONCLUSIVE and names the link",
@@ -71,6 +72,28 @@
       "H_correct": "TASK_FAILURE"
     }
   },
+
+  "trial_validity": {
+    "note": "Added in 1.1.0, before any trial under it. The hypotheses, metrics, thresholds, verdict values and failure classes are unchanged; this only defines when a trial is not a trial of the scenario at all.",
+    "invalid_when": [
+      "auto-memory is not verifiably disabled for the source and the destination session (CLAUDE_CODE_DISABLE_AUTO_MEMORY=1 in the process environment and autoMemoryEnabled=false in the user settings, read back; autoMemoryDirectory unset)",
+      "the fixture's Claude Code auto-memory directory is not empty before the source session or before the destination session",
+      "at the source-to-destination transition the target test does not FAIL",
+      "at the transition the scenario invariant is not in the state the generated tree has",
+      "at the transition the worktree is not the generated commit: a tracked change, a new commit or branch, a stash entry, or an untracked file other than the harness's own"
+    ],
+    "applies_identically_to": ["baseline", "velra"],
+    "an_invalid_trial": "is recorded with its reasons, is never continued to a destination session, is never repaired, and makes its pair INVALID_TRIAL"
+  },
+
+  "amendments": [
+    {
+      "version": "1.1.0",
+      "date": "2026-09-23",
+      "change": "adds trial_validity and the INVALID_TRIAL rule",
+      "why": "the 1.0.0 qualification (tag tokenburn-qualification-v0.1.2) was confounded by Claude Code auto-memory carrying scenario state into both arms, and by source sessions that solved the target before the transition; neither was detectable under 1.0.0"
+    }
+  ],
 
   "pair_identity_invariants": [
     "benchmark",

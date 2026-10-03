@@ -258,3 +258,60 @@ fn hooks_work_when_the_project_is_not_a_git_repository() {
     assert!(capsule.contains("no git"), "{capsule}");
     assert!(capsule.contains("[FIRST_MESSAGE]"));
 }
+
+/// Phase 9: a hook's own diagnostics are never a reason for it to fail. The
+/// log directory is a file, so nothing can be logged; debug logging is on,
+/// so every hook tries; the config and state files are garbage; and each
+/// hook runs once normally and once with an injected panic, whose handler
+/// writes to that unwritable log. Every hook exits 0 with nothing on stderr
+/// and at most one JSON object on stdout.
+#[cfg(feature = "fault-injection")]
+#[test]
+fn unwritable_diagnostics_and_garbage_config_never_block_a_hook() {
+    let env = Env::new();
+    std::fs::write(env.home.join("logs"), b"not a directory").unwrap();
+    std::fs::write(env.home.join("config.toml"), b"budget_tokens = [[[\n\x00").unwrap();
+    std::fs::write(env.home.join("state.json"), b"{\"bin_path\": 7,").unwrap();
+    env.write_file("src/a.rs", "fn a() {}\n");
+    let mut prompt = env.base_payload("UserPromptSubmit");
+    prompt["prompt"] = json!("fix src/a.rs; token=abcdefgh12345678 must not be logged");
+    let mut start = env.base_payload("SessionStart");
+    start["source"] = json!("startup");
+    let mut stop = env.base_payload("Stop");
+    stop["stop_hook_active"] = json!(false);
+    let mut compact = env.base_payload("PreCompact");
+    compact["trigger"] = json!("manual");
+    let read: serde_json::Value = serde_json::from_str(&payload(&env)).unwrap();
+    let runs = [
+        ("session-start", start),
+        ("user-prompt-submit", prompt),
+        ("post-tool-use", read),
+        ("stop", stop),
+        ("pre-compact", compact),
+    ];
+    for panic in [None, Some("all")] {
+        for (sub, p) in &runs {
+            let mut vars = vec![("VELRA_LOG", "debug")];
+            if let Some(target) = panic {
+                vars.push(("VELRA_TEST_PANIC", target));
+            }
+            let out = env.hook_with_env(sub, p, &vars);
+            assert!(
+                out.stderr.is_empty(),
+                "{sub} (panic {panic:?}): stderr {}",
+                out.stderr
+            );
+            out.assert_contract();
+        }
+        let out = env
+            .cmd()
+            .env("VELRA_LOG", "debug")
+            .arg("reduce")
+            .write_stdin("{}")
+            .output()
+            .expect("run reduce");
+        assert_eq!(out.status.code(), Some(0));
+        assert!(out.stderr.is_empty() && out.stdout.is_empty());
+    }
+    assert!(env.home.join("logs").is_file(), "nothing replaced the file");
+}

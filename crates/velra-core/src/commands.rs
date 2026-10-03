@@ -413,10 +413,133 @@ pub fn path_tokens(text: &str, limit: usize) -> Vec<PathToken> {
     out
 }
 
+/// Mentioned paths kept per command.
+pub const MENTION_LIMIT: usize = 16;
+
+/// Directory names whose files are installed or generated, not the project's
+/// own source. A traceback that runs through the test runner or a dependency
+/// names them before the project's file, and a virtualenv or `node_modules`
+/// usually lives inside the workspace.
+const THIRD_PARTY_DIRS: &[&str] = &[
+    "node_modules",
+    "bower_components",
+    "site-packages",
+    "dist-packages",
+    "__pycache__",
+    ".pytest_cache",
+    ".mypy_cache",
+    ".ruff_cache",
+    ".tox",
+    ".nox",
+    ".gradle",
+    ".git",
+];
+
+/// Whether a project-relative path lies in an installed or generated
+/// directory ([`THIRD_PARTY_DIRS`]).
+pub fn is_third_party(rel: &str) -> bool {
+    rel.split(['/', '\\'])
+        .any(|c| THIRD_PARTY_DIRS.iter().any(|d| c.eq_ignore_ascii_case(d)))
+}
+
+/// The output a shell event stored, as the reducer reads it: a failed call's
+/// error text after its `Exit code N` line, else stdout then stderr; and the
+/// exit code the event reports.
+pub fn stored_output(p: &crate::event::Payload, failure: bool) -> (Option<i64>, String) {
+    if failure {
+        let err = p.error.as_deref().unwrap_or("");
+        let (code, rest) = parse_exit_code_prefix(err);
+        (p.exit_code.or(code), rest.to_string())
+    } else {
+        let mut out = p.stdout_tail.clone().unwrap_or_default();
+        if let Some(e) = p.stderr_tail.as_deref().filter(|e| !e.is_empty()) {
+            if !out.is_empty() {
+                out.push('\n');
+            }
+            out.push_str(e);
+        }
+        (p.exit_code, out)
+    }
+}
+
+/// The workspace files `output` names, in order of appearance, at most
+/// [`MENTION_LIMIT`]: each candidate token ([`path_tokens`]) that is a file on
+/// disk *now*, inside `root`, and not in an installed or generated directory
+/// ([`is_third_party`]).
+///
+/// "Now" is the point: this is called by the hook as the command returns, and
+/// what it finds is carried in the event (`Payload::mentioned`). Checked by the
+/// reducer instead, whenever it happened to run, a file created after the
+/// command read as named by its failure, and one deleted after it did not.
+pub fn mentioned_files(
+    output: &str,
+    cwd: Option<&std::path::Path>,
+    root: &std::path::Path,
+) -> Vec<crate::event::PathMention> {
+    use crate::paths;
+    use std::path::PathBuf;
+    let root_str = root.to_string_lossy().into_owned();
+    let mut out: Vec<crate::event::PathMention> = Vec::new();
+    for tok in path_tokens(output, 40) {
+        if out.len() >= MENTION_LIMIT {
+            break;
+        }
+        let candidates: Vec<PathBuf> = if paths::is_absolute_str(&tok.path) {
+            vec![PathBuf::from(&tok.path)]
+        } else {
+            cwd.map(|c| c.join(&tok.path))
+                .into_iter()
+                .chain(std::iter::once(root.join(&tok.path)))
+                .collect()
+        };
+        let Some(found) = candidates.into_iter().find(|c| c.is_file()) else {
+            continue;
+        };
+        let rel = paths::relative_to_root_resolved(&found.to_string_lossy(), &root_str);
+        if paths::is_absolute_str(&rel) {
+            continue; // outside the project root
+        }
+        let rel = rel.replace("/./", "/");
+        if is_third_party(&rel) {
+            continue;
+        }
+        if out.iter().any(|m| m.path == rel && m.line == tok.line) {
+            continue;
+        }
+        out.push(crate::event::PathMention {
+            path: rel,
+            line: tok.line,
+            raw: tok.raw,
+        });
+    }
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use CommandKind::*;
+
+    #[test]
+    fn third_party_directories() {
+        for p in [
+            "node_modules/x/index.js",
+            ".venv/lib/python3.12/site-packages/_pytest/python.py",
+            "venv/Lib/Site-Packages/a.py",
+            "src/__pycache__/a.cpython-312.pyc",
+            ".tox/py312/lib/a.py",
+        ] {
+            assert!(is_third_party(p), "{p}");
+        }
+        for p in [
+            "src/pay.py",
+            "tests/test_pay.py",
+            "packages/site/a.ts",
+            "node_modules_shim.js",
+        ] {
+            assert!(!is_third_party(p), "{p}");
+        }
+    }
 
     fn kind(c: &str) -> CommandKind {
         classify(c).kind

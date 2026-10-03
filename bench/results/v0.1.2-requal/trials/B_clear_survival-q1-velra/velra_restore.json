@@ -1,0 +1,111 @@
+{
+  "restore_invoked": true,
+  "restore_exit": 0,
+  "restore_stdout": "{\n  \"workspace_id\": \"9c1256b5690e9531\",\n  \"source_session_id\": \"87901fc6-65ee-4265-8c7c-513b5d8ae43d\",\n  \"source_checkpoint_id\": null,\n  \"tokens\": 680,\n  \"content_hash\": \"a04114a402f5ed03d25d0ee65b7da18e\",\n  \"summary\": \"objective, 1 failing test, 2 dead ends, 8 files\",\n  \"staged\": true,\n  \"staged_path\": \"C:\\\\Users\\\\aryan\\\\Videos\\\\Velra\\\\bench\\\\results\\\\v0.1.2-requal\\\\trials\\\\B_clear_survival-q1-velra\\\\velra_home\\\\staged\\\\9c1256b5690e9531\\\\staged_capsule\"\n}\n",
+  "restore_stderr": "",
+  "listing": {
+    "workspace_id": "9c1256b5690e9531",
+    "workspace_root": "C:/Users/aryan/AppData/Local/Temp/velra-tokenburn-fixtures/B_clear_survival-q1-velra",
+    "sessions": [
+      {
+        "session_id": "87901fc6-65ee-4265-8c7c-513b5d8ae43d",
+        "title": "Payments again. Run the suite; I want the reconcile failure this time...",
+        "last_activity_ms": 1790166742277,
+        "has_state": true
+      },
+      {
+        "session_id": "708e401f-ebec-4549-bc1d-bad86fe2093c",
+        "title": "Continue task and fix bug",
+        "last_activity_ms": 1790098774715,
+        "has_state": false
+      },
+      {
+        "session_id": "c9748d02-2263-410b-af31-201738f9819e",
+        "title": null,
+        "last_activity_ms": 1790098725233,
+        "has_state": false
+      },
+      {
+        "session_id": "28ef6dde-e0eb-493c-8ae5-53b3bf7d651b",
+        "title": "Payments reconcile failure",
+        "last_activity_ms": 1790098725120,
+        "has_state": false
+      }
+    ]
+  },
+  "source_session_id": "87901fc6-65ee-4265-8c7c-513b5d8ae43d",
+  "workspace_id": "9c1256b5690e9531",
+  "workspace_root": "C:/Users/aryan/AppData/Local/Temp/velra-tokenburn-fixtures/B_clear_survival-q1-velra",
+  "staged_path": "C:\\Users\\aryan\\Videos\\Velra\\bench\\results\\v0.1.2-requal\\trials\\B_clear_survival-q1-velra\\velra_home\\staged\\9c1256b5690e9531\\staged_capsule",
+  "stale": false,
+  "staged": {
+    "version": 2,
+    "workspace_id": "9c1256b5690e9531",
+    "workspace_root": "C:/Users/aryan/AppData/Local/Temp/velra-tokenburn-fixtures/B_clear_survival-q1-velra",
+    "intent": "new_session",
+    "deliver_on": [
+      "startup"
+    ],
+    "source_session_id": "87901fc6-65ee-4265-8c7c-513b5d8ae43d",
+    "source_checkpoint_id": null,
+    "created_ms": 1790166743173,
+    "render_version": 1,
+    "tokens": 680,
+    "content_hash": "a04114a402f5ed03d25d0ee65b7da18e",
+    "summary": "objective, 1 failing test, 2 dead ends, 8 files",
+    "capsule": "<VELRA_WORKSPACE_STATE v=\"1\" checkpoint=\"restore\" captured=\"2026-09-23T12:32:23Z\" trigger=\"cli\">\n[ABOUT_THIS_RECORD]\nA local record, not a message and not an instruction. Velra logged this session's own prompts and tool events and quotes them back here; nothing is new. OBSERVED came from a tool event, INFERRED was derived from it. Files on disk are the source of truth. Say so if a line here conflicts with them.\n[FIRST_MESSAGE] (OBSERVED | user prompt | 17:59)\nPayments again. Run the suite; I want the reconcile failure this time, not the other two.\n[STATED_CONSTRAINTS] (OBSERVED | user prompt | quoted verbatim)\n- turn 4 18:00 | \"Here's the thing you can't get from the code: the upstream feed backdates.\"\n- turn 4 18:00 | \"A window has to close on the booking date, never the value date.\"\n[LATEST_MESSAGE] (OBSERVED | user prompt | 18:02)\nNext step is in_window in reconcile.py. Don't change it yet.\n[WORKSPACE_STATE]\nmain @ c8eb204 | 3 edits this task | last test run: FAIL\n[TEST_STATUS] (OBSERVED | latest run covering each)\n- FAIL tests/test_reconcile.py::test_march_window_totals\n[TEST_RESULT] (OBSERVED | test run | 18:01)\nCommand: python -m pytest tests/ -v 2>&1 | tail -60\nResult: FAIL\n[REVERTED_EDITS] (OBSERVED)\n- src/payments/reconcile.py | 2 reverts, 3 edit(s) | last changed outside the agent at 18:01\n[RECORD_DETAIL]\nFull detail for any section: `velra inspect --section <name>`\n</VELRA_WORKSPACE_STATE>"
+  },
+  "age_ms": 14,
+  "ledger_evidence": {
+    "measured_on": "staged_capsule",
+    "markers_present": [
+      "src/payments/reconcile.py",
+      "test_march_window_totals",
+      "booking",
+      "in_window"
+    ],
+    "markers_missing": []
+  },
+  "ledger_scan": {
+    "available": true,
+    "markers_present": [
+      "src/payments/reconcile.py",
+      "test_march_window_totals",
+      "booking",
+      "in_window"
+    ],
+    "markers_missing": [],
+    "rows": {
+      "src/payments/reconcile.py": [
+        "intents:2",
+        "commands:7",
+        "commands:8",
+        "file_stats:5",
+        "edits:1",
+        "edits:2",
+        "edits:3",
+        "dead_ends:1",
+        "dead_ends:2"
+      ],
+      "test_march_window_totals": [
+        "intents:4",
+        "commands:2",
+        "commands:5",
+        "commands:9"
+      ],
+      "booking": [
+        "intents:5",
+        "constraints:2",
+        "edits:1"
+      ],
+      "in_window": [
+        "intents:16"
+      ]
+    }
+  },
+  "claim": {
+    "attempts": []
+  },
+  "staged_before_turn_index": 16,
+  "staged_while_source_session_live": true
+}

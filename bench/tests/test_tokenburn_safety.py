@@ -305,10 +305,15 @@ def test_both_arms_get_the_same_continuation_prompt():
 
 
 def test_the_leak_scanner_covers_the_nine_required_surfaces():
+    # The nine of the Phase 3 specification, plus Claude Code's per-project
+    # auto-memory (prereg 1.1.0): the v0.1.2 qualification showed it carrying
+    # scenario state into both arms from outside the repository.
     required = {"tree", "filenames", "git_history", "git_refs", "claude_md",
-                "project_memory", "environment", "post_prompt", "pre_prompts"}
+                "project_memory", "auto_memory", "environment", "post_prompt",
+                "pre_prompts"}
     assert set(leakscan.ALL_SURFACES) == required
     assert "pre_prompts" not in leakscan.FATAL_SURFACES
+    assert "auto_memory" in leakscan.FATAL_SURFACES
 
 
 def test_git_history_is_a_fatal_surface(tmp_path):

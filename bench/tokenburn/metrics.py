@@ -274,12 +274,38 @@ def _any_marker(haystack: str, markers: Iterable[str]) -> list[str]:
     return [m for m in markers if _norm(m) and _norm(m) in low]
 
 
+def category_coverage(surface: str, markers: Iterable[str]) -> dict:
+    """One declared category scored against ``surface``.
+
+    ``identified`` is true only when every required marker is present:
+    3 required, 2 present is *not* identified.
+    """
+    markers = [m for m in markers if _norm(m)]
+    found = _any_marker(surface, markers)
+    missing = [m for m in markers if m not in found]
+    return {
+        "declared": True,
+        "identified": bool(markers) and not missing,
+        "markers": list(markers),
+        "markers_found": found,
+        "markers_missing": missing,
+        "coverage": (len(found) / len(markers)) if markers else None,
+    }
+
+
 def state_recovery(parsed: parse.ParsedTrial, manifest: dict) -> dict:
     """A2: did the destination identify the four things it needed?
 
     Scored over the assistant prose *and* the targets of the tools it used: an
     agent that opens the right file without narrating it has identified the
     working file, and demanding that it say so would score prose style.
+
+    A category is identified only when **every** marker declared for it is
+    found. Until v0.1.2's qualification review one hit was enough, so a
+    destination that named ``src/payments/retry.py`` but never the failing
+    test or the next function scored ``next_action`` as recovered. Partial
+    coverage is still reported -- ``markers_found`` / ``markers_missing`` and
+    ``coverage`` -- but it is not completeness.
     """
     declared = (manifest.get("state_recovery") or {})
     surface = parsed.assistant_text + "\n" + "\n".join(
@@ -293,9 +319,7 @@ def state_recovery(parsed: parse.ParsedTrial, manifest: dict) -> dict:
                              "markers_found": [],
                              "why": "the scenario declared no markers for this"}
             continue
-        hits = _any_marker(surface, markers)
-        per_item[key] = {"declared": True, "identified": bool(hits),
-                         "markers": list(markers), "markers_found": hits}
+        per_item[key] = category_coverage(surface, markers)
     scored = [v for v in per_item.values() if v["declared"]]
     return {
         "per_item": per_item,

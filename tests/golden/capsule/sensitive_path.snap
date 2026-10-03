@@ -13,7 +13,7 @@ no git | 2 edits this task | last test run: none
 - .env | 1 edit(s) | reverted by a later edit at 10:04
 [FILE_ACTIVITY] (OBSERVED)
 - .env | edited 2x, read 0x
-[FAILURE_LOCATION] (INFERRED | last-active-edit)
+[NEXT_TARGET] (INFERRED | last-active-edit)
 .env
 [RECORD_DETAIL]
 Full detail for any section: `velra inspect --section <name>`

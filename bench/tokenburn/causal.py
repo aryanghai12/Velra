@@ -166,10 +166,15 @@ def link_b(parsed: parse.ParsedTrial) -> dict:
 
 def link_c(parsed: parse.ParsedTrial) -> dict:
     restore = parsed.restore or {}
+    # Historically named: it is a scan of the staged capsule (see
+    # live_trial.do_restore). `ledger_scan` is the ledger, when recorded.
     ledger = restore.get("ledger_evidence") or {}
+    scan = restore.get("ledger_scan") or {}
     evidence = {
         "markers_present": ledger.get("markers_present"),
         "markers_missing": ledger.get("markers_missing"),
+        "measured_on": ledger.get("measured_on", "staged_capsule"),
+        "ledger_scan": scan or None,
         "source_session_id": restore.get("source_session_id"),
         "restore_exit": restore.get("restore_exit"),
     }
@@ -177,10 +182,23 @@ def link_c(parsed: parse.ParsedTrial) -> dict:
         return _link("fail", "no velra_restore.json: nothing records what the "
                              "ledger held", **evidence)
     if ledger.get("markers_missing"):
-        return _link("fail",
-                     "the ledger did not hold every piece of the declared "
-                     "operational state: this is a CAPTURE failure, not a "
-                     "delivery one", **evidence)
+        # The verdict class is fixed by the preregistration (C_retained ->
+        # CAPTURE_FAILURE). What changes is that the reason no longer claims
+        # a capture loss the evidence does not show.
+        if scan.get("available") and not scan.get("markers_missing"):
+            why = ("the staged capsule did not carry every declared marker, "
+                   "although the ledger held all of them: the loss is in "
+                   "selection or rendering, upstream of delivery "
+                   "(`velra inspect --trace <marker>` names the layer)")
+        elif scan.get("available"):
+            why = ("the ledger did not hold every declared marker "
+                   f"({scan.get('markers_missing')}): this is a CAPTURE "
+                   "failure, not a delivery one")
+        else:
+            why = ("the staged capsule did not carry every declared marker; "
+                   "no ledger scan was recorded, so capture and selection "
+                   "losses cannot be told apart")
+        return _link("fail", why, **evidence)
     if not ledger.get("markers_present"):
         return _link("fail", "the restore recorded no ledger evidence at all",
                      **evidence)

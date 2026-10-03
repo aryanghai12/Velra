@@ -55,10 +55,11 @@ from typing import Callable, Sequence
 HERE = pathlib.Path(__file__).resolve().parent
 if __package__ in (None, ""):
     sys.path.insert(0, str(HERE))
+    import isolation  # type: ignore[no-redef]
     import leakscan  # type: ignore[no-redef]
     import prereg  # type: ignore[no-redef]
 else:
-    from . import leakscan, prereg
+    from . import isolation, leakscan, prereg
 
 NL = "\n"
 
@@ -482,6 +483,9 @@ class Scenario:
         git(repo, "commit", "-q", "-m", "payments service")
 
         manifest = {
+            # The generated commit. The source handoff is valid only if the
+            # tree is still exactly this (`isolation.validate_handoff`).
+            "fixture_head": git(repo, "rev-parse", "HEAD"),
             "benchmark": self.name,
             "title": self.title,
             "transition": self.transition,
@@ -500,7 +504,8 @@ class Scenario:
         if verify:
             manifest["ground_truth"] = self.verify(repo)
             manifest["leak_scan"] = leakscan.scan(
-                repo, self.turns, self.continuation_prompt, self.leak_terms)
+                repo, self.turns, self.continuation_prompt, self.leak_terms,
+                memory_dir=isolation.memory_dir(repo))
             if not manifest["leak_scan"]["clean"]:
                 raise SystemExit(
                     f"{self.name}: "
@@ -538,6 +543,8 @@ class Scenario:
                 "target": target,
                 "expect_target": "fail",
                 "observed_target": "fail" if target_code != 0 else "pass",
+                # The state the handoff must still be in.
+                "observed_invariant": self._invariant_holds(repo, invariant),
             }
             for variant in self.variants:
                 for rel, text in variant.files.items():

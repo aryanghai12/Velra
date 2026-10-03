@@ -196,16 +196,22 @@ fn d5_parallel_post_tool_use_delivers_exactly_once() {
     );
 }
 
+/// A known delivery key is the same hook invocation run a second time (two
+/// registrations of the hook, or two session starts in one millisecond). Until
+/// DECISIONS D110 it re-emitted the capsule (§15.5) -- a second injection of
+/// the same text, and of a superseded checkpoint's text just as readily. It
+/// now writes nothing.
 #[test]
-fn d6_duplicate_delivery_key_reemits_without_a_new_injection() {
+fn d6_duplicate_delivery_key_writes_nothing_and_records_no_injection() {
     let mut log = pending();
     let ts = log.ts + 10_000;
-    let first = deliver(&mut log, Channel::UserPrompt, "same-key", ts).expect("delivered");
+    deliver(&mut log, Channel::UserPrompt, "same-key", ts).expect("delivered");
     assert_eq!(injections(&log), 1);
 
-    let again = deliver(&mut log, Channel::UserPrompt, "same-key", ts + 5_000).expect("re-emitted");
-    assert_eq!(again.capsule, first.capsule, "identical capsule");
-    assert!(again.replay);
+    assert!(
+        deliver(&mut log, Channel::UserPrompt, "same-key", ts + 5_000).is_none(),
+        "the capsule is written once per invocation"
+    );
     assert_eq!(injections(&log), 1, "no new injection row");
     let attach: i64 = log
         .db

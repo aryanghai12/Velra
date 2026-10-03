@@ -1,0 +1,144 @@
+{
+  "links": {
+    "A_large_state": {
+      "status": "pass",
+      "why": "17 source turns with a recorded context load",
+      "evidence": {
+        "source_session_turns": 17,
+        "target_context_size": 250000,
+        "synthetic_context_size": 250728,
+        "actual_observed_context_size": null,
+        "context_generation_method": "programmatic synthetic build/test logs, read by the session as part of its turn script",
+        "reason_if_target_not_reached": null,
+        "size_basis": "synthetic_fixture"
+      }
+    },
+    "B_absent_natively": {
+      "status": "pass",
+      "why": "no surface an agent can read carries the state",
+      "evidence": {
+        "surfaces_scanned": [
+          "tree",
+          "filenames",
+          "git_history",
+          "git_refs",
+          "claude_md",
+          "project_memory",
+          "auto_memory",
+          "environment",
+          "post_prompt",
+          "pre_prompts"
+        ],
+        "hits_by_surface": {
+          "pre_prompts": 6
+        },
+        "fatal_hits": [],
+        "terms": [
+          "outside the loop",
+          "before the loop",
+          "once per request",
+          "hoist",
+          "move the key",
+          "compute the key once",
+          "pure function of the request",
+          "no process-wide state",
+          "process-wide state",
+          "incident last quarter",
+          "memoise",
+          "memoize",
+          "module-level dict",
+          "_memo",
+          "the active task",
+          "currently working on",
+          "next action"
+        ]
+      }
+    },
+    "C_retained": {
+      "status": "n/a",
+      "why": "this link describes Velra's machinery; the baseline arm has none",
+      "evidence": {}
+    },
+    "D_staged": {
+      "status": "n/a",
+      "why": "this link describes Velra's machinery; the baseline arm has none",
+      "evidence": {}
+    },
+    "E_delivered": {
+      "status": "n/a",
+      "why": "this link describes Velra's machinery; the baseline arm has none",
+      "evidence": {}
+    },
+    "F_received": {
+      "status": "n/a",
+      "why": "this link describes Velra's machinery; the baseline arm has none",
+      "evidence": {}
+    },
+    "G_used": {
+      "status": "n/a",
+      "why": "this link describes Velra's machinery; the baseline arm has none",
+      "evidence": {}
+    },
+    "H_correct": {
+      "status": "fail",
+      "why": "the task was not completed correctly",
+      "evidence": {
+        "checks": {
+          "required_final_state": {
+            "declared": true,
+            "ok": true,
+            "files": [
+              {
+                "file": "src/payments/retry.py",
+                "ok": true,
+                "missing": [],
+                "forbidden_present": []
+              }
+            ]
+          },
+          "target_test": {
+            "declared": true,
+            "ok": true,
+            "node_id": "tests/test_retry.py::test_retry_preserves_idempotency_key",
+            "exit": 0,
+            "tail": [
+              ".                                                                        [100%]",
+              "1 passed in 0.01s"
+            ]
+          },
+          "no_regression": {
+            "declared": true,
+            "ok": true,
+            "suite_failures": 0,
+            "ceiling": 2,
+            "suite_exit": 0
+          },
+          "invariant": {
+            "declared": true,
+            "file": "src/payments/retry.py",
+            "ok": true,
+            "missing": [],
+            "forbidden_present": []
+          },
+          "dead_end_avoided": {
+            "declared": true,
+            "ok": false,
+            "touched": [
+              "src/payments/ledger.py",
+              "src/payments/reconcile.py"
+            ]
+          }
+        },
+        "declared_checks": 5
+      }
+    },
+    "I_burden_reduced": {
+      "status": "deferred",
+      "why": "'reduced' needs two arms; resolved by the pair verdict",
+      "evidence": {}
+    }
+  },
+  "first_broken_link": "H_correct",
+  "causal_validity": "INCOMPLETE",
+  "summary": "A_large_state=pass; B_absent_natively=pass; C_retained=n/a; D_staged=n/a; E_delivered=n/a; F_received=n/a; G_used=n/a; H_correct=fail; I_burden_reduced=deferred"
+}

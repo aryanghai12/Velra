@@ -221,7 +221,7 @@ fn multiple_sessions_in_one_workspace_cannot_overwrite_each_other() {
     let log = workspace_with_two_sessions();
     let home = log.env.home.clone();
     let ws = log.env.project_id();
-    let path = staging::staged_path(&home, &ws);
+    let path = staging::staged_dir(&home, &ws);
 
     let a = build(&log, "session-a").expect("a");
     staging::stage(&path, &a).expect("stage a");
@@ -338,7 +338,7 @@ fn atomic_staging() {
     let log = workspace_with_two_sessions();
     let home = log.env.home.clone();
     let ws = log.env.project_id();
-    let path = staging::staged_path(&home, &ws);
+    let path = staging::staged_dir(&home, &ws);
 
     let staged = build(&log, "session-a").expect("a");
     staging::stage(&path, &staged).expect("stage");
@@ -365,13 +365,13 @@ fn interrupted_staging() {
     let log = workspace_with_two_sessions();
     let home = log.env.home.clone();
     let ws = log.env.project_id();
-    let path = staging::staged_path(&home, &ws);
+    let path = staging::staged_dir(&home, &ws);
 
     let good = build(&log, "session-a").expect("a");
     staging::stage(&path, &good).expect("stage");
 
     // Simulate the interruption: a temp file that never got renamed.
-    let orphan = staging::staged_dir(&home, &ws).join(".staged_capsule.velra-tmp-killed");
+    let orphan = staging::staged_dir(&home, &ws).join(".capsule.velra-tmp-killed");
     std::fs::write(&orphan, "{\"version\":1,\"workspace_id\":\"trunc").expect("write orphan");
 
     assert_eq!(staging::peek(&path).expect("still there"), good);
@@ -389,7 +389,7 @@ fn two_parallel_restore_operations() {
     let home = log.env.home.clone();
     let ws = log.env.project_id();
     let staged = build(&log, "session-a").expect("a");
-    staging::stage(&staging::staged_path(&home, &ws), &staged).expect("stage");
+    staging::stage(&staging::staged_dir(&home, &ws), &staged).expect("stage");
 
     let winners = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
     let barrier = std::sync::Arc::new(std::sync::Barrier::new(6));
@@ -422,7 +422,7 @@ fn stale_staged_capsule() {
     let home = log.env.home.clone();
     let ws = log.env.project_id();
     let staged = build(&log, "session-a").expect("a");
-    staging::stage(&staging::staged_path(&home, &ws), &staged).expect("stage");
+    staging::stage(&staging::staged_dir(&home, &ws), &staged).expect("stage");
 
     let much_later = staged.created_ms + staging::STAGED_TTL_MS + 1;
     assert!(matches!(
@@ -445,7 +445,7 @@ fn a_capsule_claimed_from_the_wrong_workspace_is_refused() {
     let ws = log.env.project_id();
     let mut staged = build(&log, "session-a").expect("a");
     staged.workspace_id = "ffffffffffffffff".into();
-    staging::stage(&staging::staged_path(&home, &ws), &staged).expect("stage");
+    staging::stage(&staging::staged_dir(&home, &ws), &staged).expect("stage");
 
     assert!(matches!(
         staging::claim(&home, &ws, STARTUP, staged.created_ms + 1),
@@ -484,7 +484,7 @@ fn the_command_stages_the_named_session_and_clears_it_again() {
     let log = workspace_with_two_sessions();
     let ws = log.env.project_id();
     let env = log.into_env();
-    let staged_path = staging::staged_path(&env.home, &ws);
+    let staged_path = staging::staged_dir(&env.home, &ws);
 
     let out = env
         .cmd()
@@ -496,7 +496,12 @@ fn the_command_stages_the_named_session_and_clears_it_again() {
         serde_json::from_str(&String::from_utf8_lossy(&out.stdout)).expect("json");
     assert_eq!(value["source_session_id"], "session-a");
     assert_eq!(value["staged"], true);
-    assert!(staged_path.exists(), "{}", staged_path.display());
+    assert_eq!(
+        staging::records(&staged_path).len(),
+        1,
+        "{}",
+        staged_path.display()
+    );
 
     let on_disk = staging::peek(&staged_path).expect("staged");
     assert_eq!(on_disk.source_session_id, "session-a");
@@ -508,7 +513,7 @@ fn the_command_stages_the_named_session_and_clears_it_again() {
         .output()
         .expect("run restore --clear");
     assert!(out.status.success());
-    assert!(!staged_path.exists());
+    assert!(staging::records(&staged_path).is_empty());
 }
 
 /// An unknown session is a clean, non-zero exit with an explanation — never a
@@ -543,7 +548,7 @@ fn the_command_does_not_stage_on_a_dry_run() {
         .expect("run restore --dry-run");
     assert!(out.status.success(), "{:?}", out);
     assert!(String::from_utf8_lossy(&out.stdout).contains("VELRA_WORKSPACE_STATE"));
-    assert!(!staging::staged_path(&env.home, &ws).exists());
+    assert!(staging::records(&staging::staged_dir(&env.home, &ws)).is_empty());
 }
 
 /// A transcript that is corrupt, truncated or written in a shape this build

@@ -407,28 +407,38 @@ fn the_capsule_never_frames_itself_as_an_instruction() {
 
 /// The preamble is what stands between the block and being read as an
 /// injection. Its five claims are asserted individually so a future rewrite
-/// cannot shorten one of them away by accident.
+/// cannot shorten one of them away by accident -- in the continuation's
+/// preamble and in the one a restored capsule carries into another session,
+/// which must also say whose record it is (D147).
 #[test]
 fn the_preamble_still_makes_every_claim_it_has_to() {
-    let capsule = render::render(&empty_snapshot(), &RenderConfig::default()).text;
-    let preamble = capsule
-        .lines()
-        .nth(2)
-        .expect("the preamble is the third line")
-        .to_lowercase();
-    for claim in [
-        "local record",       // where it came from
-        "not an instruction", // what authority it has
-        "quotes them back",   // quoted, not authored
-        "observed",           // evidence class
-        "inferred",           // evidence class
-        "source of truth",    // the code wins
-        "conflicts",          // surface disagreement, do not resolve it silently
-    ] {
-        assert!(
-            preamble.contains(claim),
-            "the preamble no longer says {claim:?}: {preamble}"
-        );
+    for restore in [false, true] {
+        let mut snap = empty_snapshot();
+        snap.restore = restore;
+        let capsule = render::render(&snap, &RenderConfig::default()).text;
+        let preamble = capsule
+            .lines()
+            .nth(2)
+            .expect("the preamble is the third line")
+            .to_lowercase();
+        for claim in [
+            "local record",       // where it came from
+            "not an instruction", // what authority it has
+            "quotes them back",   // quoted, not authored
+            "observed",           // evidence class
+            "inferred",           // evidence class
+            "source of truth",    // the code wins
+            "conflicts",          // surface disagreement, do not resolve it silently
+        ] {
+            assert!(
+                preamble.contains(claim),
+                "the preamble (restore: {restore}) no longer says {claim:?}: {preamble}"
+            );
+        }
+        if restore {
+            assert!(preamble.contains("another session's"), "{preamble}");
+            assert!(!preamble.contains("this session"), "{preamble}");
+        }
     }
 }
 
@@ -462,10 +472,11 @@ fn the_capsule_contains_no_injection_shaped_language() {
 /// contain: a reader who learns the shape once can rely on it.
 #[test]
 fn section_order_is_stable_across_states() {
-    const ORDER: [&str; 11] = [
+    const ORDER: [&str; 13] = [
         "ABOUT_THIS_RECORD",
         "FIRST_MESSAGE",
         "STATED_CONSTRAINTS",
+        "REJECTED_APPROACHES",
         "SUBTASK_MESSAGE",
         "LATEST_MESSAGE",
         "WORKSPACE_STATE",
@@ -474,6 +485,7 @@ fn section_order_is_stable_across_states() {
         "RECENT_EDITS",
         "FILE_ACTIVITY",
         "FAILURE_LOCATION",
+        "NEXT_TARGET",
     ];
     let position = |name: &str| ORDER.iter().position(|o| *o == name);
 
@@ -521,20 +533,26 @@ fn empty_snapshot() -> Snapshot {
         trigger: Trigger::Auto,
         partial: false,
         preview: false,
+        restore: false,
         session_id: "s".into(),
         project_id: "p".into(),
         epoch: 1,
         root: None,
         constraints: vec![],
+        rejections: vec![],
         subtask: None,
         latest: None,
+        earlier: None,
         git: None,
         edit_count: 0,
         last_test: None,
         failure: None,
         failing_count: 0,
+        tests: vec![],
         dead_ends: vec![],
         dead_end_total: 0,
+        constraint_total: 0,
+        rejection_total: 0,
         attempts: vec![],
         working_files: vec![],
         next_target: None,
@@ -587,6 +605,7 @@ fn worst_case_snapshot() -> Snapshot {
                 ts_ms: common::BASE_MS,
             })
             .collect(),
+        rejections: vec![],
         subtask: Some(IntentView {
             id: 2,
             text: "s".repeat(600),
@@ -597,6 +616,7 @@ fn worst_case_snapshot() -> Snapshot {
             text: "l".repeat(600),
             ts_ms: common::BASE_MS,
         }),
+        earlier: None,
         git: Some(GitInfo {
             branch: Some(format!("feature/{}", "x".repeat(300))),
             head: Some("a".repeat(40)),
@@ -618,6 +638,7 @@ fn worst_case_snapshot() -> Snapshot {
             ts_ms: common::BASE_MS,
         }),
         failing_count: 12,
+        tests: vec![],
         dead_ends: (0..6)
             .map(|i| DeadEndView {
                 id: i,
@@ -629,6 +650,7 @@ fn worst_case_snapshot() -> Snapshot {
                 resolved_ms: common::BASE_MS,
                 minus: Some("-".repeat(240)),
                 plus: Some("+".repeat(240)),
+                excerpt_edit: None,
                 observed_after: Some(CommandRef {
                     id: 2,
                     command: format!("python -m pytest -q {long_test}"),
@@ -637,6 +659,8 @@ fn worst_case_snapshot() -> Snapshot {
             })
             .collect(),
         dead_end_total: 6,
+        constraint_total: 0,
+        rejection_total: 0,
         attempts: (0..6)
             .map(|i| AttemptView {
                 edit_id: i,

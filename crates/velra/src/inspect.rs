@@ -26,6 +26,69 @@ impl Section {
             _ => None,
         }
     }
+
+    /// The canonical spelling, as `--section` documents it.
+    pub fn name(self) -> &'static str {
+        match self {
+            Section::DeadEnds => "dead-ends",
+            Section::Failure => "failure",
+            Section::Files => "files",
+            Section::Attempts => "attempts",
+        }
+    }
+}
+
+/// Whether the ledger has anything of `session_id`: a reduced session, or
+/// events the reducer has not reached yet (it may just have failed to).
+pub fn is_recorded_session(conn: &Connection, session_id: &str) -> rusqlite::Result<bool> {
+    conn.query_row(
+        "SELECT EXISTS(SELECT 1 FROM sessions WHERE session_id = ?1) \
+         OR EXISTS(SELECT 1 FROM events WHERE session_id = ?1)",
+        [session_id],
+        |r| r.get(0),
+    )
+}
+
+/// Shortest prefix [`resolve_session`] accepts for a session id: what Velra
+/// prints for one (`velra_core::render::source_label`). Anything shorter must
+/// be the whole id, so that a mistyped id is still refused rather than
+/// resolved to whichever session it happens to begin.
+pub const SESSION_PREFIX_MIN: usize = 8;
+
+/// A session id given on the command line, resolved against the ledger.
+#[derive(Debug, PartialEq, Eq)]
+pub enum SessionMatch {
+    One(String),
+    None,
+    /// A prefix that begins more than one recorded session (at most 3 shown).
+    Ambiguous(Vec<String>),
+}
+
+/// `given` as a whole recorded session id, or else as the unique prefix of
+/// one. A restored capsule names its source by prefix, and points at
+/// `velra inspect --session <prefix>` for detail (D147).
+pub fn resolve_session(conn: &Connection, given: &str) -> rusqlite::Result<SessionMatch> {
+    if is_recorded_session(conn, given)? {
+        return Ok(SessionMatch::One(given.to_string()));
+    }
+    if given.chars().count() < SESSION_PREFIX_MIN {
+        return Ok(SessionMatch::None);
+    }
+    // `substr`, not LIKE: a session id may contain `_` or `%`.
+    let found: Vec<String> = conn
+        .prepare(
+            "SELECT session_id FROM sessions WHERE substr(session_id, 1, length(?1)) = ?1 \
+             UNION SELECT DISTINCT session_id FROM events \
+             WHERE substr(session_id, 1, length(?1)) = ?1 \
+             ORDER BY 1 LIMIT 3",
+        )?
+        .query_map([given], |r| r.get(0))?
+        .collect::<rusqlite::Result<_>>()?;
+    Ok(match found.len() {
+        0 => SessionMatch::None,
+        1 => SessionMatch::One(found.into_iter().next().unwrap_or_default()),
+        _ => SessionMatch::Ambiguous(found),
+    })
 }
 
 /// The most recently active session of a project.
@@ -56,9 +119,53 @@ pub fn preview(conn: &Connection, session_id: &str, now_ms: i64) -> rusqlite::Re
         trigger: Trigger::Cli,
         partial: false,
         preview: true,
+        restore: false,
         tz_offset_secs: local_offset_secs(now_ms),
     };
     snapshot::build(conn, session_id, &meta)
+}
+
+/// `--trace`: each marker through every layer, against a live preview.
+///
+/// The staged capsule is compared only when it was staged from this session;
+/// one staged from another session says nothing about this one's losses.
+pub fn trace(
+    conn: &Connection,
+    home: &std::path::Path,
+    session_id: &str,
+    now_ms: i64,
+    cfg: &velra_core::render::RenderConfig,
+    markers: &[String],
+) -> rusqlite::Result<Vec<velra_core::provenance::MarkerTrace>> {
+    let meta = SnapshotMeta {
+        checkpoint_id: "preview".to_string(),
+        created_ms: now_ms,
+        trigger: Trigger::Cli,
+        partial: false,
+        preview: true,
+        restore: false,
+        tz_offset_secs: local_offset_secs(now_ms),
+    };
+    let project: Option<String> = conn
+        .query_row(
+            "SELECT project_id FROM sessions WHERE session_id = ?1",
+            [session_id],
+            |r| r.get(0),
+        )
+        .optional()?;
+    let staged = project
+        .and_then(|p| velra_core::staging::peek(&velra_core::staging::staged_dir(home, &p)))
+        .filter(|s| s.source_session_id == session_id)
+        .map(|s| s.capsule);
+    let inputs = velra_core::provenance::TraceInputs {
+        meta: &meta,
+        cfg,
+        staged: staged.as_deref(),
+    };
+    markers
+        .iter()
+        .map(|m| velra_core::provenance::trace_marker(conn, session_id, &inputs, m))
+        .collect()
 }
 
 fn header(title: &str) -> String {
@@ -203,7 +310,9 @@ pub fn section_detail(
             let mut stmt = conn.prepare(
                 "SELECT path, edits, reads, in_failure, last_touch_ms FROM file_stats \
                  WHERE session_id = ?1 AND epoch = ?2 AND last_touch_ms <= ?3 \
-                 ORDER BY (4 * in_failure + 3 * MIN(edits, 3) + 2 * (reads >= 2) + MIN(reads, 3)) DESC, \
+                 ORDER BY (substr(path, 1, 1) IN ('/', '\\') OR substr(path, 2, 1) = ':' \
+                   OR substr(path, 1, 3) IN ('../', '..\\')) ASC, \
+                   (4 * in_failure + 3 * MIN(edits, 3) + 2 * (reads >= 2) + MIN(reads, 3)) DESC, \
                    edits DESC, reads DESC, first_touch_ms ASC, path ASC",
             )?;
             let rows = stmt.query_map(params![session_id, epoch, as_of_ms], |r| {
@@ -319,4 +428,46 @@ pub fn checkpoint_json(c: &StoredCheckpoint) -> serde_json::Value {
         "capsule": c.capsule,
         "capsule_tokens_est": c.tokens,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use velra_core::db::{Db, Role};
+
+    /// A whole id, a unique prefix of 8 or more characters, and nothing
+    /// else: a shorter or shared prefix never picks a session.
+    #[test]
+    fn a_session_is_named_by_its_id_or_a_unique_prefix_of_eight_characters() {
+        let dir = tempfile::tempdir().unwrap();
+        let db = Db::open(&dir.path().join("v.db"), Role::Cli).unwrap();
+        for id in [
+            "8f32aaaa-1111-4aaa-8aaa-aaaaaaaaaaaa",
+            "8f32aaaa-2222-4bbb-8bbb-bbbbbbbbbbbb",
+            "d6a12f6a-3333-4ccc-8ccc-cccccccccccc",
+            "a_b%c_d%e",
+        ] {
+            db.conn
+                .execute(
+                    "INSERT INTO sessions (session_id, project_id, started_ms, last_event_ms) \
+                     VALUES (?1, 'p', 0, 0)",
+                    [id],
+                )
+                .unwrap();
+        }
+        let one = |id: &str| SessionMatch::One(id.to_string());
+        let r = |given: &str| resolve_session(&db.conn, given).unwrap();
+        assert_eq!(
+            r("d6a12f6a-3333-4ccc-8ccc-cccccccccccc"),
+            one("d6a12f6a-3333-4ccc-8ccc-cccccccccccc")
+        );
+        assert_eq!(r("d6a12f6a"), one("d6a12f6a-3333-4ccc-8ccc-cccccccccccc"));
+        assert_eq!(r("d6a12f6"), SessionMatch::None, "shorter than 8");
+        assert_eq!(r("d6a12f6b"), SessionMatch::None);
+        assert!(matches!(r("8f32aaaa"), SessionMatch::Ambiguous(ids) if ids.len() == 2));
+        assert_eq!(r("8f32aaaa-2"), one("8f32aaaa-2222-4bbb-8bbb-bbbbbbbbbbbb"));
+        // LIKE wildcards in the input are characters, not patterns.
+        assert_eq!(r("a_b%c_d%e"), one("a_b%c_d%e"));
+        assert_eq!(r("a%b_c%d_"), SessionMatch::None);
+    }
 }

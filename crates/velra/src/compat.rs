@@ -6,8 +6,9 @@
 //! Sources are noted per constant; see DECISIONS.md for the floors chosen
 //! where the changelog does not name an introducing version.
 
+use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 /// A Claude Code semantic version.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -156,21 +157,133 @@ impl Detection {
     }
 }
 
+/// Runs `cmd` and returns its stdout when it exits successfully within
+/// `timeout`. A child still running at the deadline is killed, not left
+/// behind: `detect` runs from `enable`, `status` and `doctor`, and a hung
+/// `claude --version` used to outlive them.
+///
+/// On Windows the child's descendants are ended with it ([`end_descendants`]):
+/// an npm `.cmd` shim is `cmd.exe` running `node`, and killing `cmd.exe`
+/// alone left `node` running -- holding `velra`'s own stdout, which Windows
+/// hands down to every child, so whoever read `velra status` waited for it
+/// (measured: the process exited at 3.1 s, its output ended at 30.5 s; D138).
 fn run_with_timeout(mut cmd: Command, timeout: Duration) -> Option<String> {
-    let child = cmd
+    use std::io::Read;
+    let mut child = cmd
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::null())
         .spawn()
         .ok()?;
+    let stdout = child.stdout.take()?;
     let (tx, rx) = std::sync::mpsc::channel();
     std::thread::spawn(move || {
-        let _ = tx.send(child.wait_with_output());
+        let mut out = Vec::new();
+        let _ = stdout.take(64 * 1024).read_to_end(&mut out);
+        let _ = tx.send(out);
     });
-    match rx.recv_timeout(timeout) {
-        Ok(Ok(out)) if out.status.success() => String::from_utf8(out.stdout).ok(),
-        _ => None,
+    let deadline = Instant::now() + timeout;
+    let status = loop {
+        match child.try_wait() {
+            Ok(Some(status)) => break status,
+            Ok(None) if Instant::now() < deadline => std::thread::sleep(Duration::from_millis(10)),
+            _ => {
+                end_descendants(&child);
+                let _ = child.kill();
+                let _ = child.wait();
+                return None;
+            }
+        }
+    };
+    if !status.success() {
+        return None;
     }
+    // A grandchild can hold the pipe open after the child exits.
+    let left = deadline
+        .saturating_duration_since(Instant::now())
+        .max(Duration::from_millis(100));
+    String::from_utf8(rx.recv_timeout(left).ok()?).ok()
+}
+
+/// Ends every process `child` started, while `child` is still alive to name
+/// them: `taskkill /T /F`, run from the system directory by its full path
+/// (never looked up, D129), and itself given two seconds. Without
+/// `SystemRoot` nothing is run.
+///
+/// A descendant whose parent has already exited is not reached: a shim that
+/// returns at once and leaves a background process behind still leaves it.
+#[cfg(windows)]
+fn end_descendants(child: &std::process::Child) {
+    let Some(root) = std::env::var_os("SystemRoot") else {
+        return;
+    };
+    let exe = Path::new(&root).join("System32").join("taskkill.exe");
+    let Ok(mut taskkill) = Command::new(exe)
+        .args(["/T", "/F", "/PID", &child.id().to_string()])
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn()
+    else {
+        return;
+    };
+    let deadline = Instant::now() + Duration::from_secs(2);
+    while Instant::now() < deadline {
+        match taskkill.try_wait() {
+            Ok(None) => std::thread::sleep(Duration::from_millis(10)),
+            _ => return,
+        }
+    }
+    let _ = taskkill.kill();
+    let _ = taskkill.wait();
+}
+
+#[cfg(not(windows))]
+fn end_descendants(_child: &std::process::Child) {}
+
+/// The `claude` a shell would run, looked up in the absolute `PATH` entries
+/// only.
+///
+/// Launching `claude` by name let the lookup reach the current directory:
+/// `cmd /C claude` searches it before `PATH`, and a relative or empty `PATH`
+/// entry means it everywhere. `velra enable` and `status` are run from inside
+/// repositories, so a `claude.cmd` checked into one ran as the user
+/// (reproduced), and the version it printed chose the hooks `enable` wrote.
+fn find_claude(path: Option<&std::ffi::OsStr>) -> Option<PathBuf> {
+    let names: &[&str] = if cfg!(windows) {
+        &["claude.exe", "claude.cmd", "claude.bat"]
+    } else {
+        &["claude"]
+    };
+    std::env::split_paths(path?)
+        .filter(|dir| dir.is_absolute())
+        .flat_map(|dir| names.iter().map(move |n| dir.join(n)))
+        .find(|p| is_executable(p))
+}
+
+#[cfg(unix)]
+fn is_executable(p: &Path) -> bool {
+    use std::os::unix::fs::PermissionsExt;
+    std::fs::metadata(p).is_ok_and(|m| m.is_file() && m.permissions().mode() & 0o111 != 0)
+}
+
+#[cfg(not(unix))]
+fn is_executable(p: &Path) -> bool {
+    p.is_file()
+}
+
+/// `<claude> --version`, started in its own directory and, on Windows, with
+/// `cmd.exe`'s search of the current directory turned off for anything a
+/// `.cmd` shim runs in turn (`node`).
+fn claude_version(exe: &Path, timeout: Duration) -> Option<Version> {
+    let mut cmd = Command::new(exe);
+    cmd.arg("--version");
+    if let Some(dir) = exe.parent() {
+        cmd.current_dir(dir);
+    }
+    #[cfg(windows)]
+    cmd.env("NoDefaultCurrentDirectoryInExePath", "1");
+    Version::parse(&run_with_timeout(cmd, timeout)?)
 }
 
 /// Highest Claude Code version among installed VS Code extensions.
@@ -208,22 +321,11 @@ pub fn detect(timeout: Duration) -> Detection {
     {
         return Detection::Cli(v);
     }
-    let mut claude = Command::new("claude");
-    claude.arg("--version");
-    if let Some(out) = run_with_timeout(claude, timeout.min(Duration::from_secs(3))) {
-        if let Some(v) = Version::parse(&out) {
+    // Windows npm installs expose `claude.cmd`; `Command` runs a batch file
+    // through `cmd.exe` itself, with its arguments escaped.
+    if let Some(exe) = find_claude(std::env::var_os("PATH").as_deref()) {
+        if let Some(v) = claude_version(&exe, timeout.min(Duration::from_secs(3))) {
             return Detection::Cli(v);
-        }
-    }
-    // Windows npm installs expose `claude.cmd`, which needs a shell.
-    #[cfg(windows)]
-    {
-        let mut cmd = Command::new("cmd");
-        cmd.args(["/C", "claude", "--version"]);
-        if let Some(out) = run_with_timeout(cmd, timeout.min(Duration::from_secs(3))) {
-            if let Some(v) = Version::parse(&out) {
-                return Detection::Cli(v);
-            }
         }
     }
     match version_from_vscode_extension() {
@@ -268,5 +370,84 @@ mod tests {
         assert!(old.post_compact);
         let ancient = Features::for_version(Some(Version::new(1, 0, 50)));
         assert!(!ancient.session_end && !ancient.async_hooks && ancient.pre_compact);
+    }
+
+    /// A script that sleeps, then records that it finished and prints a
+    /// version.
+    fn slow_script(dir: &Path, seconds: u32) -> PathBuf {
+        if cfg!(windows) {
+            let p = dir.join("slow.cmd");
+            let body = format!(
+                "@echo off\r\nping -n {} 127.0.0.1 >nul\r\necho done> \"%~dp0finished\"\r\necho 2.1.300\r\n",
+                seconds + 1
+            );
+            std::fs::write(&p, body).unwrap();
+            p
+        } else {
+            let p = dir.join("slow");
+            let body = format!(
+                "#!/bin/sh\nsleep {seconds}\necho done > \"$(dirname \"$0\")/finished\"\necho 2.1.300\n"
+            );
+            std::fs::write(&p, body).unwrap();
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::PermissionsExt;
+                std::fs::set_permissions(&p, std::fs::Permissions::from_mode(0o755)).unwrap();
+            }
+            p
+        }
+    }
+
+    /// A child still running at the deadline is killed, not left running: it
+    /// never gets as far as recording that it finished. Before, the timeout
+    /// only stopped waiting, and the script ran to its end.
+    #[test]
+    fn a_timed_out_child_is_killed() {
+        let dir = tempfile::tempdir().unwrap();
+        let script = slow_script(dir.path(), 2);
+        let started = Instant::now();
+        assert_eq!(
+            run_with_timeout(Command::new(&script), Duration::from_millis(300)),
+            None
+        );
+        assert!(started.elapsed() < Duration::from_secs(2), "bounded");
+        std::thread::sleep(Duration::from_secs(4));
+        assert!(
+            !dir.path().join("finished").exists(),
+            "the timed-out child ran to completion"
+        );
+
+        // Within the deadline, its output is the answer.
+        let fast = slow_script(dir.path(), 0);
+        let out = run_with_timeout(Command::new(&fast), Duration::from_secs(20));
+        assert_eq!(out.as_deref().map(str::trim), Some("2.1.300"));
+    }
+
+    /// Only an absolute `PATH` entry is searched: a relative or empty one
+    /// would mean the current directory, which is the repository `velra` is
+    /// run from.
+    #[test]
+    fn claude_is_looked_up_in_absolute_path_entries_only() {
+        let dir = tempfile::tempdir().unwrap();
+        let bin = dir.path().join("bin");
+        std::fs::create_dir_all(&bin).unwrap();
+        let name = if cfg!(windows) {
+            "claude.cmd"
+        } else {
+            "claude"
+        };
+        let script = slow_script(&bin, 0);
+        std::fs::rename(&script, bin.join(name)).unwrap();
+
+        let rel = std::ffi::OsString::from("bin");
+        assert_eq!(find_claude(Some(&rel)), None);
+        let joined =
+            std::env::join_paths([PathBuf::from(""), PathBuf::from("."), bin.clone()]).unwrap();
+        assert_eq!(find_claude(Some(&joined)), Some(bin.join(name)));
+        assert_eq!(find_claude(None), None);
+        assert_eq!(
+            claude_version(&bin.join(name), Duration::from_secs(20)),
+            Some(Version::new(2, 1, 300))
+        );
     }
 }

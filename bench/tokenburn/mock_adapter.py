@@ -59,11 +59,12 @@ from typing import Sequence
 HERE = pathlib.Path(__file__).resolve().parent
 if __package__ in (None, ""):
     sys.path.insert(0, str(HERE))
+    import isolation  # type: ignore[no-redef]
     import prereg  # type: ignore[no-redef]
     import scenarios  # type: ignore[no-redef]
     import telemetry  # type: ignore[no-redef]
 else:
-    from . import prereg, scenarios, telemetry
+    from . import isolation, prereg, scenarios, telemetry
 
 #: Written into every artifact this module produces, so a synthetic trial
 #: directory can never be mistaken for a live one on disk either.
@@ -179,6 +180,42 @@ class MockSpec:
 
     # -- fixture-level ----------------------------------------------------
     leak_clean: bool = True
+
+    # -- trial validity (isolation.trial_validity) -------------------------
+    #: Both memory controls verified in force.
+    auto_memory_disabled: bool = True
+    #: A file in the fixture's auto-memory directory before the destination.
+    memory_leak: bool = False
+    #: The target test's status at the source handoff: "FAIL" is the scenario.
+    handoff_target: str = "FAIL"
+    handoff_invariant_as_generated: bool = True
+    handoff_worktree_violations: Sequence[str] = ()
+
+    def validity(self) -> tuple[dict, dict, dict]:
+        """(handoff, memory scan, trial_validity), exactly as the live driver
+        derives them -- the same `isolation.trial_validity` call."""
+        reasons = []
+        if self.handoff_target != "FAIL":
+            reasons.append(f"target test is {self.handoff_target} at handoff")
+        if not self.handoff_invariant_as_generated:
+            reasons.append("invariant not as generated")
+        reasons.extend(f"worktree: {v}" for v in self.handoff_worktree_violations)
+        handoff = {
+            "source_handoff_valid": not reasons,
+            "source_handoff_reason": "; ".join(reasons) if reasons
+            else "target FAIL, invariant as generated, worktree as generated",
+            "target_status_at_handoff": self.handoff_target,
+            "invariant_status_at_handoff": {
+                "holds": self.handoff_invariant_as_generated, "expected": True,
+                "matches_expected": self.handoff_invariant_as_generated},
+            "worktree_violations": list(self.handoff_worktree_violations),
+        }
+        scan = {"clean": not self.memory_leak,
+                "files": ["MEMORY.md"] if self.memory_leak else []}
+        validity = isolation.trial_validity(
+            auto_memory_disabled=self.auto_memory_disabled,
+            memory_scan_clean=scan["clean"], handoff=handoff)
+        return handoff, scan, validity
 
     def seed_string(self) -> str:
         return f"{SYNTHETIC_MARK}|{self.scenario}|{self.trial}|{self.seed}"
@@ -551,6 +588,7 @@ def build_context_fixture(spec: MockSpec) -> dict:
 def build_meta(spec: MockSpec, manifest: dict, source_id: str,
                destination_id: str) -> dict:
     """``trial_meta.json``, including the pair key pairing matches on."""
+    handoff, memory_scan, validity = spec.validity()
     leak_scan = {
         "clean": spec.leak_clean,
         "surfaces_scanned": ["tree", "filenames", "git_history", "git_refs",
@@ -594,6 +632,22 @@ def build_meta(spec: MockSpec, manifest: dict, source_id: str,
             "transition": spec.transition,
         },
         "old_transcript_replayed": spec.old_transcript_replayed,
+        "auto_memory_disabled": spec.auto_memory_disabled,
+        "memory_scan_clean": memory_scan["clean"],
+        "source_handoff_valid": handoff["source_handoff_valid"],
+        "source_handoff_reason": handoff["source_handoff_reason"],
+        "target_status_at_handoff": handoff["target_status_at_handoff"],
+        "invariant_status_at_handoff": handoff["invariant_status_at_handoff"],
+        "invalidation_reason": validity["invalidation_reason"],
+        "trial_validity": validity,
+        "memory_isolation": {
+            "controls": {isolation.MEMORY_ENV: isolation.MEMORY_ENV_VALUE,
+                         isolation.MEMORY_SETTING: False},
+            "scans": {"before_destination": memory_scan},
+            "identical_for_both_arms": True,
+        },
+        "source_handoff": handoff,
+        "destination_skipped": not validity["valid"],
         "manifest": manifest,
         "leak_scan": leak_scan,
         "telemetry_declared_source": (
@@ -616,6 +670,21 @@ def write_trial(root: pathlib.Path, spec: MockSpec) -> pathlib.Path:
 
     trial = pathlib.Path(root) / spec.trial
     trial.mkdir(parents=True, exist_ok=True)
+
+    if not spec.validity()[2]["valid"]:
+        # An invalid trial stops before its destination session, live and
+        # mock alike: there is no stream, transcript or restore to write, and
+        # nothing downstream may try to read one.
+        (trial / "final_state.json").write_text(
+            json.dumps(build_final_state(spec, manifest), indent=2),
+            encoding="utf-8", newline="")
+        (trial / "context_fixture.json").write_text(
+            json.dumps(build_context_fixture(spec), indent=2),
+            encoding="utf-8", newline="")
+        (trial / "trial_meta.json").write_text(
+            json.dumps(build_meta(spec, manifest, source_id, None),
+                       indent=2), encoding="utf-8", newline="")
+        return trial
 
     lines = build_stream(spec, manifest, source_id, destination_id, capsule)
     if spec.malformed_fraction_override is not None:
